@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Environment variables
+.env
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
