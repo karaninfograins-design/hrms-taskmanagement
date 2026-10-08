@@ -1004,27 +1004,42 @@ function ChatsContent() {
                       </button>
 
                       {showAttachmentMenu && (
-                        <div className="absolute bottom-14 left-0 bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-2 w-52 space-y-1 z-50 animate-fade-in">
+                        <div className="absolute bottom-14 left-0 z-50 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg shadow-slate-900/10">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl flex items-center gap-2.5 transition-colors"
+                            className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-50"
                           >
-                            <span className="p-1 rounded-lg bg-orange-100 text-orange-600 text-xs">🖼️</span>
-                            <div>
-                              <p className="font-extrabold text-slate-900 leading-tight">Image / Document</p>
-                              <p className="text-[10px] text-slate-400 font-normal">PNG, JPG, PDF, DOCX</p>
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm text-slate-600 group-hover:bg-orange-50 group-hover:text-orange-600">
+                              🖼️
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-medium leading-4 text-slate-700">
+                                Image / Docs
+                              </p>
+                              <p className="text-[10px] leading-4 text-slate-400">
+                                PNG, JPG, PDF, DOCX
+                              </p>
                             </div>
                           </button>
+
                           <button
                             type="button"
                             onClick={handleAddLinkPrompt}
-                            className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl flex items-center gap-2.5 transition-colors"
+                            className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-50"
                           >
-                            <span className="p-1 rounded-lg bg-blue-100 text-blue-600 text-xs">🔗</span>
-                            <div>
-                              <p className="font-extrabold text-slate-900 leading-tight">Web Link URL</p>
-                              <p className="text-[10px] text-slate-400 font-normal">Paste document/web link</p>
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600">
+                              🔗
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-medium leading-4 text-slate-700">
+                                Web Link
+                              </p>
+                              <p className="text-[10px] leading-4 text-slate-400">
+                                Paste document or web link
+                              </p>
                             </div>
                           </button>
                         </div>
