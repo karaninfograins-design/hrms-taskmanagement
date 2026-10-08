@@ -482,8 +482,8 @@ export default function DashboardPage() {
                             </div>
                           </td>
                           <td>
-                            <a href={`/dashboard/backlog`} className="text-button text-xs font-bold">
-                              Open Board →
+                            <a href={`/dashboard/projects`} className="text-button text-xs font-bold">
+                              Open Projects →
                             </a>
                           </td>
                         </tr>
@@ -502,8 +502,8 @@ export default function DashboardPage() {
                 <h2 className="text-base font-extrabold text-slate-900">Recent Work Items & Hierarchy</h2>
                 <p className="text-xs text-slate-500 font-medium">Latest Epics, Stories, Tasks, Bugs, and Subtasks.</p>
               </div>
-              <a href="/dashboard/backlog" className="text-xs font-bold text-orange-600 hover:text-orange-700">
-                View Backlog Board →
+              <a href="/dashboard/projects" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+                View Projects →
               </a>
             </div>
 

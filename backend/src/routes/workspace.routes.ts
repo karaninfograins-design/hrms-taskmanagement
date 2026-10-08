@@ -11,6 +11,7 @@ import {
   deleteRole,
   deleteSprint,
   deleteWorkItem,
+  deleteWorkItemComment,
   getProject,
   getSprint,
   getWorkItem,
@@ -49,6 +50,7 @@ router.patch("/work-items/:id", updateWorkItem);
 router.delete("/work-items/:id", deleteWorkItem);
 router.patch("/work-items/:id/sprint", updateWorkItemSprint);
 router.post("/work-items/:id/comments", addWorkItemComment);
+router.delete("/comments/:id", deleteWorkItemComment);
 router.get("/backlog", listBacklog);
 router.get("/epics", listEpics);
 

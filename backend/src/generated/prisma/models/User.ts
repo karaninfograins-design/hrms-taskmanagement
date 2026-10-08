@@ -272,6 +272,7 @@ export type UserWhereInput = {
   reportedWorkItems?: Prisma.WorkItemListRelationFilter
   createdWorkItems?: Prisma.WorkItemListRelationFilter
   comments?: Prisma.CommentListRelationFilter
+  deletedComments?: Prisma.CommentListRelationFilter
   workItemActivities?: Prisma.WorkItemActivityListRelationFilter
   createdProjects?: Prisma.ProjectListRelationFilter
   projectMembers?: Prisma.ProjectMemberListRelationFilter
@@ -282,6 +283,13 @@ export type UserWhereInput = {
   approvedLeaves?: Prisma.LeaveRequestListRelationFilter
   organizedMeetings?: Prisma.MeetingListRelationFilter
   meetingParticipants?: Prisma.MeetingParticipantListRelationFilter
+  createdConversations?: Prisma.ConversationListRelationFilter
+  conversationMemberships?: Prisma.ConversationParticipantListRelationFilter
+  sentMessages?: Prisma.MessageListRelationFilter
+  hostedCalls?: Prisma.CallSessionListRelationFilter
+  callParticipants?: Prisma.CallParticipantListRelationFilter
+  notifications?: Prisma.NotificationListRelationFilter
+  createdHolidays?: Prisma.CompanyHolidayListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -303,6 +311,7 @@ export type UserOrderByWithRelationInput = {
   reportedWorkItems?: Prisma.WorkItemOrderByRelationAggregateInput
   createdWorkItems?: Prisma.WorkItemOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
+  deletedComments?: Prisma.CommentOrderByRelationAggregateInput
   workItemActivities?: Prisma.WorkItemActivityOrderByRelationAggregateInput
   createdProjects?: Prisma.ProjectOrderByRelationAggregateInput
   projectMembers?: Prisma.ProjectMemberOrderByRelationAggregateInput
@@ -313,6 +322,13 @@ export type UserOrderByWithRelationInput = {
   approvedLeaves?: Prisma.LeaveRequestOrderByRelationAggregateInput
   organizedMeetings?: Prisma.MeetingOrderByRelationAggregateInput
   meetingParticipants?: Prisma.MeetingParticipantOrderByRelationAggregateInput
+  createdConversations?: Prisma.ConversationOrderByRelationAggregateInput
+  conversationMemberships?: Prisma.ConversationParticipantOrderByRelationAggregateInput
+  sentMessages?: Prisma.MessageOrderByRelationAggregateInput
+  hostedCalls?: Prisma.CallSessionOrderByRelationAggregateInput
+  callParticipants?: Prisma.CallParticipantOrderByRelationAggregateInput
+  notifications?: Prisma.NotificationOrderByRelationAggregateInput
+  createdHolidays?: Prisma.CompanyHolidayOrderByRelationAggregateInput
   _relevance?: Prisma.UserOrderByRelevanceInput
 }
 
@@ -338,6 +354,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   reportedWorkItems?: Prisma.WorkItemListRelationFilter
   createdWorkItems?: Prisma.WorkItemListRelationFilter
   comments?: Prisma.CommentListRelationFilter
+  deletedComments?: Prisma.CommentListRelationFilter
   workItemActivities?: Prisma.WorkItemActivityListRelationFilter
   createdProjects?: Prisma.ProjectListRelationFilter
   projectMembers?: Prisma.ProjectMemberListRelationFilter
@@ -348,6 +365,13 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   approvedLeaves?: Prisma.LeaveRequestListRelationFilter
   organizedMeetings?: Prisma.MeetingListRelationFilter
   meetingParticipants?: Prisma.MeetingParticipantListRelationFilter
+  createdConversations?: Prisma.ConversationListRelationFilter
+  conversationMemberships?: Prisma.ConversationParticipantListRelationFilter
+  sentMessages?: Prisma.MessageListRelationFilter
+  hostedCalls?: Prisma.CallSessionListRelationFilter
+  callParticipants?: Prisma.CallParticipantListRelationFilter
+  notifications?: Prisma.NotificationListRelationFilter
+  createdHolidays?: Prisma.CompanyHolidayListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -400,6 +424,7 @@ export type UserCreateInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -410,6 +435,13 @@ export type UserCreateInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -429,6 +461,7 @@ export type UserUncheckedCreateInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -439,6 +472,13 @@ export type UserUncheckedCreateInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUpdateInput = {
@@ -457,6 +497,7 @@ export type UserUpdateInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -467,6 +508,13 @@ export type UserUpdateInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -486,6 +534,7 @@ export type UserUncheckedUpdateInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -496,6 +545,13 @@ export type UserUncheckedUpdateInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -929,12 +985,128 @@ export type UserCreateNestedOneWithoutCommentsInput = {
   connect?: Prisma.UserWhereUniqueInput
 }
 
+export type UserCreateNestedOneWithoutDeletedCommentsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutDeletedCommentsInput, Prisma.UserUncheckedCreateWithoutDeletedCommentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutDeletedCommentsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
 export type UserUpdateOneRequiredWithoutCommentsNestedInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutCommentsInput, Prisma.UserUncheckedCreateWithoutCommentsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutCommentsInput
   upsert?: Prisma.UserUpsertWithoutCommentsInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCommentsInput, Prisma.UserUpdateWithoutCommentsInput>, Prisma.UserUncheckedUpdateWithoutCommentsInput>
+}
+
+export type UserUpdateOneWithoutDeletedCommentsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutDeletedCommentsInput, Prisma.UserUncheckedCreateWithoutDeletedCommentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutDeletedCommentsInput
+  upsert?: Prisma.UserUpsertWithoutDeletedCommentsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutDeletedCommentsInput, Prisma.UserUpdateWithoutDeletedCommentsInput>, Prisma.UserUncheckedUpdateWithoutDeletedCommentsInput>
+}
+
+export type UserCreateNestedOneWithoutCreatedConversationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCreatedConversationsInput, Prisma.UserUncheckedCreateWithoutCreatedConversationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCreatedConversationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutCreatedConversationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCreatedConversationsInput, Prisma.UserUncheckedCreateWithoutCreatedConversationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCreatedConversationsInput
+  upsert?: Prisma.UserUpsertWithoutCreatedConversationsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCreatedConversationsInput, Prisma.UserUpdateWithoutCreatedConversationsInput>, Prisma.UserUncheckedUpdateWithoutCreatedConversationsInput>
+}
+
+export type UserCreateNestedOneWithoutConversationMembershipsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutConversationMembershipsInput, Prisma.UserUncheckedCreateWithoutConversationMembershipsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutConversationMembershipsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutConversationMembershipsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutConversationMembershipsInput, Prisma.UserUncheckedCreateWithoutConversationMembershipsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutConversationMembershipsInput
+  upsert?: Prisma.UserUpsertWithoutConversationMembershipsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutConversationMembershipsInput, Prisma.UserUpdateWithoutConversationMembershipsInput>, Prisma.UserUncheckedUpdateWithoutConversationMembershipsInput>
+}
+
+export type UserCreateNestedOneWithoutSentMessagesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSentMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSentMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSentMessagesInput
+  upsert?: Prisma.UserUpsertWithoutSentMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSentMessagesInput, Prisma.UserUpdateWithoutSentMessagesInput>, Prisma.UserUncheckedUpdateWithoutSentMessagesInput>
+}
+
+export type UserCreateNestedOneWithoutHostedCallsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutHostedCallsInput, Prisma.UserUncheckedCreateWithoutHostedCallsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutHostedCallsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutHostedCallsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutHostedCallsInput, Prisma.UserUncheckedCreateWithoutHostedCallsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutHostedCallsInput
+  upsert?: Prisma.UserUpsertWithoutHostedCallsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutHostedCallsInput, Prisma.UserUpdateWithoutHostedCallsInput>, Prisma.UserUncheckedUpdateWithoutHostedCallsInput>
+}
+
+export type UserCreateNestedOneWithoutCallParticipantsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCallParticipantsInput, Prisma.UserUncheckedCreateWithoutCallParticipantsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCallParticipantsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutCallParticipantsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCallParticipantsInput, Prisma.UserUncheckedCreateWithoutCallParticipantsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCallParticipantsInput
+  upsert?: Prisma.UserUpsertWithoutCallParticipantsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCallParticipantsInput, Prisma.UserUpdateWithoutCallParticipantsInput>, Prisma.UserUncheckedUpdateWithoutCallParticipantsInput>
+}
+
+export type UserCreateNestedOneWithoutNotificationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutNotificationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutNotificationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutNotificationsInput
+  upsert?: Prisma.UserUpsertWithoutNotificationsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutNotificationsInput, Prisma.UserUpdateWithoutNotificationsInput>, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
+}
+
+export type UserCreateNestedOneWithoutCreatedHolidaysInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCreatedHolidaysInput, Prisma.UserUncheckedCreateWithoutCreatedHolidaysInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCreatedHolidaysInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutCreatedHolidaysNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCreatedHolidaysInput, Prisma.UserUncheckedCreateWithoutCreatedHolidaysInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCreatedHolidaysInput
+  upsert?: Prisma.UserUpsertWithoutCreatedHolidaysInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCreatedHolidaysInput, Prisma.UserUpdateWithoutCreatedHolidaysInput>, Prisma.UserUncheckedUpdateWithoutCreatedHolidaysInput>
 }
 
 export type UserCreateWithoutRoleInput = {
@@ -952,6 +1124,7 @@ export type UserCreateWithoutRoleInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -962,6 +1135,13 @@ export type UserCreateWithoutRoleInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutRoleInput = {
@@ -980,6 +1160,7 @@ export type UserUncheckedCreateWithoutRoleInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -990,6 +1171,13 @@ export type UserUncheckedCreateWithoutRoleInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutRoleInput = {
@@ -1049,6 +1237,7 @@ export type UserCreateWithoutDesignationInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1059,6 +1248,13 @@ export type UserCreateWithoutDesignationInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutDesignationInput = {
@@ -1077,6 +1273,7 @@ export type UserUncheckedCreateWithoutDesignationInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1087,6 +1284,13 @@ export type UserUncheckedCreateWithoutDesignationInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutDesignationInput = {
@@ -1130,6 +1334,7 @@ export type UserCreateWithoutEmployeeProfileInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1140,6 +1345,13 @@ export type UserCreateWithoutEmployeeProfileInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutEmployeeProfileInput = {
@@ -1158,6 +1370,7 @@ export type UserUncheckedCreateWithoutEmployeeProfileInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1168,6 +1381,13 @@ export type UserUncheckedCreateWithoutEmployeeProfileInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutEmployeeProfileInput = {
@@ -1201,6 +1421,7 @@ export type UserUpdateWithoutEmployeeProfileInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1211,6 +1432,13 @@ export type UserUpdateWithoutEmployeeProfileInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmployeeProfileInput = {
@@ -1229,6 +1457,7 @@ export type UserUncheckedUpdateWithoutEmployeeProfileInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1239,6 +1468,13 @@ export type UserUncheckedUpdateWithoutEmployeeProfileInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutAttendancesInput = {
@@ -1257,6 +1493,7 @@ export type UserCreateWithoutAttendancesInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1266,6 +1503,13 @@ export type UserCreateWithoutAttendancesInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutAttendancesInput = {
@@ -1285,6 +1529,7 @@ export type UserUncheckedCreateWithoutAttendancesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1294,6 +1539,13 @@ export type UserUncheckedCreateWithoutAttendancesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutAttendancesInput = {
@@ -1328,6 +1580,7 @@ export type UserUpdateWithoutAttendancesInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1337,6 +1590,13 @@ export type UserUpdateWithoutAttendancesInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAttendancesInput = {
@@ -1356,6 +1616,7 @@ export type UserUncheckedUpdateWithoutAttendancesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1365,6 +1626,13 @@ export type UserUncheckedUpdateWithoutAttendancesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutLeaveBalancesInput = {
@@ -1383,6 +1651,7 @@ export type UserCreateWithoutLeaveBalancesInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1392,6 +1661,13 @@ export type UserCreateWithoutLeaveBalancesInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutLeaveBalancesInput = {
@@ -1411,6 +1687,7 @@ export type UserUncheckedCreateWithoutLeaveBalancesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1420,6 +1697,13 @@ export type UserUncheckedCreateWithoutLeaveBalancesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutLeaveBalancesInput = {
@@ -1454,6 +1738,7 @@ export type UserUpdateWithoutLeaveBalancesInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1463,6 +1748,13 @@ export type UserUpdateWithoutLeaveBalancesInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLeaveBalancesInput = {
@@ -1482,6 +1774,7 @@ export type UserUncheckedUpdateWithoutLeaveBalancesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1491,6 +1784,13 @@ export type UserUncheckedUpdateWithoutLeaveBalancesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutRequestedLeavesInput = {
@@ -1509,6 +1809,7 @@ export type UserCreateWithoutRequestedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1518,6 +1819,13 @@ export type UserCreateWithoutRequestedLeavesInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutRequestedLeavesInput = {
@@ -1537,6 +1845,7 @@ export type UserUncheckedCreateWithoutRequestedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1546,6 +1855,13 @@ export type UserUncheckedCreateWithoutRequestedLeavesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutRequestedLeavesInput = {
@@ -1569,6 +1885,7 @@ export type UserCreateWithoutApprovedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1578,6 +1895,13 @@ export type UserCreateWithoutApprovedLeavesInput = {
   requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutApprovedLeavesInput = {
@@ -1597,6 +1921,7 @@ export type UserUncheckedCreateWithoutApprovedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1606,6 +1931,13 @@ export type UserUncheckedCreateWithoutApprovedLeavesInput = {
   requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutApprovedLeavesInput = {
@@ -1640,6 +1972,7 @@ export type UserUpdateWithoutRequestedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1649,6 +1982,13 @@ export type UserUpdateWithoutRequestedLeavesInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRequestedLeavesInput = {
@@ -1668,6 +2008,7 @@ export type UserUncheckedUpdateWithoutRequestedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1677,6 +2018,13 @@ export type UserUncheckedUpdateWithoutRequestedLeavesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutApprovedLeavesInput = {
@@ -1706,6 +2054,7 @@ export type UserUpdateWithoutApprovedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1715,6 +2064,13 @@ export type UserUpdateWithoutApprovedLeavesInput = {
   requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutApprovedLeavesInput = {
@@ -1734,6 +2090,7 @@ export type UserUncheckedUpdateWithoutApprovedLeavesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1743,6 +2100,13 @@ export type UserUncheckedUpdateWithoutApprovedLeavesInput = {
   requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutOrganizedMeetingsInput = {
@@ -1761,6 +2125,7 @@ export type UserCreateWithoutOrganizedMeetingsInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1770,6 +2135,13 @@ export type UserCreateWithoutOrganizedMeetingsInput = {
   requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutOrganizedMeetingsInput = {
@@ -1789,6 +2161,7 @@ export type UserUncheckedCreateWithoutOrganizedMeetingsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1798,6 +2171,13 @@ export type UserUncheckedCreateWithoutOrganizedMeetingsInput = {
   requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutOrganizedMeetingsInput = {
@@ -1832,6 +2212,7 @@ export type UserUpdateWithoutOrganizedMeetingsInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1841,6 +2222,13 @@ export type UserUpdateWithoutOrganizedMeetingsInput = {
   requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrganizedMeetingsInput = {
@@ -1860,6 +2248,7 @@ export type UserUncheckedUpdateWithoutOrganizedMeetingsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1869,6 +2258,13 @@ export type UserUncheckedUpdateWithoutOrganizedMeetingsInput = {
   requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutMeetingParticipantsInput = {
@@ -1887,6 +2283,7 @@ export type UserCreateWithoutMeetingParticipantsInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -1896,6 +2293,13 @@ export type UserCreateWithoutMeetingParticipantsInput = {
   requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutMeetingParticipantsInput = {
@@ -1915,6 +2319,7 @@ export type UserUncheckedCreateWithoutMeetingParticipantsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1924,6 +2329,13 @@ export type UserUncheckedCreateWithoutMeetingParticipantsInput = {
   requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutMeetingParticipantsInput = {
@@ -1958,6 +2370,7 @@ export type UserUpdateWithoutMeetingParticipantsInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -1967,6 +2380,13 @@ export type UserUpdateWithoutMeetingParticipantsInput = {
   requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMeetingParticipantsInput = {
@@ -1986,6 +2406,7 @@ export type UserUncheckedUpdateWithoutMeetingParticipantsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1995,6 +2416,13 @@ export type UserUncheckedUpdateWithoutMeetingParticipantsInput = {
   requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutCreatedProjectsInput = {
@@ -2013,6 +2441,7 @@ export type UserCreateWithoutCreatedProjectsInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
   createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
@@ -2022,6 +2451,13 @@ export type UserCreateWithoutCreatedProjectsInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutCreatedProjectsInput = {
@@ -2041,6 +2477,7 @@ export type UserUncheckedCreateWithoutCreatedProjectsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
   createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
@@ -2050,6 +2487,13 @@ export type UserUncheckedCreateWithoutCreatedProjectsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutCreatedProjectsInput = {
@@ -2084,6 +2528,7 @@ export type UserUpdateWithoutCreatedProjectsInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
   createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
@@ -2093,6 +2538,13 @@ export type UserUpdateWithoutCreatedProjectsInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
@@ -2112,6 +2564,7 @@ export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
   createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
@@ -2121,6 +2574,13 @@ export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutProjectMembersInput = {
@@ -2139,6 +2599,7 @@ export type UserCreateWithoutProjectMembersInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
@@ -2148,6 +2609,13 @@ export type UserCreateWithoutProjectMembersInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutProjectMembersInput = {
@@ -2167,6 +2635,7 @@ export type UserUncheckedCreateWithoutProjectMembersInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
@@ -2176,6 +2645,13 @@ export type UserUncheckedCreateWithoutProjectMembersInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutProjectMembersInput = {
@@ -2210,6 +2686,7 @@ export type UserUpdateWithoutProjectMembersInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
@@ -2219,6 +2696,13 @@ export type UserUpdateWithoutProjectMembersInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutProjectMembersInput = {
@@ -2238,6 +2722,7 @@ export type UserUncheckedUpdateWithoutProjectMembersInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
@@ -2247,6 +2732,13 @@ export type UserUncheckedUpdateWithoutProjectMembersInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutCreatedSprintsInput = {
@@ -2265,6 +2757,7 @@ export type UserCreateWithoutCreatedSprintsInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -2274,6 +2767,13 @@ export type UserCreateWithoutCreatedSprintsInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutCreatedSprintsInput = {
@@ -2293,6 +2793,7 @@ export type UserUncheckedCreateWithoutCreatedSprintsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -2302,6 +2803,13 @@ export type UserUncheckedCreateWithoutCreatedSprintsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutCreatedSprintsInput = {
@@ -2336,6 +2844,7 @@ export type UserUpdateWithoutCreatedSprintsInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -2345,6 +2854,13 @@ export type UserUpdateWithoutCreatedSprintsInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedSprintsInput = {
@@ -2364,6 +2880,7 @@ export type UserUncheckedUpdateWithoutCreatedSprintsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -2373,6 +2890,13 @@ export type UserUncheckedUpdateWithoutCreatedSprintsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutAssignedWorkItemsInput = {
@@ -2390,6 +2914,7 @@ export type UserCreateWithoutAssignedWorkItemsInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -2400,6 +2925,13 @@ export type UserCreateWithoutAssignedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutAssignedWorkItemsInput = {
@@ -2418,6 +2950,7 @@ export type UserUncheckedCreateWithoutAssignedWorkItemsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -2428,6 +2961,13 @@ export type UserUncheckedCreateWithoutAssignedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutAssignedWorkItemsInput = {
@@ -2450,6 +2990,7 @@ export type UserCreateWithoutReportedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -2460,6 +3001,13 @@ export type UserCreateWithoutReportedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutReportedWorkItemsInput = {
@@ -2478,6 +3026,7 @@ export type UserUncheckedCreateWithoutReportedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -2488,6 +3037,13 @@ export type UserUncheckedCreateWithoutReportedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutReportedWorkItemsInput = {
@@ -2510,6 +3066,7 @@ export type UserCreateWithoutCreatedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -2520,6 +3077,13 @@ export type UserCreateWithoutCreatedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutCreatedWorkItemsInput = {
@@ -2538,6 +3102,7 @@ export type UserUncheckedCreateWithoutCreatedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -2548,6 +3113,13 @@ export type UserUncheckedCreateWithoutCreatedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutCreatedWorkItemsInput = {
@@ -2581,6 +3153,7 @@ export type UserUpdateWithoutAssignedWorkItemsInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -2591,6 +3164,13 @@ export type UserUpdateWithoutAssignedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedWorkItemsInput = {
@@ -2609,6 +3189,7 @@ export type UserUncheckedUpdateWithoutAssignedWorkItemsInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -2619,6 +3200,13 @@ export type UserUncheckedUpdateWithoutAssignedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutReportedWorkItemsInput = {
@@ -2647,6 +3235,7 @@ export type UserUpdateWithoutReportedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -2657,6 +3246,13 @@ export type UserUpdateWithoutReportedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReportedWorkItemsInput = {
@@ -2675,6 +3271,7 @@ export type UserUncheckedUpdateWithoutReportedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -2685,6 +3282,13 @@ export type UserUncheckedUpdateWithoutReportedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUpsertWithoutCreatedWorkItemsInput = {
@@ -2713,6 +3317,7 @@ export type UserUpdateWithoutCreatedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -2723,6 +3328,13 @@ export type UserUpdateWithoutCreatedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedWorkItemsInput = {
@@ -2741,6 +3353,7 @@ export type UserUncheckedUpdateWithoutCreatedWorkItemsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -2751,6 +3364,13 @@ export type UserUncheckedUpdateWithoutCreatedWorkItemsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutAssignedWorkItemLinksInput = {
@@ -2768,6 +3388,7 @@ export type UserCreateWithoutAssignedWorkItemLinksInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -2778,6 +3399,13 @@ export type UserCreateWithoutAssignedWorkItemLinksInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutAssignedWorkItemLinksInput = {
@@ -2796,6 +3424,7 @@ export type UserUncheckedCreateWithoutAssignedWorkItemLinksInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -2806,6 +3435,13 @@ export type UserUncheckedCreateWithoutAssignedWorkItemLinksInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutAssignedWorkItemLinksInput = {
@@ -2839,6 +3475,7 @@ export type UserUpdateWithoutAssignedWorkItemLinksInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -2849,6 +3486,13 @@ export type UserUpdateWithoutAssignedWorkItemLinksInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedWorkItemLinksInput = {
@@ -2867,6 +3511,7 @@ export type UserUncheckedUpdateWithoutAssignedWorkItemLinksInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -2877,6 +3522,13 @@ export type UserUncheckedUpdateWithoutAssignedWorkItemLinksInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutWorkItemActivitiesInput = {
@@ -2895,6 +3547,7 @@ export type UserCreateWithoutWorkItemActivitiesInput = {
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
   createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
@@ -2904,6 +3557,13 @@ export type UserCreateWithoutWorkItemActivitiesInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutWorkItemActivitiesInput = {
@@ -2923,6 +3583,7 @@ export type UserUncheckedCreateWithoutWorkItemActivitiesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
   createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
@@ -2932,6 +3593,13 @@ export type UserUncheckedCreateWithoutWorkItemActivitiesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutWorkItemActivitiesInput = {
@@ -2966,6 +3634,7 @@ export type UserUpdateWithoutWorkItemActivitiesInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
   createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
@@ -2975,6 +3644,13 @@ export type UserUpdateWithoutWorkItemActivitiesInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWorkItemActivitiesInput = {
@@ -2994,6 +3670,7 @@ export type UserUncheckedUpdateWithoutWorkItemActivitiesInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
   createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
@@ -3003,6 +3680,13 @@ export type UserUncheckedUpdateWithoutWorkItemActivitiesInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -3020,6 +3704,7 @@ export type UserCreateWithoutCommentsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
   reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
@@ -3030,6 +3715,13 @@ export type UserCreateWithoutCommentsInput = {
   approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -3048,6 +3740,7 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
   reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
   createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
   createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
   projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
@@ -3058,11 +3751,94 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
   organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
   where: Prisma.UserWhereUniqueInput
   create: Prisma.XOR<Prisma.UserCreateWithoutCommentsInput, Prisma.UserUncheckedCreateWithoutCommentsInput>
+}
+
+export type UserCreateWithoutDeletedCommentsInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutDeletedCommentsInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutDeletedCommentsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutDeletedCommentsInput, Prisma.UserUncheckedCreateWithoutDeletedCommentsInput>
 }
 
 export type UserUpsertWithoutCommentsInput = {
@@ -3091,6 +3867,7 @@ export type UserUpdateWithoutCommentsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -3101,6 +3878,13 @@ export type UserUpdateWithoutCommentsInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -3119,6 +3903,7 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -3129,6 +3914,1201 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUpsertWithoutDeletedCommentsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutDeletedCommentsInput, Prisma.UserUncheckedUpdateWithoutDeletedCommentsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutDeletedCommentsInput, Prisma.UserUncheckedCreateWithoutDeletedCommentsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutDeletedCommentsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutDeletedCommentsInput, Prisma.UserUncheckedUpdateWithoutDeletedCommentsInput>
+}
+
+export type UserUpdateWithoutDeletedCommentsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutDeletedCommentsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutCreatedConversationsInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutCreatedConversationsInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutCreatedConversationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutCreatedConversationsInput, Prisma.UserUncheckedCreateWithoutCreatedConversationsInput>
+}
+
+export type UserUpsertWithoutCreatedConversationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutCreatedConversationsInput, Prisma.UserUncheckedUpdateWithoutCreatedConversationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCreatedConversationsInput, Prisma.UserUncheckedCreateWithoutCreatedConversationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutCreatedConversationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutCreatedConversationsInput, Prisma.UserUncheckedUpdateWithoutCreatedConversationsInput>
+}
+
+export type UserUpdateWithoutCreatedConversationsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutCreatedConversationsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutConversationMembershipsInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutConversationMembershipsInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutConversationMembershipsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutConversationMembershipsInput, Prisma.UserUncheckedCreateWithoutConversationMembershipsInput>
+}
+
+export type UserUpsertWithoutConversationMembershipsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutConversationMembershipsInput, Prisma.UserUncheckedUpdateWithoutConversationMembershipsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutConversationMembershipsInput, Prisma.UserUncheckedCreateWithoutConversationMembershipsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutConversationMembershipsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutConversationMembershipsInput, Prisma.UserUncheckedUpdateWithoutConversationMembershipsInput>
+}
+
+export type UserUpdateWithoutConversationMembershipsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutConversationMembershipsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutSentMessagesInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutSentMessagesInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutSentMessagesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+}
+
+export type UserUpsertWithoutSentMessagesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSentMessagesInput, Prisma.UserUncheckedUpdateWithoutSentMessagesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentMessagesInput, Prisma.UserUncheckedCreateWithoutSentMessagesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSentMessagesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSentMessagesInput, Prisma.UserUncheckedUpdateWithoutSentMessagesInput>
+}
+
+export type UserUpdateWithoutSentMessagesInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSentMessagesInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutHostedCallsInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutHostedCallsInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutHostedCallsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutHostedCallsInput, Prisma.UserUncheckedCreateWithoutHostedCallsInput>
+}
+
+export type UserUpsertWithoutHostedCallsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutHostedCallsInput, Prisma.UserUncheckedUpdateWithoutHostedCallsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutHostedCallsInput, Prisma.UserUncheckedCreateWithoutHostedCallsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutHostedCallsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutHostedCallsInput, Prisma.UserUncheckedUpdateWithoutHostedCallsInput>
+}
+
+export type UserUpdateWithoutHostedCallsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutHostedCallsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutCallParticipantsInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutCallParticipantsInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutCallParticipantsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutCallParticipantsInput, Prisma.UserUncheckedCreateWithoutCallParticipantsInput>
+}
+
+export type UserUpsertWithoutCallParticipantsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutCallParticipantsInput, Prisma.UserUncheckedUpdateWithoutCallParticipantsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCallParticipantsInput, Prisma.UserUncheckedCreateWithoutCallParticipantsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutCallParticipantsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutCallParticipantsInput, Prisma.UserUncheckedUpdateWithoutCallParticipantsInput>
+}
+
+export type UserUpdateWithoutCallParticipantsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutCallParticipantsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutNotificationsInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutNotificationsInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutNotificationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
+}
+
+export type UserUpsertWithoutNotificationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutNotificationsInput, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutNotificationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutNotificationsInput, Prisma.UserUncheckedUpdateWithoutNotificationsInput>
+}
+
+export type UserUpdateWithoutNotificationsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutNotificationsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutCreatedHolidaysInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutCreatedHolidaysInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutCreatedHolidaysInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutCreatedHolidaysInput, Prisma.UserUncheckedCreateWithoutCreatedHolidaysInput>
+}
+
+export type UserUpsertWithoutCreatedHolidaysInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutCreatedHolidaysInput, Prisma.UserUncheckedUpdateWithoutCreatedHolidaysInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCreatedHolidaysInput, Prisma.UserUncheckedCreateWithoutCreatedHolidaysInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutCreatedHolidaysInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutCreatedHolidaysInput, Prisma.UserUncheckedUpdateWithoutCreatedHolidaysInput>
+}
+
+export type UserUpdateWithoutCreatedHolidaysInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutCreatedHolidaysInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyRoleInput = {
@@ -3158,6 +5138,7 @@ export type UserUpdateWithoutRoleInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -3168,6 +5149,13 @@ export type UserUpdateWithoutRoleInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRoleInput = {
@@ -3186,6 +5174,7 @@ export type UserUncheckedUpdateWithoutRoleInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -3196,6 +5185,13 @@ export type UserUncheckedUpdateWithoutRoleInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateManyWithoutRoleInput = {
@@ -3237,6 +5233,7 @@ export type UserUpdateWithoutDesignationInput = {
   reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
@@ -3247,6 +5244,13 @@ export type UserUpdateWithoutDesignationInput = {
   approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDesignationInput = {
@@ -3265,6 +5269,7 @@ export type UserUncheckedUpdateWithoutDesignationInput = {
   reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
   createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
   workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
   createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
   projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -3275,6 +5280,13 @@ export type UserUncheckedUpdateWithoutDesignationInput = {
   approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
   organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
   meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserUncheckedUpdateManyWithoutDesignationInput = {
@@ -3300,6 +5312,7 @@ export type UserCountOutputType = {
   reportedWorkItems: number
   createdWorkItems: number
   comments: number
+  deletedComments: number
   workItemActivities: number
   createdProjects: number
   projectMembers: number
@@ -3310,6 +5323,13 @@ export type UserCountOutputType = {
   approvedLeaves: number
   organizedMeetings: number
   meetingParticipants: number
+  createdConversations: number
+  conversationMemberships: number
+  sentMessages: number
+  hostedCalls: number
+  callParticipants: number
+  notifications: number
+  createdHolidays: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3318,6 +5338,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   reportedWorkItems?: boolean | UserCountOutputTypeCountReportedWorkItemsArgs
   createdWorkItems?: boolean | UserCountOutputTypeCountCreatedWorkItemsArgs
   comments?: boolean | UserCountOutputTypeCountCommentsArgs
+  deletedComments?: boolean | UserCountOutputTypeCountDeletedCommentsArgs
   workItemActivities?: boolean | UserCountOutputTypeCountWorkItemActivitiesArgs
   createdProjects?: boolean | UserCountOutputTypeCountCreatedProjectsArgs
   projectMembers?: boolean | UserCountOutputTypeCountProjectMembersArgs
@@ -3328,6 +5349,13 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   approvedLeaves?: boolean | UserCountOutputTypeCountApprovedLeavesArgs
   organizedMeetings?: boolean | UserCountOutputTypeCountOrganizedMeetingsArgs
   meetingParticipants?: boolean | UserCountOutputTypeCountMeetingParticipantsArgs
+  createdConversations?: boolean | UserCountOutputTypeCountCreatedConversationsArgs
+  conversationMemberships?: boolean | UserCountOutputTypeCountConversationMembershipsArgs
+  sentMessages?: boolean | UserCountOutputTypeCountSentMessagesArgs
+  hostedCalls?: boolean | UserCountOutputTypeCountHostedCallsArgs
+  callParticipants?: boolean | UserCountOutputTypeCountCallParticipantsArgs
+  notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
+  createdHolidays?: boolean | UserCountOutputTypeCountCreatedHolidaysArgs
 }
 
 /**
@@ -3372,6 +5400,13 @@ export type UserCountOutputTypeCountCreatedWorkItemsArgs<ExtArgs extends runtime
  * UserCountOutputType without action
  */
 export type UserCountOutputTypeCountCommentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CommentWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountDeletedCommentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.CommentWhereInput
 }
 
@@ -3445,6 +5480,55 @@ export type UserCountOutputTypeCountMeetingParticipantsArgs<ExtArgs extends runt
   where?: Prisma.MeetingParticipantWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountCreatedConversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ConversationWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountConversationMembershipsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ConversationParticipantWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountSentMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MessageWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountHostedCallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CallSessionWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountCallParticipantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CallParticipantWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountNotificationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.NotificationWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountCreatedHolidaysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CompanyHolidayWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -3465,6 +5549,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   reportedWorkItems?: boolean | Prisma.User$reportedWorkItemsArgs<ExtArgs>
   createdWorkItems?: boolean | Prisma.User$createdWorkItemsArgs<ExtArgs>
   comments?: boolean | Prisma.User$commentsArgs<ExtArgs>
+  deletedComments?: boolean | Prisma.User$deletedCommentsArgs<ExtArgs>
   workItemActivities?: boolean | Prisma.User$workItemActivitiesArgs<ExtArgs>
   createdProjects?: boolean | Prisma.User$createdProjectsArgs<ExtArgs>
   projectMembers?: boolean | Prisma.User$projectMembersArgs<ExtArgs>
@@ -3475,6 +5560,13 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   approvedLeaves?: boolean | Prisma.User$approvedLeavesArgs<ExtArgs>
   organizedMeetings?: boolean | Prisma.User$organizedMeetingsArgs<ExtArgs>
   meetingParticipants?: boolean | Prisma.User$meetingParticipantsArgs<ExtArgs>
+  createdConversations?: boolean | Prisma.User$createdConversationsArgs<ExtArgs>
+  conversationMemberships?: boolean | Prisma.User$conversationMembershipsArgs<ExtArgs>
+  sentMessages?: boolean | Prisma.User$sentMessagesArgs<ExtArgs>
+  hostedCalls?: boolean | Prisma.User$hostedCallsArgs<ExtArgs>
+  callParticipants?: boolean | Prisma.User$callParticipantsArgs<ExtArgs>
+  notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
+  createdHolidays?: boolean | Prisma.User$createdHolidaysArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -3503,6 +5595,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   reportedWorkItems?: boolean | Prisma.User$reportedWorkItemsArgs<ExtArgs>
   createdWorkItems?: boolean | Prisma.User$createdWorkItemsArgs<ExtArgs>
   comments?: boolean | Prisma.User$commentsArgs<ExtArgs>
+  deletedComments?: boolean | Prisma.User$deletedCommentsArgs<ExtArgs>
   workItemActivities?: boolean | Prisma.User$workItemActivitiesArgs<ExtArgs>
   createdProjects?: boolean | Prisma.User$createdProjectsArgs<ExtArgs>
   projectMembers?: boolean | Prisma.User$projectMembersArgs<ExtArgs>
@@ -3513,6 +5606,13 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   approvedLeaves?: boolean | Prisma.User$approvedLeavesArgs<ExtArgs>
   organizedMeetings?: boolean | Prisma.User$organizedMeetingsArgs<ExtArgs>
   meetingParticipants?: boolean | Prisma.User$meetingParticipantsArgs<ExtArgs>
+  createdConversations?: boolean | Prisma.User$createdConversationsArgs<ExtArgs>
+  conversationMemberships?: boolean | Prisma.User$conversationMembershipsArgs<ExtArgs>
+  sentMessages?: boolean | Prisma.User$sentMessagesArgs<ExtArgs>
+  hostedCalls?: boolean | Prisma.User$hostedCallsArgs<ExtArgs>
+  callParticipants?: boolean | Prisma.User$callParticipantsArgs<ExtArgs>
+  notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
+  createdHolidays?: boolean | Prisma.User$createdHolidaysArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -3527,6 +5627,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     reportedWorkItems: Prisma.$WorkItemPayload<ExtArgs>[]
     createdWorkItems: Prisma.$WorkItemPayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
+    deletedComments: Prisma.$CommentPayload<ExtArgs>[]
     workItemActivities: Prisma.$WorkItemActivityPayload<ExtArgs>[]
     createdProjects: Prisma.$ProjectPayload<ExtArgs>[]
     projectMembers: Prisma.$ProjectMemberPayload<ExtArgs>[]
@@ -3537,6 +5638,13 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     approvedLeaves: Prisma.$LeaveRequestPayload<ExtArgs>[]
     organizedMeetings: Prisma.$MeetingPayload<ExtArgs>[]
     meetingParticipants: Prisma.$MeetingParticipantPayload<ExtArgs>[]
+    createdConversations: Prisma.$ConversationPayload<ExtArgs>[]
+    conversationMemberships: Prisma.$ConversationParticipantPayload<ExtArgs>[]
+    sentMessages: Prisma.$MessagePayload<ExtArgs>[]
+    hostedCalls: Prisma.$CallSessionPayload<ExtArgs>[]
+    callParticipants: Prisma.$CallParticipantPayload<ExtArgs>[]
+    notifications: Prisma.$NotificationPayload<ExtArgs>[]
+    createdHolidays: Prisma.$CompanyHolidayPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -3897,6 +6005,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   reportedWorkItems<T extends Prisma.User$reportedWorkItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reportedWorkItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   createdWorkItems<T extends Prisma.User$createdWorkItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdWorkItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.User$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  deletedComments<T extends Prisma.User$deletedCommentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$deletedCommentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   workItemActivities<T extends Prisma.User$workItemActivitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$workItemActivitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkItemActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   createdProjects<T extends Prisma.User$createdProjectsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdProjectsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projectMembers<T extends Prisma.User$projectMembersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$projectMembersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3907,6 +6016,13 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   approvedLeaves<T extends Prisma.User$approvedLeavesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$approvedLeavesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeaveRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   organizedMeetings<T extends Prisma.User$organizedMeetingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$organizedMeetingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MeetingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   meetingParticipants<T extends Prisma.User$meetingParticipantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$meetingParticipantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MeetingParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  createdConversations<T extends Prisma.User$createdConversationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdConversationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  conversationMemberships<T extends Prisma.User$conversationMembershipsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$conversationMembershipsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sentMessages<T extends Prisma.User$sentMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sentMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  hostedCalls<T extends Prisma.User$hostedCallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$hostedCallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CallSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  callParticipants<T extends Prisma.User$callParticipantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$callParticipantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CallParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  createdHolidays<T extends Prisma.User$createdHolidaysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdHolidaysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyHolidayPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4452,6 +6568,30 @@ export type User$commentsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 }
 
 /**
+ * User.deletedComments
+ */
+export type User$deletedCommentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Comment
+   */
+  select?: Prisma.CommentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Comment
+   */
+  omit?: Prisma.CommentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CommentInclude<ExtArgs> | null
+  where?: Prisma.CommentWhereInput
+  orderBy?: Prisma.CommentOrderByWithRelationInput | Prisma.CommentOrderByWithRelationInput[]
+  cursor?: Prisma.CommentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CommentScalarFieldEnum | Prisma.CommentScalarFieldEnum[]
+}
+
+/**
  * User.workItemActivities
  */
 export type User$workItemActivitiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4689,6 +6829,174 @@ export type User$meetingParticipantsArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.MeetingParticipantScalarFieldEnum | Prisma.MeetingParticipantScalarFieldEnum[]
+}
+
+/**
+ * User.createdConversations
+ */
+export type User$createdConversationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Conversation
+   */
+  select?: Prisma.ConversationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Conversation
+   */
+  omit?: Prisma.ConversationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ConversationInclude<ExtArgs> | null
+  where?: Prisma.ConversationWhereInput
+  orderBy?: Prisma.ConversationOrderByWithRelationInput | Prisma.ConversationOrderByWithRelationInput[]
+  cursor?: Prisma.ConversationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ConversationScalarFieldEnum | Prisma.ConversationScalarFieldEnum[]
+}
+
+/**
+ * User.conversationMemberships
+ */
+export type User$conversationMembershipsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ConversationParticipant
+   */
+  select?: Prisma.ConversationParticipantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ConversationParticipant
+   */
+  omit?: Prisma.ConversationParticipantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ConversationParticipantInclude<ExtArgs> | null
+  where?: Prisma.ConversationParticipantWhereInput
+  orderBy?: Prisma.ConversationParticipantOrderByWithRelationInput | Prisma.ConversationParticipantOrderByWithRelationInput[]
+  cursor?: Prisma.ConversationParticipantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ConversationParticipantScalarFieldEnum | Prisma.ConversationParticipantScalarFieldEnum[]
+}
+
+/**
+ * User.sentMessages
+ */
+export type User$sentMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Message
+   */
+  select?: Prisma.MessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Message
+   */
+  omit?: Prisma.MessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MessageInclude<ExtArgs> | null
+  where?: Prisma.MessageWhereInput
+  orderBy?: Prisma.MessageOrderByWithRelationInput | Prisma.MessageOrderByWithRelationInput[]
+  cursor?: Prisma.MessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MessageScalarFieldEnum | Prisma.MessageScalarFieldEnum[]
+}
+
+/**
+ * User.hostedCalls
+ */
+export type User$hostedCallsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CallSession
+   */
+  select?: Prisma.CallSessionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CallSession
+   */
+  omit?: Prisma.CallSessionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CallSessionInclude<ExtArgs> | null
+  where?: Prisma.CallSessionWhereInput
+  orderBy?: Prisma.CallSessionOrderByWithRelationInput | Prisma.CallSessionOrderByWithRelationInput[]
+  cursor?: Prisma.CallSessionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CallSessionScalarFieldEnum | Prisma.CallSessionScalarFieldEnum[]
+}
+
+/**
+ * User.callParticipants
+ */
+export type User$callParticipantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CallParticipant
+   */
+  select?: Prisma.CallParticipantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CallParticipant
+   */
+  omit?: Prisma.CallParticipantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CallParticipantInclude<ExtArgs> | null
+  where?: Prisma.CallParticipantWhereInput
+  orderBy?: Prisma.CallParticipantOrderByWithRelationInput | Prisma.CallParticipantOrderByWithRelationInput[]
+  cursor?: Prisma.CallParticipantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CallParticipantScalarFieldEnum | Prisma.CallParticipantScalarFieldEnum[]
+}
+
+/**
+ * User.notifications
+ */
+export type User$notificationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Notification
+   */
+  select?: Prisma.NotificationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Notification
+   */
+  omit?: Prisma.NotificationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.NotificationInclude<ExtArgs> | null
+  where?: Prisma.NotificationWhereInput
+  orderBy?: Prisma.NotificationOrderByWithRelationInput | Prisma.NotificationOrderByWithRelationInput[]
+  cursor?: Prisma.NotificationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.NotificationScalarFieldEnum | Prisma.NotificationScalarFieldEnum[]
+}
+
+/**
+ * User.createdHolidays
+ */
+export type User$createdHolidaysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CompanyHoliday
+   */
+  select?: Prisma.CompanyHolidaySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CompanyHoliday
+   */
+  omit?: Prisma.CompanyHolidayOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CompanyHolidayInclude<ExtArgs> | null
+  where?: Prisma.CompanyHolidayWhereInput
+  orderBy?: Prisma.CompanyHolidayOrderByWithRelationInput | Prisma.CompanyHolidayOrderByWithRelationInput[]
+  cursor?: Prisma.CompanyHolidayWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CompanyHolidayScalarFieldEnum | Prisma.CompanyHolidayScalarFieldEnum[]
 }
 
 /**

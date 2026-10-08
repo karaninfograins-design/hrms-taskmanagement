@@ -173,6 +173,13 @@ export default function LeavesPage() {
   const roleName = typeof session.user?.role === "string" ? session.user.role : (session.user?.role as any)?.name || "";
   const isSuperAdmin = roleName === "SUPER_ADMIN" || (session.user?.role as any) === 1;
 
+  const getLeaveTypeName = (leaveType: any): string => {
+    if (!leaveType) return "Leave";
+    if (typeof leaveType === "string") return leaveType;
+    if (typeof leaveType === "object" && leaveType.name) return String(leaveType.name);
+    return "Leave";
+  };
+
   return (
     <main className="app-shell">
       <Navbar user={session.user} onSignOut={handleSignOut} />
@@ -267,7 +274,7 @@ export default function LeavesPage() {
               <div key={bal.id} className="min-w-[200px] flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between shrink-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                    {bal.leaveType.name}
+                    {getLeaveTypeName(bal.leaveType)}
                   </span>
                   <span className="text-[10px] text-orange-600 font-extrabold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
                     {bal.remaining}d Left
@@ -280,7 +287,7 @@ export default function LeavesPage() {
                 <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                   <div
                     className="bg-orange-500 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (bal.remaining / bal.allocated) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (bal.remaining / (bal.allocated || 1)) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -314,59 +321,79 @@ export default function LeavesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {requests.map((req) => (
-                      <tr key={req.id} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-bold text-slate-900">
-                          {req.user?.name || "Self"}
-                        </td>
-                        <td className="py-3 px-4 text-slate-700 font-semibold">
-                          {req.leaveType.name}
-                        </td>
-                        <td className="py-3 px-4 text-slate-600 text-xs">
-                          {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 font-black text-slate-900">
-                          {req.totalDays}
-                        </td>
-                        <td className="py-3 px-4 text-slate-500 max-w-xs truncate text-xs">
-                          {req.reason}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${req.status === "APPROVED"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : req.status === "REJECTED"
-                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                  : "bg-amber-50 text-amber-700 border border-amber-200"
-                              }`}
-                          >
-                            {req.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          {req.status === "PENDING" ? (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleAction(req.id, "APPROVED")}
-                                className="px-2.5 py-1 bg-emerald-600 text-white font-extrabold text-xs rounded-lg hover:bg-emerald-700"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleAction(req.id, "REJECTED")}
-                                className="px-2.5 py-1 bg-rose-600 text-white font-extrabold text-xs rounded-lg hover:bg-rose-700"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 font-medium">
-                              {req.approvedBy ? `By ${req.approvedBy.name}` : "--"}
+                    {(() => {
+                      const roleName = typeof session?.user?.role === "string" ? session.user.role : (session?.user?.role as any)?.name || "";
+                      const userRoleId = typeof session?.user?.role === "number" ? session?.user?.role : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : 3);
+                      const isAdmin = roleName === "SUPER_ADMIN" || roleName === "ADMIN" || userRoleId === 1 || userRoleId === 2;
+
+                      const displayRequests = !isAdmin
+                        ? requests.filter((req: any) => req.user?.email === session?.user?.email || req.userId === session?.user?.id)
+                        : requests;
+
+                      if (displayRequests.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} className="py-6 text-center text-slate-400 font-medium">
+                              No leave requests found.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return displayRequests.map((req) => (
+                        <tr key={req.id} className="hover:bg-slate-50/80">
+                          <td className="py-3 px-4 font-bold text-slate-900">
+                            {req.user?.name || "Self"}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 font-semibold">
+                            {getLeaveTypeName(req.leaveType)}
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 text-xs">
+                            {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4 font-black text-slate-900">
+                            {req.totalDays}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500 max-w-xs truncate text-xs">
+                            {req.reason}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${req.status === "APPROVED"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : req.status === "REJECTED"
+                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                                }`}
+                            >
+                              {req.status}
                             </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-3 px-4">
+                            {req.status === "PENDING" && isAdmin ? (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleAction(req.id, "APPROVED")}
+                                  className="px-2.5 py-1 bg-emerald-600 text-white font-extrabold text-xs rounded-lg hover:bg-emerald-700"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleAction(req.id, "REJECTED")}
+                                  className="px-2.5 py-1 bg-rose-600 text-white font-extrabold text-xs rounded-lg hover:bg-rose-700"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 font-medium">
+                                {req.approvedBy ? `By ${req.approvedBy.name}` : req.status}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>

@@ -104,6 +104,7 @@ export type LeaveStatus = (typeof LeaveStatus)[keyof typeof LeaveStatus]
 
 export const MeetingStatus = {
   SCHEDULED: 'SCHEDULED',
+  IN_PROGRESS: 'IN_PROGRESS',
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED'
 } as const
@@ -119,3 +120,30 @@ export const ParticipantStatus = {
 } as const
 
 export type ParticipantStatus = (typeof ParticipantStatus)[keyof typeof ParticipantStatus]
+
+
+export const ConversationType = {
+  DIRECT: 'DIRECT',
+  GROUP: 'GROUP'
+} as const
+
+export type ConversationType = (typeof ConversationType)[keyof typeof ConversationType]
+
+
+export const CallType = {
+  AUDIO: 'AUDIO',
+  VIDEO: 'VIDEO'
+} as const
+
+export type CallType = (typeof CallType)[keyof typeof CallType]
+
+
+export const CallStatus = {
+  RINGING: 'RINGING',
+  ACTIVE: 'ACTIVE',
+  ENDED: 'ENDED',
+  MISSED: 'MISSED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type CallStatus = (typeof CallStatus)[keyof typeof CallStatus]

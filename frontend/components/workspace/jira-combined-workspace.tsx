@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 
 import { DashboardShell } from "@/components/workspace/management-pages";
@@ -13,6 +13,7 @@ import {
   deleteProject,
   deleteSprint,
   deleteWorkItem,
+  deleteWorkItemComment,
   getProject,
   getSprint,
   getWorkItem,
@@ -547,8 +548,28 @@ export function ProjectSprintPage({ mode }: Props) {
               </thead>
 
               <tbody>
-                {items.map((item) => (
-                  <tr key={String(item.id)}>
+                {(() => {
+                  const isEmployeeRole = session?.user?.role === "EMPLOYEE";
+                  const displayItems = isEmployeeRole
+                    ? items.filter((item: any) => {
+                        const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
+                        const isOwner = (item.createdBy?.id || item.createdById) === session?.user?.id;
+                        return isMember || isOwner;
+                      })
+                    : items;
+
+                  if (displayItems.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--muted, #64748b)" }}>
+                          {isEmployeeRole ? "You are not assigned to any projects yet." : "No projects found."}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return displayItems.map((item) => (
+                    <tr key={String(item.id)}>
                     <td>
                       <strong>
                         {String(item.key || "PRJ")}
@@ -629,7 +650,8 @@ export function ProjectSprintPage({ mode }: Props) {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ));
+              })()}
               </tbody>
             </table>
           </div>
@@ -787,7 +809,10 @@ export function ProjectDetailsPage() {
 
   const [memberIds, setMemberIds] = useState<number[]>([]);
   const [memberToAdd, setMemberToAdd] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
   const [memberMessage, setMemberMessage] = useState("");
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [tempMemberIds, setTempMemberIds] = useState<number[]>([]);
 
   /* Epic creation state */
   const [showCreateEpic, setShowCreateEpic] = useState(false);
@@ -1210,28 +1235,6 @@ export function ProjectDetailsPage() {
                 }}
               >
                 ⚡ + Create Epic
-              </button>
-              <button
-                type="button"
-                className="sprint-btn sprint-btn-success"
-                onClick={() => {
-                  setShowCreateWorkItem(!showCreateWorkItem);
-                  setShowCreateEpic(false);
-                  setShowCreateSprint(false);
-                }}
-              >
-                + Create Work Item
-              </button>
-              <button
-                type="button"
-                className="sprint-btn sprint-btn-primary"
-                onClick={() => {
-                  setShowCreateSprint(!showCreateSprint);
-                  setShowCreateEpic(false);
-                  setShowCreateWorkItem(false);
-                }}
-              >
-                + Create Sprint
               </button>
             </div>
           </div>
@@ -2096,7 +2099,7 @@ export function ProjectDetailsPage() {
                 <div className="section-heading">
                   <h2>Active & Planned Sprints</h2>
                   <button className="text-button" onClick={() => setActiveTab("sprints")}>
-                    View All Sprints →
+                    View All Sprints ({project.sprints.length}) →
                   </button>
                 </div>
                 {project.sprints.length ? (
@@ -2113,7 +2116,7 @@ export function ProjectDetailsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {project.sprints.map((sprint) => (
+                        {project.sprints.slice(0, 5).map((sprint) => (
                           <tr key={sprint.id}>
                             <td>
                               <strong
@@ -2149,6 +2152,63 @@ export function ProjectDetailsPage() {
                   </div>
                 ) : (
                   <p className="workspace-list-empty">No sprints created yet.</p>
+                )}
+              </section>
+
+              {/* Overview Epics Table (Capped at 5 rows) */}
+              <section className="project-detail-section" style={{ marginTop: "24px" }}>
+                <div className="section-heading">
+                  <h2>Project Epics</h2>
+                  <button className="text-button" onClick={() => setActiveTab("epics")}>
+                    View All Epics ({epicItems.length}) →
+                  </button>
+                </div>
+                {epicItems.length ? (
+                  <div className="workspace-list-card">
+                    <table className="workspace-table">
+                      <thead>
+                        <tr>
+                          <th>Epic Title</th>
+                          <th>Status</th>
+                          <th>Priority</th>
+                          <th>Assignee</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {epicItems.slice(0, 5).map((epic) => (
+                          <tr key={epic.id}>
+                            <td>
+                              <strong
+                                style={{ cursor: "pointer", color: "var(--orange)" }}
+                                onClick={() => router.push(`/dashboard/epics/${epic.id}`)}
+                              >
+                                [EPIC] {epic.title} ↗
+                              </strong>
+                            </td>
+                            <td>
+                              <span className="jira-status">{epic.status}</span>
+                            </td>
+                            <td>
+                              <span className="priority-pill">{epic.priority}</span>
+                            </td>
+                            <td>{epic.assignee?.name || "Unassigned"}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="sprint-btn sprint-btn-primary"
+                                onClick={() => router.push(`/dashboard/epics/${epic.id}`)}
+                              >
+                                View Epic ↗
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="workspace-list-empty">No epics created for this project yet.</p>
                 )}
               </section>
             </>
@@ -2370,7 +2430,7 @@ export function ProjectDetailsPage() {
                           <td>
                             <strong
                               style={{ cursor: "pointer", color: "var(--orange)" }}
-                              onClick={() => setSelectedSprintForView(sprint)}
+                              onClick={() => router.push(`/dashboard/sprints/${sprint.id}`)}
                             >
                               {sprint.name} ↗
                             </strong>
@@ -2401,7 +2461,7 @@ export function ProjectDetailsPage() {
                               <button
                                 type="button"
                                 className="sprint-btn"
-                                onClick={() => setSelectedSprintForView(sprint)}
+                                onClick={() => router.push(`/dashboard/sprints/${sprint.id}`)}
                               >
                                 View Sprint
                               </button>
@@ -2421,6 +2481,24 @@ export function ProjectDetailsPage() {
                                   onClick={() => handleUpdateSprintStatus(sprint.id, "COMPLETED")}
                                 >
                                   Complete Sprint
+                                </button>
+                              )}
+                              {sprint.status !== "COMPLETED" && sprint.status !== "CANCELLED" && (
+                                <button
+                                  type="button"
+                                  className="sprint-btn sprint-btn-danger"
+                                  onClick={async () => {
+                                    if (confirm(`Are you sure you want to delete sprint "${sprint.name}"?`)) {
+                                      try {
+                                        await deleteSprint(sprint.id, session.token);
+                                        await loadProject();
+                                      } catch (err) {
+                                        setSprintMessage(getErrorMessage(err, "Failed to delete sprint."));
+                                      }
+                                    }
+                                  }}
+                                >
+                                  Delete
                                 </button>
                               )}
                             </div>
@@ -2513,13 +2591,13 @@ export function ProjectDetailsPage() {
                       cursor: "pointer",
                     }}
                   >
-                    <option value="">⚡ All Types</option>
-                    <option value="STORY">📖 Story</option>
-                    <option value="TASK">☑️ Task</option>
-                    <option value="FEATURE">✨ Feature</option>
-                    <option value="BUG">🐛 Bug</option>
-                    <option value="SUBTASK">📌 Subtask</option>
-                    <option value="EPIC">🟣 Epic</option>
+                    <option value="">All Types</option>
+                    <option value="STORY">Story</option>
+                    <option value="TASK">Task</option>
+                    <option value="FEATURE">Feature</option>
+                    <option value="BUG">Bug</option>
+                    <option value="SUBTASK">Subtask</option>
+                    <option value="EPIC">Epic</option>
                   </select>
                 </div>
 
@@ -2539,12 +2617,12 @@ export function ProjectDetailsPage() {
                       cursor: "pointer",
                     }}
                   >
-                    <option value="">📊 All Statuses</option>
-                    <option value="TODO">⏳ To Do</option>
-                    <option value="IN_PROGRESS">🔄 In Progress</option>
-                    <option value="IN_REVIEW">🔍 In Review</option>
-                    <option value="DONE">✅ Done</option>
-                    <option value="BLOCKED">🚫 Blocked</option>
+                    <option value="">All Statuses</option>
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="IN_REVIEW">In Review</option>
+                    <option value="DONE">Done</option>
+                    <option value="BLOCKED">Blocked</option>
                   </select>
                 </div>
 
@@ -2724,13 +2802,23 @@ export function ProjectDetailsPage() {
                             <span className="priority-pill">{epic.priority}</span>
                           </td>
                           <td>{epic.assignee?.name || "Unassigned"}</td>
-                          <td>
+                          <td style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                             <button
                               type="button"
                               className="sprint-btn sprint-btn-primary"
                               onClick={() => router.push(`/dashboard/epics/${epic.id}`)}
                             >
                               View Epic ↗
+                            </button>
+                            <button
+                              type="button"
+                              className="sprint-btn sprint-btn-success"
+                              onClick={() => {
+                                setShowCreateSprint(true);
+                                setSprintMessage(`Creating Sprint for Epic: ${epic.title}`);
+                              }}
+                            >
+                              + Create Sprint
                             </button>
                           </td>
                         </tr>
@@ -2752,31 +2840,246 @@ export function ProjectDetailsPage() {
                 <span>{project.members.length} members assigned</span>
               </div>
 
-              <div className="team-editor">
-                <div className="team-select-wrapper">
-                  <select
-                    className="team-select"
-                    value={memberToAdd}
-                    onChange={(e) => setMemberToAdd(e.target.value)}
-                  >
-                    <option value="">Select employee to add...</option>
-                    {project.availableUsers
-                      .filter((u) => !memberIds.includes(u.id))
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.email})
-                        </option>
-                      ))}
-                  </select>
+              <div className="team-editor" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", background: "var(--card-bg, #ffffff)", padding: "16px", borderRadius: "12px", border: "1px solid var(--line, #e2e8f0)" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "var(--fg, #0f172a)" }}>Project Members</h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "var(--muted, #64748b)" }}>
+                    Manage assignees and team access for this project ({memberIds.length} members selected)
+                  </p>
                 </div>
-                <button type="button" className="team-btn-add" onClick={addMember} disabled={!memberToAdd}>
-                  + Add Member
-                </button>
-                <button type="button" className="team-btn-save" onClick={saveMembers}>
-                  Save Team
-                </button>
-                {memberMessage && <p className="team-success-badge">✓ {memberMessage}</p>}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {memberMessage && <span style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: 700 }}>✓ {memberMessage}</span>}
+                  <button
+                    type="button"
+                    className="sprint-btn sprint-btn-success"
+                    style={{ padding: "8px 16px", borderRadius: "8px", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    onClick={() => {
+                      setTempMemberIds(memberIds);
+                      setMemberSearch("");
+                      setShowMemberModal(true);
+                    }}
+                  >
+                    <span>+</span> Add Team Members
+                  </button>
+                </div>
               </div>
+
+              {/* Add Team Members Modal Dialog */}
+              {showMemberModal && (
+                <div
+                  className="jira-modal-backdrop"
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(15, 23, 42, 0.6)",
+                    backdropFilter: "blur(4px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                    padding: "16px",
+                  }}
+                  onClick={() => setShowMemberModal(false)}
+                >
+                  <div
+                    style={{
+                      maxWidth: "480px",
+                      width: "100%",
+                      backgroundColor: "#ffffff",
+                      borderRadius: "16px",
+                      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                      overflow: "hidden",
+                      border: "1px solid #cbd5e1",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Modal Header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                      <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                        👥 Add Team Members
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowMemberModal(false)}
+                        style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", color: "#64748b", padding: "2px 6px" }}
+                        title="Close"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Modal Content */}
+                    <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {/* Search Bar */}
+                      <input
+                        type="text"
+                        placeholder="🔍 Search employee..."
+                        value={memberSearch}
+                        onChange={(e) => setMemberSearch(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "10px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "0.85rem",
+                          outline: "none",
+                          color: "#0f172a",
+                        }}
+                      />
+
+                      {(() => {
+                        const filteredUsers = project.availableUsers.filter((u) => {
+                          if (!memberSearch.trim()) return true;
+                          const q = memberSearch.toLowerCase();
+                          return u.name.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+                        });
+                        const allSelected = filteredUsers.length > 0 && filteredUsers.every((u) => tempMemberIds.includes(u.id));
+
+                        return (
+                          <>
+                            {/* Select All Checkbox */}
+                            <label style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", background: "#f1f5f9", borderRadius: "10px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 700, color: "#334155" }}>
+                              <input
+                                type="checkbox"
+                                checked={allSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    const newIds = Array.from(new Set([...tempMemberIds, ...filteredUsers.map((u) => u.id)]));
+                                    setTempMemberIds(newIds);
+                                  } else {
+                                    const filteredUserIds = new Set(filteredUsers.map((u) => u.id));
+                                    setTempMemberIds(tempMemberIds.filter((id) => !filteredUserIds.has(id)));
+                                  }
+                                }}
+                                style={{ width: "16px", height: "16px", accentColor: "#f97316", cursor: "pointer" }}
+                              />
+                              <span>Select all ({filteredUsers.length} employees)</span>
+                            </label>
+
+                            {/* Employee List */}
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "6px",
+                                maxHeight: "240px",
+                                overflowY: "auto",
+                                paddingRight: "4px",
+                              }}
+                            >
+                              {filteredUsers.length ? (
+                                filteredUsers.map((u) => {
+                                  const isChecked = tempMemberIds.includes(u.id);
+                                  const assignedMember = project.members.find((m) => m.user.id === u.id);
+                                  const designationName = assignedMember?.user.designation?.name || "Employee";
+
+                                  return (
+                                    <label
+                                      key={u.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: "10px",
+                                        padding: "8px 12px",
+                                        borderRadius: "10px",
+                                        border: isChecked ? "1px solid #f97316" : "1px solid #e2e8f0",
+                                        backgroundColor: isChecked ? "#fff7ed" : "#ffffff",
+                                        cursor: "pointer",
+                                        transition: "all 0.15s ease",
+                                      }}
+                                    >
+                                      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setTempMemberIds([...tempMemberIds, u.id]);
+                                            } else {
+                                              setTempMemberIds(tempMemberIds.filter((id) => id !== u.id));
+                                            }
+                                          }}
+                                          style={{ width: "16px", height: "16px", accentColor: "#f97316", cursor: "pointer" }}
+                                        />
+                                        <span style={{ fontSize: "1rem" }}>👤</span>
+                                        <span style={{ fontSize: "0.85rem", fontWeight: isChecked ? 700 : 500, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                          {u.name}
+                                        </span>
+                                      </div>
+                                      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: "12px", whiteSpace: "nowrap" }}>
+                                        {designationName}
+                                      </span>
+                                    </label>
+                                  );
+                                })
+                              ) : (
+                                <p style={{ textAlign: "center", color: "#64748b", fontSize: "0.85rem", padding: "16px" }}>No matching employees found.</p>
+                              )}
+                            </div>
+
+                            {/* Members selected counter */}
+                            <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#f97316", paddingTop: "2px" }}>
+                              {tempMemberIds.length} members selected
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "14px 20px", borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowMemberModal(false)}
+                        style={{
+                          padding: "8px 16px",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                          background: "#ffffff",
+                          color: "#334155",
+                          fontWeight: 600,
+                          fontSize: "0.82rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setMemberIds(tempMemberIds);
+                          setShowMemberModal(false);
+                          if (session?.token && project) {
+                            try {
+                              await updateProjectMembers(project.id, tempMemberIds, session.token);
+                              setMemberMessage("Team updated successfully!");
+                              setTimeout(() => setMemberMessage(""), 4000);
+                            } catch (err) {
+                              console.error("Failed to update members:", err);
+                            }
+                          }
+                        }}
+                        style={{
+                          padding: "8px 18px",
+                          borderRadius: "8px",
+                          border: "none",
+                          background: "linear-gradient(to right, #f97316, #f59e0b)",
+                          color: "#ffffff",
+                          fontWeight: 700,
+                          fontSize: "0.82rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Add {tempMemberIds.length} Members
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="workspace-list-card" style={{ marginTop: "16px" }}>
                 <table className="workspace-table">
@@ -2928,6 +3231,7 @@ export function SprintDetailsPage() {
   const params = useParams<{ id: string }>();
 
   const { session, isLoading } = useAuth();
+  const commentSectionRef = useRef<HTMLDivElement>(null);
 
   const [sprint, setSprint] =
     useState<SprintDetails | null>(null);
@@ -2941,6 +3245,7 @@ export function SprintDetailsPage() {
     useState<number | null>(null);
 
   const [comment, setComment] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const [workItemForm, setWorkItemForm] =
     useState({
@@ -2949,8 +3254,19 @@ export function SprintDetailsPage() {
       description: "",
       priority: "MEDIUM",
       assigneeId: "",
+      assigneeIds: [] as number[],
       parentId: "",
+      storyPoints: "",
+      startDate: "",
+      dueDate: "",
     });
+
+  const handleOpenComments = (itemId: number) => {
+    setSelectedWorkItemId(itemId);
+    setTimeout(() => {
+      commentSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
 
   useEffect(() => {
     if (!isLoading && !session) {
@@ -2977,6 +3293,17 @@ export function SprintDetailsPage() {
       await refresh();
     } catch (err) {
       setError(getErrorMessage(err, "Failed to update sprint status."));
+    }
+  }
+
+  async function handleDeleteSprint() {
+    if (!session?.token || !sprint) return;
+    if (!confirm(`Are you sure you want to delete sprint "${sprint.name}"?`)) return;
+    try {
+      await deleteSprint(sprint.id, session.token);
+      router.push(`/dashboard/projects/${sprint.project.id}`);
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to delete sprint."));
     }
   }
 
@@ -3026,32 +3353,16 @@ export function SprintDetailsPage() {
         {
           projectId: sprint.project.id,
           sprintId: sprint.id,
-
-          type:
-            workItemForm.type as WorkItemInput["type"],
-
-          title:
-            workItemForm.title.trim(),
-
-          description:
-            workItemForm.description,
-
-          priority:
-            workItemForm.priority as WorkItemInput["priority"],
-
-          assigneeId:
-            workItemForm.assigneeId
-              ? Number(
-                workItemForm.assigneeId,
-              )
-              : null,
-
-          parentId:
-            workItemForm.parentId
-              ? Number(
-                workItemForm.parentId,
-              )
-              : null,
+          type: workItemForm.type as WorkItemInput["type"],
+          title: workItemForm.title.trim(),
+          description: workItemForm.description,
+          priority: workItemForm.priority as WorkItemInput["priority"],
+          assigneeId: workItemForm.assigneeIds[0] || (workItemForm.assigneeId ? Number(workItemForm.assigneeId) : null),
+          assigneeIds: workItemForm.assigneeIds,
+          parentId: workItemForm.parentId ? Number(workItemForm.parentId) : null,
+          storyPoints: workItemForm.storyPoints || null,
+          startDate: workItemForm.startDate || null,
+          dueDate: workItemForm.dueDate || null,
         },
         session.token,
       );
@@ -3062,7 +3373,11 @@ export function SprintDetailsPage() {
         description: "",
         priority: "MEDIUM",
         assigneeId: "",
+        assigneeIds: [],
         parentId: "",
+        storyPoints: "",
+        startDate: "",
+        dueDate: "",
       });
 
       setShowCreate(false);
@@ -3143,6 +3458,7 @@ export function SprintDetailsPage() {
     }
 
     try {
+      setIsSubmittingComment(true);
       await addWorkItemComment(
         selectedWorkItemId,
         comment.trim(),
@@ -3150,7 +3466,6 @@ export function SprintDetailsPage() {
       );
 
       setComment("");
-
       await refresh();
     } catch (error) {
       console.error(
@@ -3164,6 +3479,21 @@ export function SprintDetailsPage() {
           "Unable to add comment.",
         ),
       );
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  }
+
+  async function handleDeleteComment(commentId: number) {
+    if (!session?.token) return;
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+
+    try {
+      await deleteWorkItemComment(commentId, session.token);
+      await refresh();
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      setError(getErrorMessage(error, "Unable to delete comment."));
     }
   }
 
@@ -3181,7 +3511,7 @@ export function SprintDetailsPage() {
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs shadow-xs transition-all cursor-pointer"
             onClick={() => router.push(`/dashboard/projects/${sprint.project.id}`)}
           >
-            ← Back to Project Workspace ({sprint.project.name})
+            ← Back ({sprint.project.name})
           </button>
         )}
         <button
@@ -3254,17 +3584,6 @@ export function SprintDetailsPage() {
           </div>
 
           <div className="workspace-submenu">
-            {/* <button
-              className="primary-button"
-              onClick={() =>
-                setShowCreate(!showCreate)
-              }
-            >
-              {showCreate
-                ? "Close form"
-                : "Create work item"}
-            </button> */}
-
             {sprint.status === "PLANNED" && (
               <button
                 className="sprint-btn sprint-btn-primary"
@@ -3280,6 +3599,22 @@ export function SprintDetailsPage() {
                 onClick={() => handleSprintStatusUpdate("COMPLETED")}
               >
                 ✓ Complete Sprint
+              </button>
+            )}
+
+            <button
+              className="sprint-btn sprint-btn-success"
+              onClick={() => setShowCreate(!showCreate)}
+            >
+              + Add Work Item
+            </button>
+
+            {sprint.status !== "COMPLETED" && sprint.status !== "CANCELLED" && (
+              <button
+                className="sprint-btn sprint-btn-danger"
+                onClick={handleDeleteSprint}
+              >
+                🗑️ Delete Sprint
               </button>
             )}
 
@@ -3371,160 +3706,127 @@ export function SprintDetailsPage() {
             );
           })()}
 
-          {/* Create Work Item */}
+          {/* Enhanced Create Work Item Form Sync */}
           {showCreate && (
             <form
-              className="jira-create-form work-item-form"
+              className="enhanced-sprint-form"
               onSubmit={createItem}
+              style={{ borderLeft: "4px solid #10b981", marginBottom: "24px" }}
             >
-              <select
-                value={workItemForm.type}
-                onChange={(event) =>
-                  setWorkItemForm({
-                    ...workItemForm,
-                    type:
-                      event.target.value,
-                  })
-                }
-              >
-                <option value="EPIC">
-                  EPIC
-                </option>
-
-                <option value="STORY">
-                  STORY
-                </option>
-
-                <option value="TASK">
-                  TASK
-                </option>
-
-                <option value="FEATURE">
-                  FEATURE
-                </option>
-
-                <option value="BUG">
-                  BUG
-                </option>
-
-                <option value="SUBTASK">
-                  SUBTASK
-                </option>
-              </select>
-
-              <input
-                placeholder="Title"
-                value={workItemForm.title}
-                onChange={(event) =>
-                  setWorkItemForm({
-                    ...workItemForm,
-                    title:
-                      event.target.value,
-                  })
-                }
-                required
+              <h3 style={{ gridColumn: "1 / -1", margin: "0 0 8px", fontSize: "1.1rem", color: "#059669" }}>
+                ✨ Create Work Item in {sprint.name}
+              </h3>
+              <label>
+                Issue Type
+                <select
+                  value={workItemForm.type}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, type: e.target.value })}
+                >
+                  <option value="STORY">Story</option>
+                  <option value="TASK">Task</option>
+                  <option value="FEATURE">Feature</option>
+                  <option value="BUG">Bug</option>
+                  <option value="SUBTASK">Sub-task</option>
+                  <option value="EPIC">Epic</option>
+                </select>
+              </label>
+              <label style={{ gridColumn: "span 2" }}>
+                Title *
+                <input
+                  type="text"
+                  placeholder="Short summary of work item..."
+                  value={workItemForm.title}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, title: e.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                Priority
+                <select
+                  value={workItemForm.priority}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, priority: e.target.value })}
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="CRITICAL">Critical</option>
+                </select>
+              </label>
+              <MultiAssigneeSelector
+                members={sprint.members}
+                selectedIds={workItemForm.assigneeIds}
+                onChange={(ids) => setWorkItemForm({ ...workItemForm, assigneeIds: ids, assigneeId: ids[0] ? String(ids[0]) : "" })}
+                label="Assignees (Multiple Select)"
               />
-
-              <select
-                value={workItemForm.priority}
-                onChange={(event) =>
-                  setWorkItemForm({
-                    ...workItemForm,
-                    priority:
-                      event.target.value,
-                  })
-                }
-              >
-                <option value="LOW">
-                  LOW
-                </option>
-
-                <option value="MEDIUM">
-                  MEDIUM
-                </option>
-
-                <option value="HIGH">
-                  HIGH
-                </option>
-
-                <option value="CRITICAL">
-                  CRITICAL
-                </option>
-              </select>
-
-              <select
-                value={workItemForm.assigneeId}
-                onChange={(event) =>
-                  setWorkItemForm({
-                    ...workItemForm,
-                    assigneeId:
-                      event.target.value,
-                  })
-                }
-              >
-                <option value="">
-                  Unassigned
-                </option>
-
-                {sprint.members.map(
-                  (member) => (
-                    <option
-                      key={member.id}
-                      value={member.id}
-                    >
-                      {member.name}
-                    </option>
-                  ),
-                )}
-              </select>
-
-              <select
-                value={workItemForm.parentId}
-                onChange={(event) =>
-                  setWorkItemForm({
-                    ...workItemForm,
-                    parentId:
-                      event.target.value,
-                  })
-                }
-              >
-                <option value="">
-                  No parent
-                </option>
-
-                {sprint.workItems
-                  .filter(
-                    (item) =>
-                      item.type !==
-                      "SUBTASK",
-                  )
-                  .map((item) => (
-                    <option
-                      key={item.id}
-                      value={item.id}
-                    >
-                      {item.title}
-                    </option>
-                  ))}
-              </select>
-
-              <textarea
-                placeholder="Description"
-                value={
-                  workItemForm.description
-                }
-                onChange={(event) =>
-                  setWorkItemForm({
-                    ...workItemForm,
-                    description:
-                      event.target.value,
-                  })
-                }
-              />
-
-              <button className="primary-button">
-                Create
-              </button>
+              <label style={{ border: workItemForm.type === "SUBTASK" && !workItemForm.parentId ? "2px solid #ef4444" : "1px solid var(--line)", padding: "4px", borderRadius: "8px" }}>
+                Parent Work Item {workItemForm.type === "SUBTASK" ? "* (Required for Sub-task)" : "(Optional)"}
+                <select
+                  value={workItemForm.parentId}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, parentId: e.target.value })}
+                  required={workItemForm.type === "SUBTASK"}
+                >
+                  <option value="">{workItemForm.type === "SUBTASK" ? "-- Select Parent Item --" : "None (Top Level)"}</option>
+                  {sprint.workItems
+                    .filter((item) => item.type !== "SUBTASK")
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        [{item.type}] {item.title}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label>
+                Effort / Story Points
+                <select
+                  value={workItemForm.storyPoints}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, storyPoints: e.target.value })}
+                >
+                  <option value="">None / Unestimated</option>
+                  <option value="4-5 hrs">4-5 hrs</option>
+                  <option value="8-10 hrs">8-10 hrs</option>
+                  <option value="12-15 hrs">12-15 hrs</option>
+                  <option value="20-25 hrs">20-25 hrs</option>
+                  <option value="32-40 hrs">32-40 hrs</option>
+                  <option value="52-65 hrs">52-65 hrs</option>
+                </select>
+              </label>
+              <label>
+                Start Date (Optional)
+                <input
+                  type="date"
+                  value={workItemForm.startDate}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, startDate: e.target.value })}
+                />
+              </label>
+              <label>
+                Due Date (Optional)
+                <input
+                  type="date"
+                  value={workItemForm.dueDate}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, dueDate: e.target.value })}
+                />
+              </label>
+              <label style={{ gridColumn: "1 / -1" }}>
+                Description
+                <textarea
+                  placeholder="Detailed description of work item..."
+                  value={workItemForm.description}
+                  onChange={(e) => setWorkItemForm({ ...workItemForm, description: e.target.value })}
+                />
+              </label>
+              <div className="enhanced-sprint-form-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  style={{ width: "auto", margin: 0 }}
+                  onClick={() => setShowCreate(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="sprint-btn sprint-btn-success">
+                  Create Work Item
+                </button>
+              </div>
             </form>
           )}
 
@@ -3552,22 +3854,17 @@ export function SprintDetailsPage() {
                         <th>Reporter</th>
                         <th>Subtasks</th>
                         <th>Comments</th>
-                        <th />
                       </tr>
                     </thead>
 
                     <tbody>
                       {sprint.workItems.map(
                         (item) => (
-                          <tr key={item.id}>
+                          <tr key={item.id} style={{ backgroundColor: selectedWorkItemId === item.id ? "#fff7ed" : "transparent" }}>
                             <td>
                               <button
                                 className="table-link"
-                                onClick={() =>
-                                  setSelectedWorkItemId(
-                                    item.id,
-                                  )
-                                }
+                                onClick={() => handleOpenComments(item.id)}
                               >
                                 <strong>
                                   {item.title}
@@ -3618,10 +3915,6 @@ export function SprintDetailsPage() {
                                 <option value="IN_REVIEW">
                                   IN_REVIEW
                                 </option>
-
-                                {/* <option value="REVIEW">
-                                  REVIEW
-                                </option> */}
 
                                 <option value="DONE">
                                   DONE
@@ -3701,22 +3994,27 @@ export function SprintDetailsPage() {
                             </td>
 
                             <td>
-                              {
-                                item._count
-                                  .comments
-                              }
-                            </td>
-
-                            <td>
                               <button
-                                className="text-button"
-                                onClick={() =>
-                                  setSelectedWorkItemId(
-                                    item.id,
-                                  )
-                                }
+                                type="button"
+                                className="sprint-btn sprint-btn-secondary"
+                                style={{
+                                  fontSize: "0.78rem",
+                                  padding: "4px 10px",
+                                  borderRadius: "6px",
+                                  border: "1px solid var(--line, #cbd5e1)",
+                                  backgroundColor: selectedWorkItemId === item.id ? "#ea580c" : "var(--bg, #f8fafc)",
+                                  color: selectedWorkItemId === item.id ? "#ffffff" : "inherit",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "5px",
+                                  transition: "all 0.2s ease"
+                                }}
+                                onClick={() => handleOpenComments(item.id)}
+                                title="Click to open comments"
                               >
-                                Comments
+                                {item._count.comments} {item._count.comments === 1 ? "Comment" : "Comments"}
                               </button>
                             </td>
                           </tr>
@@ -3734,34 +4032,45 @@ export function SprintDetailsPage() {
             )}
           </section>
 
-          {/* Work Item Focus / Comments */}
+          {/* Work Item Focus / Comments Panel */}
           {selectedWorkItemId &&
             selectedItem && (
-              <section className="work-item-focus">
-                <div className="section-heading">
+              <section
+                ref={commentSectionRef}
+                className="work-item-focus"
+                style={{
+                  scrollMarginTop: "90px",
+                  border: "2px solid var(--orange, #f97316)",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 12px rgba(249, 115, 22, 0.12)",
+                  marginTop: "24px"
+                }}
+              >
+                <div className="section-heading" style={{ borderBottom: "1px solid var(--line, #e2e8f0)", paddingBottom: "12px" }}>
                   <div>
-                    <p className="eyebrow">
-                      WORK ITEM
-                    </p>
-
-                    <h2>
+                    <span className="type-badge type-badge-story" style={{ marginBottom: "6px", display: "inline-block" }}>
+                      {selectedItem.type} #{selectedItem.id}
+                    </span>
+                    <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }}>
                       {selectedItem.title}
                     </h2>
                   </div>
 
                   <button
-                    className="text-button"
+                    type="button"
+                    className="secondary-button"
+                    style={{ padding: "4px 12px", fontSize: "0.8rem" }}
                     onClick={() =>
                       setSelectedWorkItemId(
                         null,
                       )
                     }
                   >
-                    Close
+                    Close ✕
                   </button>
                 </div>
 
-                <div className="work-item-focus-meta">
+                <div className="work-item-focus-meta" style={{ padding: "12px 0", borderBottom: "1px solid var(--line, #e2e8f0)", marginBottom: "16px" }}>
                   <span>
                     <strong>Type</strong>
                     {selectedItem.type}
@@ -3783,36 +4092,124 @@ export function SprintDetailsPage() {
                         .children
                     }
                   </span>
+
+                  <span>
+                    <strong>Total Comments</strong>
+                    {
+                      selectedItem.comments?.length || 0
+                    }
+                  </span>
                 </div>
 
                 <div className="comment-panel">
-                  <div className="section-heading">
-                    <h2>Comments</h2>
+                  <div className="section-heading" style={{ marginBottom: "16px" }}>
+                    <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                      Activity & Comments ({selectedItem.comments?.length || 0})
+                    </h3>
                   </div>
 
-                  <div className="comment-list">
+                  <div className="comment-list" style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
                     {selectedItem.comments
                       ?.length ? (
                       selectedItem.comments.map(
-                        (item) => (
-                          <p key={item.id}>
-                            <strong>
-                              {item.user.name}
-                            </strong>
+                        (item) => item.deletedAt ? (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: "flex",
+                              gap: "10px",
+                              alignItems: "center",
+                              padding: "10px 14px",
+                              borderRadius: "10px",
+                              backgroundColor: "#fef2f2",
+                              border: "1px dashed #fca5a5",
+                              color: "#991b1b",
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            <span style={{ fontSize: "1rem" }}>🚫</span>
+                            <div>
+                              <strong>Comment deleted</strong> by{" "}
+                              <span style={{ fontWeight: 700, textDecoration: "underline" }}>
+                                {item.deletedBy?.name || "User"}
+                              </span>{" "}
+                              on {new Date(item.deletedAt).toLocaleString()}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: "flex",
+                              gap: "12px",
+                              alignItems: "flex-start",
+                              padding: "12px 14px",
+                              borderRadius: "10px",
+                              backgroundColor: "var(--bg, #f8fafc)",
+                              border: "1px solid var(--line, #e2e8f0)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "34px",
+                                height: "34px",
+                                borderRadius: "50%",
+                                backgroundColor: "var(--orange, #f97316)",
+                                color: "#ffffff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: 700,
+                                fontSize: "0.85rem",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {item.user?.name ? item.user.name.slice(0, 2).toUpperCase() : "U"}
+                            </div>
 
-                            <span>
-                              {new Date(
-                                item.createdAt,
-                              ).toLocaleString()}
-                            </span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <strong style={{ fontSize: "0.88rem", color: "inherit" }}>
+                                    {item.user?.name || "Anonymous User"}
+                                  </strong>
+                                  <span style={{ fontSize: "0.75rem", color: "var(--muted, #64748b)" }}>
+                                    {new Date(item.createdAt).toLocaleString()}
+                                  </span>
+                                </div>
 
-                            {item.content}
-                          </p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComment(item.id)}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#ef4444",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                  }}
+                                  title="Delete comment"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+
+                              <p style={{ margin: 0, fontSize: "0.88rem", lineHeight: 1.45, color: "inherit", whiteSpace: "pre-wrap" }}>
+                                {item.content}
+                              </p>
+                            </div>
+                          </div>
                         ),
                       )
                     ) : (
-                      <p className="workspace-list-empty">
-                        No comments yet.
+                      <p className="workspace-list-empty" style={{ padding: "20px 0", textAlign: "center" }}>
+                        No comments yet. Be the first to share an update!
                       </p>
                     )}
                   </div>
@@ -3820,6 +4217,15 @@ export function SprintDetailsPage() {
                   <form
                     className="comment-form"
                     onSubmit={submitComment}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      background: "#ffffff",
+                      padding: "14px",
+                      borderRadius: "10px",
+                      border: "1px solid var(--line, #cbd5e1)",
+                    }}
                   >
                     <textarea
                       value={comment}
@@ -3828,13 +4234,36 @@ export function SprintDetailsPage() {
                           event.target.value,
                         )
                       }
-                      placeholder="Add a comment"
+                      placeholder="Write a comment or status update..."
                       required
+                      rows={3}
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--line, #cbd5e1)",
+                        fontSize: "0.88rem",
+                        resize: "vertical",
+                        outline: "none",
+                      }}
                     />
 
-                    <button className="primary-button">
-                      Comment
-                    </button>
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingComment || !comment.trim()}
+                        className="sprint-btn sprint-btn-primary"
+                        style={{
+                          padding: "8px 18px",
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          cursor: isSubmittingComment ? "not-allowed" : "pointer",
+                          opacity: isSubmittingComment || !comment.trim() ? 0.6 : 1,
+                        }}
+                      >
+                        {isSubmittingComment ? "Posting..." : "Post Comment"}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </section>
@@ -4277,15 +4706,6 @@ export function JiraProjectWorkspace() {
             searchQuery.toLowerCase(),
           );
 
-      /*
-       * The original Jira workspace had a project
-       * selector but did not have projectId on
-       * work items. Therefore "ALL" is the only
-       * reliable filter for this local backlog.
-       *
-       * Once backend work-item projectId is exposed,
-       * this condition can be extended safely.
-       */
       const matchesProject =
         selectedProjectId === "ALL";
 
@@ -5658,30 +6078,6 @@ export function EpicDetailsPage() {
                           >
                             👁️ View
                           </button>
-                          {item.type !== "SUBTASK" && (
-                            <button
-                              type="button"
-                              className="sprint-btn sprint-btn-secondary"
-                              style={{ fontSize: "0.76rem", padding: "4px 8px" }}
-                              onClick={() => {
-                                setChildForm({
-                                  type: "SUBTASK",
-                                  title: "",
-                                  description: "",
-                                  priority: "MEDIUM",
-                                  assigneeId: item.assignee ? String(item.assignee.id) : "",
-                                  sprintId: item.sprint ? String(item.sprint.id) : "",
-                                  storyPoints: "",
-                                  startDate: "",
-                                  dueDate: "",
-                                  parentId: String(item.id),
-                                });
-                                setShowCreateChild(true);
-                              }}
-                            >
-                              + Subtask
-                            </button>
-                          )}
                           <button
                             type="button"
                             className="sprint-btn"

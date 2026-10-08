@@ -4,7 +4,8 @@ import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secretsecretsecretsecretsecretsecretsecretsecret";
+const LIVEKIT_API_SECRET =
+  process.env.LIVEKIT_API_SECRET || "secretsecretsecretsecretsecretsecretsecretsecret";
 
 export const getMeetings = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -14,7 +15,7 @@ export const getMeetings = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const { userId } = verifyToken(token);
+    verifyToken(token);
     const { projectId, status } = req.query;
 
     const where: Record<string, unknown> = {};
@@ -26,8 +27,6 @@ export const getMeetings = async (req: Request, res: Response): Promise<void> =>
     if (status && status !== "ALL") {
       where.status = String(status);
     }
-
-    // All scheduled/active meetings are visible to all users and admins
 
     const meetings = await prisma.meeting.findMany({
       where,
@@ -59,7 +58,17 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
     }
 
     const { userId } = verifyToken(token);
-    const { title, description, startTime, endTime, projectId, participantIds = [] } = req.body;
+    const {
+      title,
+      description,
+      agenda,
+      startTime,
+      endTime,
+      timezone = "UTC",
+      notes,
+      projectId,
+      participantIds = [],
+    } = req.body;
 
     if (!title || !startTime || !endTime) {
       res.status(400).json({ message: "Title, start time, and end time are required" });
@@ -72,11 +81,14 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
       data: {
         title: title.trim(),
         description: description ? description.trim() : null,
+        agenda: agenda ? agenda.trim() : null,
         roomName,
         organizerId: userId,
         projectId: projectId ? Number(projectId) : null,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
+        timezone: timezone ? timezone.trim() : "UTC",
+        notes: notes ? notes.trim() : null,
         locationOrLink: `ws://localhost:7880`,
         status: "SCHEDULED",
         members: {
@@ -101,6 +113,113 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
   } catch (error) {
     console.error("Create meeting error:", error);
     res.status(500).json({ message: "Failed to schedule meeting" });
+  }
+};
+
+export const updateMeeting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const meetingId = Number(req.params.id);
+
+    const existing = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: "Meeting not found" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+
+    const roleName = user?.role?.name || "";
+    const isAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN";
+
+    if (existing.organizerId !== userId && !isAdmin) {
+      res.status(403).json({ message: "Only the organizer or admin can edit this meeting" });
+      return;
+    }
+
+    const { title, description, agenda, startTime, endTime, timezone, notes, status } = req.body;
+
+    const updated = await prisma.meeting.update({
+      where: { id: meetingId },
+      data: {
+        ...(title && { title: title.trim() }),
+        ...(description !== undefined && { description: description ? description.trim() : null }),
+        ...(agenda !== undefined && { agenda: agenda ? agenda.trim() : null }),
+        ...(startTime && { startTime: new Date(startTime) }),
+        ...(endTime && { endTime: new Date(endTime) }),
+        ...(timezone && { timezone: timezone.trim() }),
+        ...(notes !== undefined && { notes: notes ? notes.trim() : null }),
+        ...(status && { status }),
+      },
+      include: {
+        organizer: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
+        members: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+      },
+    });
+
+    res.json({ message: "Meeting updated successfully", meeting: updated });
+  } catch (error) {
+    console.error("Update meeting error:", error);
+    res.status(500).json({ message: "Failed to update meeting" });
+  }
+};
+
+export const deleteMeeting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const meetingId = Number(req.params.id);
+
+    const existing = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: "Meeting not found" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+
+    const roleName = user?.role?.name || "";
+    const isAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN";
+
+    if (existing.organizerId !== userId && !isAdmin) {
+      res.status(403).json({ message: "Only organizer or admin can delete this meeting" });
+      return;
+    }
+
+    await prisma.meeting.delete({
+      where: { id: meetingId },
+    });
+
+    res.json({ message: "Meeting deleted successfully" });
+  } catch (error) {
+    console.error("Delete meeting error:", error);
+    res.status(500).json({ message: "Failed to delete meeting" });
   }
 };
 
@@ -133,7 +252,6 @@ export const getLiveKitToken = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Generate LiveKit compatible JWT token
     const now = Math.floor(Date.now() / 1000);
     const livekitJwtPayload = {
       iss: LIVEKIT_API_KEY,

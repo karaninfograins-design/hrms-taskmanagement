@@ -1,5 +1,6 @@
-import { JiraCombinedWorkspace as JiraProjectWorkspace } from "@/components/workspace/jira-combined-workspace";
+import { redirect } from "next/navigation";
 
 export default function BacklogPage() {
-  return <JiraProjectWorkspace />;
+  redirect("/dashboard/projects");
 }
+

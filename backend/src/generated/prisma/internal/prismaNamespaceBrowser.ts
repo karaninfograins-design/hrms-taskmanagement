@@ -71,7 +71,14 @@ export const ModelName = {
   WorkItem: 'WorkItem',
   WorkItemAssignee: 'WorkItemAssignee',
   WorkItemActivity: 'WorkItemActivity',
-  Comment: 'Comment'
+  Comment: 'Comment',
+  Conversation: 'Conversation',
+  ConversationParticipant: 'ConversationParticipant',
+  Message: 'Message',
+  CallSession: 'CallSession',
+  CallParticipant: 'CallParticipant',
+  Notification: 'Notification',
+  CompanyHoliday: 'CompanyHoliday'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -249,12 +256,15 @@ export const MeetingScalarFieldEnum = {
   id: 'id',
   title: 'title',
   description: 'description',
+  agenda: 'agenda',
   roomName: 'roomName',
   organizerId: 'organizerId',
   projectId: 'projectId',
   startTime: 'startTime',
   endTime: 'endTime',
+  timezone: 'timezone',
   locationOrLink: 'locationOrLink',
+  notes: 'notes',
   status: 'status',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -379,11 +389,109 @@ export const CommentScalarFieldEnum = {
   workItemId: 'workItemId',
   userId: 'userId',
   content: 'content',
+  deletedById: 'deletedById',
+  deletedAt: 'deletedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type CommentScalarFieldEnum = (typeof CommentScalarFieldEnum)[keyof typeof CommentScalarFieldEnum]
+
+
+export const ConversationScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  name: 'name',
+  avatar: 'avatar',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ConversationScalarFieldEnum = (typeof ConversationScalarFieldEnum)[keyof typeof ConversationScalarFieldEnum]
+
+
+export const ConversationParticipantScalarFieldEnum = {
+  conversationId: 'conversationId',
+  userId: 'userId',
+  joinedAt: 'joinedAt',
+  lastReadAt: 'lastReadAt',
+  role: 'role'
+} as const
+
+export type ConversationParticipantScalarFieldEnum = (typeof ConversationParticipantScalarFieldEnum)[keyof typeof ConversationParticipantScalarFieldEnum]
+
+
+export const MessageScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  senderId: 'senderId',
+  content: 'content',
+  attachmentUrl: 'attachmentUrl',
+  attachmentType: 'attachmentType',
+  replyToId: 'replyToId',
+  editedAt: 'editedAt',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
+
+
+export const CallSessionScalarFieldEnum = {
+  id: 'id',
+  channelName: 'channelName',
+  conversationId: 'conversationId',
+  hostId: 'hostId',
+  type: 'type',
+  status: 'status',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CallSessionScalarFieldEnum = (typeof CallSessionScalarFieldEnum)[keyof typeof CallSessionScalarFieldEnum]
+
+
+export const CallParticipantScalarFieldEnum = {
+  callSessionId: 'callSessionId',
+  userId: 'userId',
+  status: 'status',
+  joinedAt: 'joinedAt',
+  leftAt: 'leftAt'
+} as const
+
+export type CallParticipantScalarFieldEnum = (typeof CallParticipantScalarFieldEnum)[keyof typeof CallParticipantScalarFieldEnum]
+
+
+export const NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  title: 'title',
+  message: 'message',
+  link: 'link',
+  isRead: 'isRead',
+  createdAt: 'createdAt'
+} as const
+
+export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
+
+
+export const CompanyHolidayScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  date: 'date',
+  type: 'type',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CompanyHolidayScalarFieldEnum = (typeof CompanyHolidayScalarFieldEnum)[keyof typeof CompanyHolidayScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -483,8 +591,11 @@ export type LeaveRequestOrderByRelevanceFieldEnum = (typeof LeaveRequestOrderByR
 export const MeetingOrderByRelevanceFieldEnum = {
   title: 'title',
   description: 'description',
+  agenda: 'agenda',
   roomName: 'roomName',
-  locationOrLink: 'locationOrLink'
+  timezone: 'timezone',
+  locationOrLink: 'locationOrLink',
+  notes: 'notes'
 } as const
 
 export type MeetingOrderByRelevanceFieldEnum = (typeof MeetingOrderByRelevanceFieldEnum)[keyof typeof MeetingOrderByRelevanceFieldEnum]
@@ -540,4 +651,61 @@ export const CommentOrderByRelevanceFieldEnum = {
 } as const
 
 export type CommentOrderByRelevanceFieldEnum = (typeof CommentOrderByRelevanceFieldEnum)[keyof typeof CommentOrderByRelevanceFieldEnum]
+
+
+export const ConversationOrderByRelevanceFieldEnum = {
+  name: 'name',
+  avatar: 'avatar'
+} as const
+
+export type ConversationOrderByRelevanceFieldEnum = (typeof ConversationOrderByRelevanceFieldEnum)[keyof typeof ConversationOrderByRelevanceFieldEnum]
+
+
+export const ConversationParticipantOrderByRelevanceFieldEnum = {
+  role: 'role'
+} as const
+
+export type ConversationParticipantOrderByRelevanceFieldEnum = (typeof ConversationParticipantOrderByRelevanceFieldEnum)[keyof typeof ConversationParticipantOrderByRelevanceFieldEnum]
+
+
+export const MessageOrderByRelevanceFieldEnum = {
+  content: 'content',
+  attachmentUrl: 'attachmentUrl',
+  attachmentType: 'attachmentType'
+} as const
+
+export type MessageOrderByRelevanceFieldEnum = (typeof MessageOrderByRelevanceFieldEnum)[keyof typeof MessageOrderByRelevanceFieldEnum]
+
+
+export const CallSessionOrderByRelevanceFieldEnum = {
+  channelName: 'channelName'
+} as const
+
+export type CallSessionOrderByRelevanceFieldEnum = (typeof CallSessionOrderByRelevanceFieldEnum)[keyof typeof CallSessionOrderByRelevanceFieldEnum]
+
+
+export const CallParticipantOrderByRelevanceFieldEnum = {
+  status: 'status'
+} as const
+
+export type CallParticipantOrderByRelevanceFieldEnum = (typeof CallParticipantOrderByRelevanceFieldEnum)[keyof typeof CallParticipantOrderByRelevanceFieldEnum]
+
+
+export const NotificationOrderByRelevanceFieldEnum = {
+  type: 'type',
+  title: 'title',
+  message: 'message',
+  link: 'link'
+} as const
+
+export type NotificationOrderByRelevanceFieldEnum = (typeof NotificationOrderByRelevanceFieldEnum)[keyof typeof NotificationOrderByRelevanceFieldEnum]
+
+
+export const CompanyHolidayOrderByRelevanceFieldEnum = {
+  title: 'title',
+  description: 'description',
+  type: 'type'
+} as const
+
+export type CompanyHolidayOrderByRelevanceFieldEnum = (typeof CompanyHolidayOrderByRelevanceFieldEnum)[keyof typeof CompanyHolidayOrderByRelevanceFieldEnum]
 

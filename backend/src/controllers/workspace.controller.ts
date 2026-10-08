@@ -90,7 +90,10 @@ export async function getSprint(req: Request, res: Response) {
               id: true,
               content: true,
               createdAt: true,
+              deletedAt: true,
+              deletedById: true,
               user: { select: { id: true, name: true } },
+              deletedBy: { select: { id: true, name: true } },
             },
           },
           activities: {
@@ -149,7 +152,10 @@ export async function getWorkItem(req: Request, res: Response) {
           id: true,
           content: true,
           createdAt: true,
+          deletedAt: true,
+          deletedById: true,
           user: { select: { id: true, name: true } },
+          deletedBy: { select: { id: true, name: true } },
         },
       },
     },
@@ -444,6 +450,58 @@ export async function addWorkItemComment(req: Request, res: Response) {
   res.status(201).json({ comment });
 }
 
+export async function deleteWorkItemComment(req: Request, res: Response) {
+  const user = await authenticate(req, res);
+  if (!user) return;
+  const commentId = Number(req.params.id);
+
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { id: true, userId: true, workItemId: true, workItem: { select: { projectId: true, assigneeId: true } } },
+  });
+
+  if (!comment) {
+    res.status(404).json({ message: "Comment not found" });
+    return;
+  }
+
+  // Permission check: Author or Admin/SuperAdmin or Project Manager
+  const member = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId: comment.workItem.projectId, userId: user.id } },
+  });
+
+  const isAuthor = comment.userId === user.id;
+  const isAdmin = user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN";
+
+  if (!isAuthor && !isAdmin && !member) {
+    res.status(403).json({ message: "You do not have permission to delete this comment" });
+    return;
+  }
+
+  const updatedComment = await prisma.comment.update({
+    where: { id: commentId },
+    data: {
+      deletedById: user.id,
+      deletedAt: new Date(),
+    },
+    include: {
+      user: { select: { id: true, name: true } },
+      deletedBy: { select: { id: true, name: true } },
+    },
+  });
+
+  await prisma.workItemActivity.create({
+    data: {
+      workItemId: comment.workItemId,
+      userId: user.id,
+      action: "COMMENT_DELETED",
+      newValue: `Comment #${commentId} deleted by ${user.name}`,
+    },
+  });
+
+  res.json({ message: "Comment deleted successfully", comment: updatedComment });
+}
+
 export async function getProject(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
 
@@ -552,7 +610,8 @@ export async function createSprint(req: Request, res: Response) {
   const user = await authenticate(req, res); if (!user || !adminOnly(user.role.name, res)) return;
   const { name, projectId, type, startDate, endDate, description } = req.body as Record<string, string | undefined>;
   const rawType = (type || "WEEKLY").toUpperCase();
-  const sprintType = rawType === "FORTNIGHTLY" || rawType === "MONTHLY" || rawType === "MANUAL" || rawType === "CUSTOM" ? rawType : "WEEKLY";
+  const validTypes = ["WEEKLY", "MONTHLY", "MANUAL"] as const;
+  const sprintType: "WEEKLY" | "MONTHLY" | "MANUAL" = rawType === "WEEKLY" || rawType === "MONTHLY" ? rawType : "MANUAL";
 
   if (!name?.trim() || !projectId) {
     res.status(400).json({ message: "Name and project are required" });

@@ -175,66 +175,96 @@ export default function AddEmployeePage() {
           canCreateAdmins={canCreateAdmins}
           onSignOut={handleSignOut}
         />
-        <section className="dashboard-content">
-          <button onClick={() => router.push("/dashboard/employees")} className="back-button">
-            ← Back to Employees
-          </button>
-          <div className="welcome mb-6">
-            <p className="eyebrow">ADMINISTRATION</p>
-            <h1>Add New Employee</h1>
-            <p>Create a new employee user account and assign system access role.</p>
+        <section className="dashboard-content space-y-6 w-full">
+          {/* Top Action Bar */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <button
+              onClick={() => router.push("/dashboard/employees")}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer"
+            >
+              ← Back to Directory
+            </button>
           </div>
 
-          {error && <div className="error-message mb-4">{error}</div>}
-          {success && <div className="success-message mb-4">{success}</div>}
+          {/* Hero Header Banner */}
+          <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-800">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 bg-orange-500/20 px-3 py-1 rounded-md border border-orange-500/30">
+                ADMINISTRATION WORKSPACE
+              </span>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">➕ Add New Employee</h1>
+              <p className="text-xs md:text-sm text-slate-300 font-medium max-w-2xl">
+                Register a new employee account, configure initial credentials, and assign system access permissions.
+              </p>
+            </div>
+          </div>
 
-          <form onSubmit={handleSubmit} className="form-card max-w-xl mx-auto bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="card-heading mb-6 border-b border-slate-100 pb-3">
-              <h2 className="text-base font-extrabold text-slate-900">Create Employee Account</h2>
-              <p className="text-xs text-slate-500 font-medium">Fill in the employee credentials and role details below.</p>
+          {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
+
+          {/* Form Card */}
+          <form
+            onSubmit={handleSubmit}
+            autoComplete="off"
+            className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6"
+          >
+            {/* Section 1: Personal & Credentials */}
+            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-orange-600 flex items-center gap-2">
+                <span>👤 Personal & Contact Info</span>
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="e.g. John Doe"
+                    required
+                    autoComplete="off"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="e.g. john@company.com"
+                    required
+                    autoComplete="new-email"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Phone Number <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.phoneNumber}
+                    onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+                    placeholder="e.g. +1 555-0199"
+                    autoComplete="off"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="e.g. John Doe"
-                  required
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="e.g. john@company.com"
-                  required
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Phone Number <span className="text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.phoneNumber}
-                  onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                  placeholder="e.g. +1 555-0199"
-                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium"
-                />
-              </div>
-
+            {/* Section 2: Password Security */}
+            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-orange-600 flex items-center gap-2">
+                <span>🔐 Password Security</span>
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Account Password *</label>
                   <div className="relative flex items-center">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -242,7 +272,8 @@ export default function AddEmployeePage() {
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       placeholder="Minimum 8 characters"
                       required
-                      className="w-full h-10 pl-3 pr-10 rounded-lg border border-slate-300 text-xs font-medium"
+                      autoComplete="new-password"
+                      className="w-full h-10 pl-3 pr-10 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
                     />
                     <button
                       type="button"
@@ -256,7 +287,7 @@ export default function AddEmployeePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Confirm Password *</label>
                   <div className="relative flex items-center">
                     <input
                       type={showConfirmPassword ? "text" : "password"}
@@ -264,7 +295,8 @@ export default function AddEmployeePage() {
                       onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                       placeholder="Confirm password"
                       required
-                      className="w-full h-10 pl-3 pr-10 rounded-lg border border-slate-300 text-xs font-medium"
+                      autoComplete="new-password"
+                      className="w-full h-10 pl-3 pr-10 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
                     />
                     <button
                       type="button"
@@ -277,15 +309,21 @@ export default function AddEmployeePage() {
                   </div>
                 </div>
               </div>
+            </div>
 
+            {/* Section 3: System Access & Role */}
+            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-orange-600 flex items-center gap-2">
+                <span>💼 System Access & Role</span>
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">System Role</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">System Role *</label>
                   <select
                     value={formData.roleId}
                     onChange={(e) => handleInputChange("roleId", e.target.value)}
                     required
-                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium bg-white"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                   >
                     <option value="">Select Role</option>
                     {roles.map((role) => (
@@ -301,7 +339,7 @@ export default function AddEmployeePage() {
                   <select
                     value={formData.designationId}
                     onChange={(e) => handleInputChange("designationId", e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium bg-white"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                   >
                     <option value="">Select Designation</option>
                     {designations.map((designation) => (
@@ -312,23 +350,24 @@ export default function AddEmployeePage() {
                   </select>
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => router.push("/dashboard/employees")}
-                  className="flex-1 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-xs disabled:opacity-50"
-                >
-                  {loading ? "Creating..." : "Save Employee"}
-                </button>
-              </div>
+            {/* Action Buttons: Right-aligned compact buttons */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard/employees")}
+                className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? "Creating Employee..." : "Save Employee Account"}
+              </button>
             </div>
           </form>
         </section>

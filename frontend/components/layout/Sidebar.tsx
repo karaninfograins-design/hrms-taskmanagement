@@ -141,7 +141,6 @@ const workspaceNavigation = {
   title: "Work Management",
   items: [
     { label: "Projects", href: "/dashboard/projects", icon: "PR" },
-    { label: "Backlog", href: "/dashboard/backlog", icon: "BL" },
   ]
 };
 
@@ -153,11 +152,21 @@ const peopleNavigation = {
   ]
 };
 
+const messengerNavigation = {
+  title: "Messenger",
+  items: [
+    { label: "Chats", href: "/dashboard/messenger/chats", icon: "💬" },
+    { label: "Groups", href: "/dashboard/messenger/groups", icon: "👥" },
+    { label: "Calls", href: "/dashboard/messenger/calls", icon: "📞" },
+  ],
+};
+
 const hrNavigation = {
   title: "HR & Attendance",
   items: [
     { label: "Attendance", href: "/dashboard/attendance", icon: "AT" },
     { label: "Leave Management", href: "/dashboard/leaves", icon: "LV" },
+    { label: "Company Calendar", href: "/dashboard/company-calendar", icon: "CC" },
     { label: "HRMS", href: "/dashboard/hr-settings", icon: "HS" },
   ]
 };
@@ -165,7 +174,8 @@ const hrNavigation = {
 const collaborationNavigation = {
   title: "Collaboration",
   items: [
-    { label: "Meetings", href: "/dashboard/meetings", icon: "MT" },
+    { label: "Meetings", href: "/dashboard/meetings", icon: "📅" },
+    { label: "Meeting Calendar", href: "/dashboard/meetings/calendar", icon: "📆" },
   ]
 };
 
@@ -220,18 +230,27 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
     (item) => item.href !== "/dashboard/hr-settings" || isAdminUser
   );
 
+  const peopleItems = peopleNavigation.items.filter(
+    (item) => item.href !== "/dashboard/designations" || isAdminUser
+  );
+
+  const personalItems = personalNavigation.items.filter(
+    (item) => item.href !== "/dashboard/settings" || isAdminUser
+  );
+
   return (
     <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`} aria-label="Dashboard navigation">
       <SidebarBrand isCollapsed={isCollapsed} onToggle={toggleSidebar} />
 
       <nav className="sidebar-menu">
         <NavigationGroup title={primaryNavigation.title} items={primaryNavigation.items} isCollapsed={isCollapsed} />
+        <NavigationGroup title={messengerNavigation.title} items={messengerNavigation.items} isCollapsed={isCollapsed} />
         <NavigationGroup title={workspaceNavigation.title} items={workspaceNavigation.items} isCollapsed={isCollapsed} />
-        <NavigationGroup title={peopleNavigation.title} items={peopleNavigation.items} isCollapsed={isCollapsed} />
+        <NavigationGroup title={peopleNavigation.title} items={peopleItems} isCollapsed={isCollapsed} />
         <NavigationGroup title={hrNavigation.title} items={hrItems} isCollapsed={isCollapsed} />
         <NavigationGroup title={collaborationNavigation.title} items={collaborationNavigation.items} isCollapsed={isCollapsed} />
         {isAdminUser && <NavigationGroup title={administrationNavigation.title} items={administrationNavigation.items} isCollapsed={isCollapsed} />}
-        <NavigationGroup title={personalNavigation.title} items={personalNavigation.items} isCollapsed={isCollapsed} />
+        <NavigationGroup title={personalNavigation.title} items={personalItems} isCollapsed={isCollapsed} />
       </nav>
 
       {user && onSignOut && (

@@ -13,3 +13,8 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Test Outputs & Generated Logs
+e2e_results.json
+test_results.log
+e2e_test_suite.cjs

@@ -75,6 +75,7 @@ enum LeaveStatus {
 
 enum MeetingStatus {
   SCHEDULED
+  IN_PROGRESS
   COMPLETED
   CANCELLED
 }
@@ -166,7 +167,8 @@ model User {
   reportedWorkItems WorkItem[] @relation("Reporter")
   createdWorkItems  WorkItem[] @relation("WorkItemCreator")
 
-  comments           Comment[]
+  comments           Comment[]           @relation("CommentAuthor")
+  deletedComments    Comment[]           @relation("CommentDeleter")
   workItemActivities WorkItemActivity[]
 
   createdProjects Project[]       @relation("ProjectCreator")
@@ -180,6 +182,14 @@ model User {
   approvedLeaves       LeaveRequest[]        @relation("LeaveApprover")
   organizedMeetings    Meeting[]             @relation("MeetingOrganizer")
   meetingParticipants  MeetingParticipant[]
+
+  createdConversations    Conversation[]            @relation("ConversationCreator")
+  conversationMemberships ConversationParticipant[]
+  sentMessages            Message[]                 @relation("MessageSender")
+  hostedCalls             CallSession[]             @relation("CallHost")
+  callParticipants        CallParticipant[]
+  notifications           Notification[]
+  createdHolidays         CompanyHoliday[]          @relation("HolidayCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -296,12 +306,15 @@ model Meeting {
   id             Int           @id @default(autoincrement())
   title          String        @db.VarChar(200)
   description    String?       @db.Text
+  agenda         String?       @db.Text
   roomName       String        @unique @db.VarChar(100)
   organizerId    Int
   projectId      Int?
   startTime      DateTime
   endTime        DateTime
+  timezone       String?       @default("UTC") @db.VarChar(50)
   locationOrLink String?       @db.VarChar(255)
+  notes          String?       @db.Text
   status         MeetingStatus @default(SCHEDULED)
 
   organizer User                 @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
@@ -481,17 +494,164 @@ model WorkItemActivity {
 }
 
 model Comment {
-  id         Int    @id @default(autoincrement())
-  workItemId Int
-  userId     Int
-  content    String @db.Text
+  id          Int       @id @default(autoincrement())
+  workItemId  Int
+  userId      Int
+  content     String    @db.Text
+  deletedById Int?
+  deletedAt   DateTime?
 
-  workItem WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workItem  WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  user      User     @relation("CommentAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  deletedBy User?    @relation("CommentDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([workItemId])
   @@index([userId])
+  @@index([deletedById])
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  MISSED
+  REJECTED
+}
+
+model Conversation {
+  id          Int              @id @default(autoincrement())
+  type        ConversationType @default(DIRECT)
+  name        String?          @db.VarChar(150)
+  avatar      String?          @db.VarChar(255)
+  createdById Int?
+
+  createdBy    User?                     @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants ConversationParticipant[]
+  messages     Message[]
+  callSessions CallSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+}
+
+model ConversationParticipant {
+  conversationId Int
+  userId         Int
+  joinedAt       DateTime  @default(now())
+  lastReadAt     DateTime?
+  role           String    @default("MEMBER") @db.VarChar(20)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Message {
+  id             Int       @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  content        String    @db.Text
+  attachmentUrl  String?   @db.VarChar(500)
+  attachmentType String?   @db.VarChar(50)
+  replyToId      Int?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("MessageReplies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([replyToId])
+}
+
+model CallSession {
+  id             Int        @id @default(autoincrement())
+  channelName    String     @unique @db.VarChar(100)
+  conversationId Int?
+  hostId         Int
+  type           CallType   @default(VIDEO)
+  status         CallStatus @default(RINGING)
+  startedAt      DateTime?
+  endedAt        DateTime?
+
+  conversation Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  host         User              @relation("CallHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants CallParticipant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([hostId])
+}
+
+model CallParticipant {
+  callSessionId Int
+  userId        Int
+  status        String    @default("INVITED") @db.VarChar(20)
+  joinedAt      DateTime?
+  leftAt        DateTime?
+
+  callSession CallSession @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([callSessionId, userId])
+  @@index([callSessionId])
+  @@index([userId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(200)
+  message   String   @db.Text
+  link      String?  @db.VarChar(255)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CompanyHoliday {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(150)
+  description String?  @db.Text
+  date        DateTime @db.Date
+  type        String   @default("OFFICIAL_HOLIDAY") @db.VarChar(50)
+  createdById Int
+
+  createdBy User @relation("HolidayCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([date])
 }

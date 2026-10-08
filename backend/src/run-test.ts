@@ -142,16 +142,40 @@ async function runTest() {
   const storyItem = workItems.find((i: any) => i.type === "STORY");
   const subtaskItem = workItems.find((i: any) => i.type === "SUBTASK");
 
+  // 9. Test Comment Creation & Deletion
+  const comment = await prisma.comment.create({
+    data: {
+      workItemId: storyItem.id,
+      userId: adminUser.id,
+      content: "This is a test comment to verify comment deletion functionality."
+    }
+  });
+  console.log(`✓ Comment Created: ID ${comment.id} on WorkItem #${storyItem.id}`);
+
+  const deletedComment = await prisma.comment.update({
+    where: { id: comment.id },
+    data: {
+      deletedById: adminUser.id,
+      deletedAt: new Date(),
+    },
+    include: {
+      deletedBy: { select: { id: true, name: true } }
+    }
+  });
+  console.log(`✓ Comment Soft-Deleted: ID ${deletedComment.id} | Deleted By: ${deletedComment.deletedBy?.name} | Deleted At: ${deletedComment.deletedAt}`);
+
   if (
     epicItem && epicItem.children.length === 2 && // Story + Task
     storyItem && storyItem.parentId === epicItem.id && storyItem.children.length === 1 && // Subtask
-    subtaskItem && subtaskItem.parentId === storyItem.id && subtaskItem.assignees.length > 0
+    subtaskItem && subtaskItem.parentId === storyItem.id && subtaskItem.assignees.length > 0 &&
+    deletedComment.deletedById === adminUser.id
   ) {
     console.log("\n🎉 ALL TEST CASES PASSED SUCCESSFULLY!");
     console.log("Hierarchy Verified: EPIC -> STORY -> SUBTASK");
     console.log("Multi-Assignee Join Model Verified!");
     console.log("Sprint Cadence Verified: WEEKLY auto-dates populated.");
     console.log("Effort / Story Points Verified: Values saved correctly.");
+    console.log("Comment Deletion & Deleter Tracking Verified!");
   } else {
     console.error("\n❌ Hierarchy check failed!");
     process.exit(1);

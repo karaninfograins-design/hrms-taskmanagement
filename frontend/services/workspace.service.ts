@@ -72,7 +72,15 @@ export type SprintDetails = {
     reporter: { id: number; name: string; email: string } | null;
     parent: { id: number; title: string; type: string } | null;
     _count: { children: number; comments: number };
-    comments: Array<{ id: number; content: string; createdAt: string; user: { id: number; name: string } }>;
+    comments: Array<{
+      id: number;
+      content: string;
+      createdAt: string;
+      deletedAt?: string | null;
+      deletedById?: number | null;
+      user: { id: number; name: string };
+      deletedBy?: { id: number; name: string } | null;
+    }>;
   }>;
 };
 
@@ -191,6 +199,10 @@ export function getProjectBacklog(projectId: number, token: string) {
 
 export function addWorkItemComment(id: number, content: string, token: string) {
   return apiRequest(`/api/workspace/work-items/${id}/comments`, { method: "POST", headers: { ...auth(token), "Content-Type": "application/json" }, body: JSON.stringify({ content }) });
+}
+
+export function deleteWorkItemComment(id: number, token: string) {
+  return apiRequest(`/api/workspace/comments/${id}`, { method: "DELETE", headers: auth(token) });
 }
 
 export type Designation = { id: number; name: string; description: string | null; status: boolean };

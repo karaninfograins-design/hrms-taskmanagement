@@ -405,7 +405,7 @@ export default function ProfilePage() {
                     {leaveBalances.map(bal => (
                       <div key={bal.id} className="space-y-1">
                         <div className="flex justify-between text-[11px] font-bold text-slate-600">
-                          <span>{bal.leaveType?.name}</span>
+                          <span>{typeof bal.leaveType === "object" ? bal.leaveType?.name || "Leave" : String(bal.leaveType || "Leave")}</span>
                           <span>{bal.remaining} / {bal.allocated} days left</span>
                         </div>
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">

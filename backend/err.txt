@@ -1,0 +1,5 @@
+﻿prisma/seed.ts(1,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../src/generated/prisma/client.js'?
+src/config/prisma.ts(3,30): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../generated/prisma/client.js'?
+src/routes/auth.routes.ts(2,23): error TS2307: Cannot find module '../controllers/auth.controller' or its corresponding type declarations.
+src/routes/employee.routes.ts(9,8): error TS2307: Cannot find module '../controllers/employee.controller' or its corresponding type declarations.
+src/routes/user.routes.ts(2,47): error TS2307: Cannot find module '../controllers/user.controller' or its corresponding type declarations.

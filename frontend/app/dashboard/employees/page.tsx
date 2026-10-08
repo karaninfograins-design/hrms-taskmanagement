@@ -277,7 +277,7 @@ export default function EmployeesPage() {
                   placeholder=" "
                   value={filters.search}
                   onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="floating-label-input"
+                  className="floating-label-input "
                 />
                 <label
                   htmlFor="employee-search"
@@ -510,11 +510,11 @@ export default function EmployeesPage() {
                 <div className="text-xs font-medium text-slate-500">
                   Showing <span className="font-bold text-slate-800">{employees.length > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0}</span> to <span className="font-bold text-slate-800">{Math.min(pagination.page * pagination.pageSize, pagination.total)}</span> of <span className="font-bold text-slate-800">{pagination.total}</span> employees
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <select
                     value={filters.limit}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="h-8 px-2.5 rounded-lg border border-slate-300 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                    className="h-7 px-2 rounded-sm border border-slate-200 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                   >
                     <option value={10}>10 per page</option>
                     <option value={20}>20 per page</option>

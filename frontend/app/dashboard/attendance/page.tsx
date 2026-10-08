@@ -275,8 +275,24 @@ export default function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {logs.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/80">
+                    {(() => {
+                      const isEmployee = !isSuperAdmin && roleName !== "ADMIN";
+                      const displayLogs = isEmployee
+                        ? logs.filter((row) => row.userId === session.user?.id || row.user?.email === session.user?.email)
+                        : logs;
+
+                      if (displayLogs.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="py-6 text-center text-slate-400 font-medium">
+                              No attendance records found.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return displayLogs.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50/80">
                         <td className="py-3 px-4 font-bold text-slate-900">
                           {row.user?.name || "Self"}
                         </td>
@@ -308,7 +324,8 @@ export default function AttendancePage() {
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    ));
+                  })()}
                   </tbody>
                 </table>
               </div>

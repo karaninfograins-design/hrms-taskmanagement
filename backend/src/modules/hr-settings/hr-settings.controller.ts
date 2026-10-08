@@ -84,11 +84,12 @@ export const updateHRSetting = async (req: Request, res: Response): Promise<void
     }
 
     const id = Number(req.params.id);
-    const { value, status } = req.body;
+    const { key, value, status } = req.body;
 
     const setting = await prisma.hRSetting.update({
       where: { id },
       data: {
+        ...(key ? { key: String(key).toUpperCase().trim() } : {}),
         ...(value ? { value: String(value).trim() } : {}),
         ...(status !== undefined ? { status: Boolean(status) } : {}),
       },
@@ -98,5 +99,32 @@ export const updateHRSetting = async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error("Update HR setting error:", error);
     res.status(500).json({ message: "Failed to update HR setting" });
+  }
+};
+
+export const deleteHRSetting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const hasPerm = await checkHRAdminPermission(userId);
+    if (!hasPerm) {
+      res.status(403).json({ message: "Only HR/Admins can manage HR settings" });
+      return;
+    }
+
+    const id = Number(req.params.id);
+    await prisma.hRSetting.delete({
+      where: { id },
+    });
+
+    res.json({ message: "HR Setting deleted successfully" });
+  } catch (error) {
+    console.error("Delete HR setting error:", error);
+    res.status(500).json({ message: "Failed to delete HR setting" });
   }
 };

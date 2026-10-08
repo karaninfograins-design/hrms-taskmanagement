@@ -122,3 +122,38 @@ export type WorkItemActivity = Prisma.WorkItemActivityModel
  * 
  */
 export type Comment = Prisma.CommentModel
+/**
+ * Model Conversation
+ * 
+ */
+export type Conversation = Prisma.ConversationModel
+/**
+ * Model ConversationParticipant
+ * 
+ */
+export type ConversationParticipant = Prisma.ConversationParticipantModel
+/**
+ * Model Message
+ * 
+ */
+export type Message = Prisma.MessageModel
+/**
+ * Model CallSession
+ * 
+ */
+export type CallSession = Prisma.CallSessionModel
+/**
+ * Model CallParticipant
+ * 
+ */
+export type CallParticipant = Prisma.CallParticipantModel
+/**
+ * Model Notification
+ * 
+ */
+export type Notification = Prisma.NotificationModel
+/**
+ * Model CompanyHoliday
+ * 
+ */
+export type CompanyHoliday = Prisma.CompanyHolidayModel
