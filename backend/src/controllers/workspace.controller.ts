@@ -51,7 +51,7 @@ export async function listProjects(req: Request, res: Response) {
     select: { id: true, key: true, name: true, status: true, startDate: true, endDate: true, createdBy: { select: { name: true } } },
     orderBy: { updatedAt: "desc" },
   });
-  res.json({ items: items.map(({ createdBy, ...project }: { createdBy: { name: string }; [key: string]: unknown }) => ({ ...project, owner: createdBy.name })) });
+  res.json({ items: items.map(({ createdBy, ...project }: { createdBy: { name: string };[key: string]: unknown }) => ({ ...project, owner: createdBy.name })) });
 }
 
 export async function deleteProject(req: Request, res: Response) {
@@ -257,21 +257,21 @@ export async function createWorkItem(req: Request, res: Response) {
 
   const workItemCount = await prisma.workItem.count({ where: { projectId } });
   const keyNumber = workItemCount + 1;
-  const primaryAssigneeId = rawAssigneeIds.length > 0 ? rawAssigneeIds[0] : (assigneeId === undefined || assigneeId === null ? null : Number(assigneeId));
+  const primaryAssigneeId: number | null = rawAssigneeIds.length > 0 ? (rawAssigneeIds[0] as number) : (assigneeId === undefined || assigneeId === null ? null : Number(assigneeId));
 
   const item = await prisma.workItem.create({
     data: {
       projectId,
       keyNumber,
-      sprintId: finalSprintId,
+      sprintId: (finalSprintId ?? null) as number | null,
       type: type as typeof validTypes[number],
       title: title.trim(),
       description: typeof description === "string" ? description.trim() || null : null,
       priority: (priority as typeof validPriorities[number] | undefined) || "MEDIUM",
       status: "TODO",
-      assigneeId: primaryAssigneeId,
+      assigneeId: (primaryAssigneeId ?? null) as number | null,
       reporterId: reporterId === undefined || reporterId === null ? user.id : Number(reporterId),
-      parentId: finalParentId,
+      parentId: (finalParentId ?? null) as number | null,
       storyPoints: typeof storyPoints === "string" ? storyPoints : null,
       startDate: typeof startDate === "string" && startDate ? new Date(`${startDate}T00:00:00`) : null,
       dueDate: typeof dueDate === "string" && dueDate ? new Date(`${dueDate}T23:59:59`) : null,
@@ -588,7 +588,7 @@ export async function listSprints(req: Request, res: Response) {
     select: { id: true, name: true, type: true, status: true, startDate: true, endDate: true, project: { select: { name: true } } },
     orderBy: { updatedAt: "desc" },
   });
-  res.json({ items: items.map(({ project, ...sprint }: { project: { name: string }; [key: string]: unknown }) => ({ ...sprint, project: project.name })) });
+  res.json({ items: items.map(({ project, ...sprint }: { project: { name: string };[key: string]: unknown }) => ({ ...sprint, project: project.name })) });
 }
 
 export async function deleteSprint(req: Request, res: Response) {
@@ -734,7 +734,7 @@ export async function listBacklog(req: Request, res: Response) {
     },
     orderBy: { updatedAt: "desc" },
   });
-  res.json({ items: items.map(({ project, ...item }: { project: { key: string | null; name: string }; [key: string]: unknown }) => ({ ...item, project: project.name, issueKey: `${project.key || "PRJ"}-${(item as { keyNumber?: number; id: number }).keyNumber || (item as { id: number }).id}` })) });
+  res.json({ items: items.map(({ project, ...item }: { project: { key: string | null; name: string };[key: string]: unknown }) => ({ ...item, project: project.name, issueKey: `${project.key || "PRJ"}-${(item as { keyNumber?: number; id: number }).keyNumber || (item as { id: number }).id}` })) });
 }
 
 export async function listEpics(req: Request, res: Response) {
@@ -777,7 +777,7 @@ export async function listAdmins(req: Request, res: Response) {
     select: { id: true, name: true, email: true, status: true, role: { select: { name: true } } },
     orderBy: { name: "asc" },
   });
-  res.json({ items: items.map(({ role, ...admin }: { role: { name: string }; [key: string]: unknown }) => ({ ...admin, role: role.name })) });
+  res.json({ items: items.map(({ role, ...admin }: { role: { name: string };[key: string]: unknown }) => ({ ...admin, role: role.name })) });
 }
 
 export async function listDesignations(req: Request, res: Response) {
@@ -813,7 +813,7 @@ export async function deleteDesignation(req: Request, res: Response) {
   if (!user || !adminOnly(user.role.name, res)) return;
   try {
     const item = await prisma.designation.update({ where: { id: Number(req.params.id) }, data: { status: false } });
-    res.json({ item, message: "Designation soft deleted" });
+    res.json({ item, message: "Designation  deleted" });
   } catch { res.status(404).json({ message: "Designation not found" }); }
 }
 
@@ -825,7 +825,7 @@ export async function listRoles(req: Request, res: Response) {
     select: { id: true, name: true, description: true, status: true, permissions: { select: { permission: { select: { name: true } } } } },
     orderBy: { name: "asc" },
   }), prisma.permission.findMany({ select: { id: true, name: true, description: true }, orderBy: { name: "asc" } })]);
-  res.json({ roles: roles.map(({ permissions: assigned, ...role }: { permissions: Array<{ permission: { name: string } }>; [key: string]: unknown }) => ({ ...role, permissionIds: assigned.map(({ permission }: { permission: { name: string } }) => permission.name) })), permissions });
+  res.json({ roles: roles.map(({ permissions: assigned, ...role }: { permissions: Array<{ permission: { name: string } }>;[key: string]: unknown }) => ({ ...role, permissionIds: assigned.map(({ permission }: { permission: { name: string } }) => permission.name) })), permissions });
 }
 
 export async function deleteRole(req: Request, res: Response) {
@@ -833,7 +833,7 @@ export async function deleteRole(req: Request, res: Response) {
   if (!user || !superAdminOnly(user.role.name, res)) return;
   try {
     const item = await prisma.role.update({ where: { id: Number(req.params.id) }, data: { status: false } });
-    res.json({ item, message: "Role soft deleted" });
+    res.json({ item, message: "Role  deleted" });
   } catch { res.status(404).json({ message: "Role not found" }); }
 }
 

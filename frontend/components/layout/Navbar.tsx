@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CompanyLogo } from "@/components/common/company-logo";
 import type { User } from "@/types/auth";
 
@@ -48,9 +49,9 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
   return (
     <header className="topbar">
-      <a className="brand" href="/dashboard" aria-label="Infograins HRMS dashboard">
+      <Link className="brand" href="/dashboard" aria-label="Infograins HRMS dashboard">
         <CompanyLogo />
-      </a>
+      </Link>
 
       <div className="profile" ref={dropdownRef} style={{ position: 'relative' }}>
         <button

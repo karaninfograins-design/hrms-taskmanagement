@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { User } from "@/types/auth";
+import Link from "next/link";
 
 type SidebarProps = {
   user?: User;
@@ -27,7 +28,7 @@ function NavigationLink({ label, href, icon, isCollapsed }: NavigationItem & { i
       (href !== "/dashboard" && pathname.startsWith(`${href}/`)));
 
   return (
-    <a
+    <Link
       className={`sidebar-link ${isActive ? "active" : ""}`}
       href={href}
       title={isCollapsed ? label : undefined}
@@ -37,7 +38,7 @@ function NavigationLink({ label, href, icon, isCollapsed }: NavigationItem & { i
         {icon}
       </span>
       {!isCollapsed && <span>{label}</span>}
-    </a>
+    </Link>
   );
 }
 

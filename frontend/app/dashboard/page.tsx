@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -266,33 +267,33 @@ export default function DashboardPage() {
 
           {/* Quick Actions Row */}
           <div className="flex flex-wrap gap-3 mb-6">
-            <a
+            <Link
               href="/dashboard/projects"
               className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
             >
               <span>📁</span> Manage Projects ({projectsCount})
-            </a>
-            <a
+            </Link>
+            <Link
               href="/dashboard/sprints"
               className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
             >
               <span>⚡</span> Active Sprints ({sprintsCount})
-            </a>
+            </Link>
             {canManageEmployees && (
-              <a
+              <Link
                 href="/dashboard/employees/new"
                 className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:border-orange-400 text-slate-800 font-bold text-xs shadow-xs transition-all flex items-center gap-2"
               >
                 <span>👤</span> + Add Employee
-              </a>
+              </Link>
             )}
             {canCreateAdmins && (
-              <a
+              <Link
                 href="/dashboard/admins"
                 className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:border-orange-400 text-slate-800 font-bold text-xs shadow-xs transition-all flex items-center gap-2"
               >
                 <span>🛡️</span> System Admins
-              </a>
+              </Link>
             )}
           </div>
 
@@ -343,12 +344,12 @@ export default function DashboardPage() {
                 <h2 className="text-base font-extrabold text-slate-900">Employee Roster & Roles</h2>
                 <p className="text-xs text-slate-500 font-medium">Recent employees and system role assignments.</p>
               </div>
-              <a
+              <Link
                 href="/dashboard/employees"
                 className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
               >
                 View All Employees →
-              </a>
+              </Link>
             </div>
 
             <div className="workspace-list-card">
@@ -380,12 +381,12 @@ export default function DashboardPage() {
                                 {emp.name.slice(0, 1).toUpperCase()}
                               </span>
                               <div>
-                                <a
+                                <Link
                                   href={`/dashboard/employees/${emp.id}`}
                                   className="font-bold text-xs text-slate-900 hover:text-orange-600 block"
                                 >
                                   {emp.name}
-                                </a>
+                                </Link>
                                 <span className="text-[10px] text-slate-400 font-semibold">EMP-{emp.id}</span>
                               </div>
                             </div>
@@ -415,12 +416,12 @@ export default function DashboardPage() {
                             </span>
                           </td>
                           <td>
-                            <a
+                            <Link
                               href={`/dashboard/employees/${emp.id}`}
                               className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs inline-block"
                             >
                               Details
-                            </a>
+                            </Link>
                           </td>
                         </tr>
                       ))
@@ -438,9 +439,9 @@ export default function DashboardPage() {
                 <h2 className="text-base font-extrabold text-slate-900">Active Iterations & Sprints</h2>
                 <p className="text-xs text-slate-500 font-medium">Sprint progress and timeline tracking.</p>
               </div>
-              <a href="/dashboard/sprints" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+              <Link href="/dashboard/sprints" className="text-xs font-bold text-orange-600 hover:text-orange-700">
                 View All Sprints →
-              </a>
+              </Link>
             </div>
 
             <div className="workspace-list-card">
@@ -482,9 +483,9 @@ export default function DashboardPage() {
                             </div>
                           </td>
                           <td>
-                            <a href={`/dashboard/projects`} className="text-button text-xs font-bold">
+                            <Link href={`/dashboard/projects`} className="text-button text-xs font-bold">
                               Open Projects →
-                            </a>
+                            </Link>
                           </td>
                         </tr>
                       );
@@ -502,9 +503,9 @@ export default function DashboardPage() {
                 <h2 className="text-base font-extrabold text-slate-900">Recent Work Items & Hierarchy</h2>
                 <p className="text-xs text-slate-500 font-medium">Latest Epics, Stories, Tasks, Bugs, and Subtasks.</p>
               </div>
-              <a href="/dashboard/projects" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+              <Link href="/dashboard/projects" className="text-xs font-bold text-orange-600 hover:text-orange-700">
                 View Projects →
-              </a>
+              </Link>
             </div>
 
             <div className="workspace-list-card">

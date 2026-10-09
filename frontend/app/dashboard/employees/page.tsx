@@ -565,7 +565,6 @@ export default function EmployeesPage() {
                 </h2>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6">
                   Are you sure you want to deactivate <strong>{employeeToDelete.name}</strong>?
-                  This will soft-delete the employee account and restrict access to workspace tools.
                 </p>
                 <div className="flex gap-3 justify-end">
                   <button
