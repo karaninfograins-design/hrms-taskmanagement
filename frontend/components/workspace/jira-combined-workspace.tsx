@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 
 import { DashboardShell } from "@/components/workspace/management-pages";
@@ -465,6 +465,22 @@ export function ProjectSprintPage({ mode }: Props) {
             </select>
           </label>
 
+          {!isProjects && (
+            <label>
+              Parent Epic / Key (Optional)
+              <input
+                placeholder="Epic Key or Title (e.g. EPIC-12)"
+                value={form.epicId || ""}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    epicId: event.target.value,
+                  })
+                }
+              />
+            </label>
+          )}
+
           <label>
             Start Date {(!isProjects && form.type !== "MANUAL") ? "(Optional)" : isProjects ? "(Optional)" : ""}
             <input
@@ -553,8 +569,9 @@ export function ProjectSprintPage({ mode }: Props) {
                   const displayItems = isEmployeeRole
                     ? items.filter((item: any) => {
                       const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
+                      const isAssigned = Array.isArray(item.assignedUserIds) && item.assignedUserIds.includes(session?.user?.id);
                       const isOwner = (item.createdBy?.id || item.createdById) === session?.user?.id;
-                      return isMember || isOwner;
+                      return isMember || isAssigned || isOwner;
                     })
                     : items;
 
@@ -910,10 +927,6 @@ export function ProjectDetailsPage() {
     loadProject();
   }, [loadProject]);
 
-  if (isLoading || !session) {
-    return <main className="route-loading">Loading project...</main>;
-  }
-
   async function saveMembers() {
     if (!session?.token || !project) return;
     try {
@@ -1164,6 +1177,31 @@ export function ProjectDetailsPage() {
     return true;
   });
 
+  /* Hierarchical ordering of work items (Parents followed by their subtasks) */
+  const orderedWorkItems = useMemo(() => {
+    if (searchFilter || typeFilter || statusFilter || sprintFilter) {
+      return filteredWorkItems;
+    }
+    const topLevel = filteredWorkItems.filter((i) => i.type !== "SUBTASK" && !(i as any).parentId);
+    const subtasks = filteredWorkItems.filter((i) => i.type === "SUBTASK" || (i as any).parentId);
+    const result: typeof filteredWorkItems = [];
+
+    topLevel.forEach((parent) => {
+      result.push(parent);
+      const children = subtasks.filter((s) => Number((s as any).parentId) === Number(parent.id));
+      result.push(...children);
+    });
+
+    const addedIds = new Set(result.map((r) => r.id));
+    filteredWorkItems.forEach((item) => {
+      if (!addedIds.has(item.id)) {
+        result.push(item);
+      }
+    });
+
+    return result;
+  }, [filteredWorkItems, searchFilter, typeFilter, statusFilter, sprintFilter]);
+
   /* Report metrics */
   const statusCounts = {
     TODO: workItems.filter((i) => i.status === "TODO").length,
@@ -1183,6 +1221,10 @@ export function ProjectDetailsPage() {
   };
 
   const projectKey = `PRJ-${project?.id || ""}`;
+
+  if (isLoading || !session) {
+    return <main className="route-loading">Loading project...</main>;
+  }
 
   return (
     <DashboardShell>
@@ -1609,14 +1651,14 @@ export function ProjectDetailsPage() {
               <div className="enhanced-sprint-form-actions">
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="sprint-btn sprint-btn-secondary"
                   style={{ width: "auto", margin: 0 }}
                   onClick={() => setShowCreateWorkItem(false)}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="sprint-btn sprint-btn-success">
-                  Create Work Item
+                  Save
                 </button>
               </div>
             </form>
@@ -2668,90 +2710,107 @@ export function ProjectDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredWorkItems.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <span className="type-badge type-badge-story">{item.type}</span>
-                        </td>
-                        <td>
-                          <strong>{item.title}</strong>
-                        </td>
-                        <td>
-                          <select
-                            className="table-select"
-                            value={item.status}
-                            onChange={(e) => handleQuickStatusChange(item.id, e.target.value)}
-                          >
-                            <option value="TODO">To Do</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="IN_REVIEW">In Review</option>
-                            <option value="DONE">Done</option>
-                            <option value="BLOCKED">Blocked</option>
-                          </select>
-                        </td>
-                        <td>
-                          <span className="priority-pill">{item.priority}</span>
-                        </td>
-                        <td>{item.sprint ? item.sprint.name : "Backlog"}</td>
-                        <td>{renderAssignees(item)}</td>
-                        <td style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            className="sprint-btn sprint-btn-secondary"
-                            style={{ fontSize: "0.76rem", padding: "4px 8px" }}
-                            title="View/Edit Work Item"
-                            onClick={() => {
-                              const currentAssigneeIds = Array.isArray((item as any).assignees) && (item as any).assignees.length > 0
-                                ? (item as any).assignees.map((a: any) => a.userId || a.user?.id).filter(Boolean)
-                                : (item.assignee ? [item.assignee.id] : []);
-                              setEditingWorkItem({
-                                id: item.id,
-                                title: item.title,
-                                description: (item as any).description || "",
-                                type: item.type,
-                                status: item.status,
-                                priority: item.priority,
-                                assigneeId: item.assignee ? String(item.assignee.id) : "",
-                                assigneeIds: currentAssigneeIds,
-                                sprintId: item.sprint ? String(item.sprint.id) : "",
-                                parentId: (item as any).parentId ? String((item as any).parentId) : "",
-                                storyPoints: (item as any).storyPoints || "",
-                                startDate: (item as any).startDate ? String((item as any).startDate).split("T")[0] : "",
-                                dueDate: (item as any).dueDate ? String((item as any).dueDate).split("T")[0] : "",
-                              });
-                            }}
-                          >
-                            👁️ View
-                          </button>
-                          {item.type !== "SUBTASK" && (
+                    {orderedWorkItems.map((item) => {
+                      const isSubtask = item.type === "SUBTASK" || Boolean((item as any).parentId);
+                      const parentItem = isSubtask
+                        ? workItems.find((w) => Number(w.id) === Number((item as any).parentId))
+                        : null;
+
+                      return (
+                        <tr key={item.id} style={{ backgroundColor: isSubtask ? "#f8fafc" : "transparent" }}>
+                          <td>
+                            <span className={`type-badge ${isSubtask ? "bg-amber-100 text-amber-900 border-amber-300 font-bold" : "type-badge-story"}`}>
+                              {item.type === "SUBTASK" ? "↳ SUBTASK" : item.type}
+                            </span>
+                          </td>
+                          <td style={{ paddingLeft: isSubtask ? "28px" : "12px" }}>
+                            <strong style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {isSubtask && <span style={{ color: "#ea580c", fontWeight: "bold" }}>↳</span>}
+                              {item.title}
+                            </strong>
+                            {isSubtask && (
+                              <small className="table-subtext font-semibold text-slate-500 block">
+                                Parent: {parentItem ? `${parentItem.type} #${parentItem.id} - ${parentItem.title}` : ((item as any).parentId ? `Item #${(item as any).parentId}` : "Unlinked")}
+                              </small>
+                            )}
+                          </td>
+                          <td>
+                            <select
+                              className="table-select"
+                              value={item.status}
+                              onChange={(e) => handleQuickStatusChange(item.id, e.target.value)}
+                            >
+                              <option value="TODO">To Do</option>
+                              <option value="IN_PROGRESS">In Progress</option>
+                              <option value="IN_REVIEW">In Review</option>
+                              <option value="DONE">Done</option>
+                              <option value="BLOCKED">Blocked</option>
+                            </select>
+                          </td>
+                          <td>
+                            <span className="priority-pill">{item.priority}</span>
+                          </td>
+                          <td>{item.sprint ? item.sprint.name : "Backlog"}</td>
+                          <td>{renderAssignees(item)}</td>
+                          <td style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <button
+                              type="button"
+                              className="sprint-btn sprint-btn-secondary"
+                              style={{ fontSize: "0.76rem", padding: "4px 8px" }}
+                              title="View/Edit Work Item"
+                              onClick={() => {
+                                const currentAssigneeIds = Array.isArray((item as any).assignees) && (item as any).assignees.length > 0
+                                  ? (item as any).assignees.map((a: any) => a.userId || a.user?.id).filter(Boolean)
+                                  : (item.assignee ? [item.assignee.id] : []);
+                                setEditingWorkItem({
+                                  id: item.id,
+                                  title: item.title,
+                                  description: (item as any).description || "",
+                                  type: item.type,
+                                  status: item.status,
+                                  priority: item.priority,
+                                  assigneeId: item.assignee ? String(item.assignee.id) : "",
+                                  assigneeIds: currentAssigneeIds,
+                                  sprintId: item.sprint ? String(item.sprint.id) : "",
+                                  parentId: (item as any).parentId ? String((item as any).parentId) : "",
+                                  storyPoints: (item as any).storyPoints || "",
+                                  startDate: (item as any).startDate ? String((item as any).startDate).split("T")[0] : "",
+                                  dueDate: (item as any).dueDate ? String((item as any).dueDate).split("T")[0] : "",
+                                });
+                              }}
+                            >
+                              👁️ View
+                            </button>
+                            {item.type !== "SUBTASK" && (
+                              <button
+                                type="button"
+                                className="sprint-btn"
+                                style={{ fontSize: "0.76rem", padding: "4px 8px" }}
+                                onClick={() => {
+                                  setWorkItemForm((prev) => ({
+                                    ...prev,
+                                    type: "SUBTASK",
+                                    parentId: String(item.id),
+                                  }));
+                                  setShowCreateWorkItem(true);
+                                }}
+                              >
+                                + Subtask
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="sprint-btn"
-                              style={{ fontSize: "0.76rem", padding: "4px 8px" }}
-                              onClick={() => {
-                                setWorkItemForm((prev) => ({
-                                  ...prev,
-                                  type: "SUBTASK",
-                                  parentId: String(item.id),
-                                }));
-                                setShowCreateWorkItem(true);
-                              }}
+                              style={{ fontSize: "0.76rem", padding: "4px 8px", backgroundColor: "#252321ff", color: "#fff" }}
+                              title="Delete Work Item"
+                              onClick={() => handleDeleteWorkItem(item.id)}
                             >
-                              + Subtask
+                              🗑️ Delete
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            className="sprint-btn"
-                            style={{ fontSize: "0.76rem", padding: "4px 8px", backgroundColor: "#252321ff", color: "#fff" }}
-                            title="Delete Work Item"
-                            onClick={() => handleDeleteWorkItem(item.id)}
-                          >
-                            🗑️ Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -3821,14 +3880,14 @@ export function SprintDetailsPage() {
               <div className="enhanced-sprint-form-actions">
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="sprint-btn sprint-btn-secondary"
                   style={{ width: "auto", margin: 0 }}
                   onClick={() => setShowCreate(false)}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="sprint-btn sprint-btn-success">
-                  Create Work Item
+                  Save
                 </button>
               </div>
             </form>

@@ -138,6 +138,45 @@ export default function GroupChatsPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Real-time listener for deleted groups
+  useEffect(() => {
+    if (!socket) return;
+    const onConvDeleted = ({ conversationId }: { conversationId: number }) => {
+      setGroups((prev) => prev.filter((g) => g.id !== conversationId));
+      if (activeGroup?.id === conversationId) {
+        setActiveGroup(null);
+        setMessages([]);
+      }
+    };
+    socket.on("conversation:deleted", onConvDeleted);
+    return () => {
+      socket.off("conversation:deleted", onConvDeleted);
+    };
+  }, [socket, activeGroup?.id]);
+
+  // Delete Group Handler
+  const handleDeleteGroup = async (groupId: number) => {
+    if (!confirm("Are you sure you want to delete this group channel? All messages and attachments in this channel will be permanently deleted.")) return;
+    try {
+      const res = await fetch(`${getApiUrl()}/api/messenger/conversations/${groupId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) {
+        alert("Failed to delete group");
+        return;
+      }
+      setGroups((prev) => prev.filter((g) => g.id !== groupId));
+      if (activeGroup?.id === groupId) {
+        setActiveGroup(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error("Error deleting group:", err);
+      alert("Error deleting group");
+    }
+  };
+
   // Create Group Handler
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,7 +292,7 @@ export default function GroupChatsPage() {
                     <div
                       key={group.id}
                       onClick={() => setActiveGroup(group)}
-                      className={`p-4 cursor-pointer transition-all flex items-center justify-between ${
+                      className={`p-4 cursor-pointer transition-all flex items-center justify-between group ${
                         isSelected ? "bg-orange-50/80 border-l-4 border-orange-500" : "hover:bg-slate-50"
                       }`}
                     >
@@ -268,6 +307,18 @@ export default function GroupChatsPage() {
                           </p>
                         </div>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteGroup(group.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
+                        title="Delete group"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   );
                 })
@@ -292,9 +343,18 @@ export default function GroupChatsPage() {
                       </p>
                     </div>
                   </div>
-                  <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
-                    {activeGroup.participants.length} Participants
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
+                      {activeGroup.participants.length} Participants
+                    </span>
+                    <button
+                      onClick={() => handleDeleteGroup(activeGroup.id)}
+                      className="px-3 py-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                      title="Delete this group channel"
+                    >
+                      Delete Group
+                    </button>
+                  </div>
                 </div>
 
                 {/* Messages */}

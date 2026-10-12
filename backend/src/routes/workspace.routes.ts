@@ -16,6 +16,7 @@ import {
   getSprint,
   getWorkItem,
   getWorkspaceSettings,
+  listAllWorkItems,
   listBacklog,
   listDesignations,
   listEpics,
@@ -44,6 +45,7 @@ router.post("/sprints", createSprint);
 router.patch("/sprints/:id/status", updateSprintStatus);
 router.delete("/sprints/:id", deleteSprint);
 
+router.get("/work-items", listAllWorkItems);
 router.post("/work-items", createWorkItem);
 router.get("/work-items/:id", getWorkItem);
 router.patch("/work-items/:id", updateWorkItem);

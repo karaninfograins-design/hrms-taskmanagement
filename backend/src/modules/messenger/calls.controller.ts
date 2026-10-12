@@ -119,3 +119,98 @@ export const updateCallStatus = async (req: Request, res: Response): Promise<voi
     res.status(500).json({ message: "Failed to update call status" });
   }
 };
+
+export const deleteCallLog = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const callId = Number(req.params.id);
+
+    const call = await prisma.callSession.findUnique({
+      where: { id: callId },
+      include: { participants: true },
+    });
+
+    if (!call) {
+      res.status(404).json({ message: "Call log not found" });
+      return;
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: { select: { name: true } } },
+    });
+    const isAdmin = currentUser?.role?.name?.toUpperCase().includes("ADMIN");
+    const isHost = call.hostId === userId;
+    const isParticipant = call.participants.some((p) => p.userId === userId);
+
+    if (!isAdmin && !isHost && !isParticipant) {
+      res.status(403).json({ message: "Not authorized to delete this call log" });
+      return;
+    }
+
+    await prisma.callParticipant.deleteMany({
+      where: { callSessionId: callId },
+    });
+
+    await prisma.callSession.delete({
+      where: { id: callId },
+    });
+
+    res.json({ message: "Call log deleted successfully", id: callId });
+  } catch (error) {
+    console.error("Delete call log error:", error);
+    res.status(500).json({ message: "Failed to delete call log" });
+  }
+};
+
+export const clearAllCallLogs = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: { select: { name: true } } },
+    });
+    const isAdmin = currentUser?.role?.name?.toUpperCase().includes("ADMIN");
+
+    const callsToDelete = await prisma.callSession.findMany({
+      where: isAdmin
+        ? {}
+        : {
+            OR: [
+              { hostId: userId },
+              { participants: { some: { userId } } },
+            ],
+          },
+      select: { id: true },
+    });
+
+    const callIds = callsToDelete.map((c) => c.id);
+
+    if (callIds.length > 0) {
+      await prisma.callParticipant.deleteMany({
+        where: { callSessionId: { in: callIds } },
+      });
+      await prisma.callSession.deleteMany({
+        where: { id: { in: callIds } },
+      });
+    }
+
+    res.json({ message: "Call logs cleared successfully", count: callIds.length });
+  } catch (error) {
+    console.error("Clear call logs error:", error);
+    res.status(500).json({ message: "Failed to clear call logs" });
+  }
+};
+

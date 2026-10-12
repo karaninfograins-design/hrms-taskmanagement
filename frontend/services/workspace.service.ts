@@ -87,6 +87,9 @@ export type SprintDetails = {
 export function getWorkspaceList(resource: string, token: string) {
   return apiRequest<WorkspaceListResponse>(`/api/workspace/${resource}`, {
     headers: { Authorization: `Bearer ${token}` },
+  }).catch((err) => {
+    console.warn(`Failed to fetch workspace resource ${resource}:`, err?.message);
+    return { items: [] } as WorkspaceListResponse;
   });
 }
 

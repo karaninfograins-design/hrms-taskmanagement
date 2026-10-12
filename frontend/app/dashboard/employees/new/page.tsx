@@ -182,21 +182,18 @@ export default function AddEmployeePage() {
               onClick={() => router.push("/dashboard/employees")}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer"
             >
-              ← Back to Directory
+              ← Back
             </button>
           </div>
 
           {/* Hero Header Banner */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-800">
+          <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-4 md:p-6 shadow-xl border border-slate-800">
             <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="relative z-10 space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 bg-orange-500/20 px-3 py-1 rounded-md border border-orange-500/30">
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-300 bg-orange-300/20 px-2 py-1 rounded-md border border-orange-500/30">
                 ADMINISTRATION WORKSPACE
               </span>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">➕ Add New Employee</h1>
-              <p className="text-xs md:text-sm text-slate-300 font-medium max-w-2xl">
-                Register a new employee account, configure initial credentials, and assign system access permissions.
-              </p>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1"> Add New Employee</h1>
             </div>
           </div>
 
@@ -211,8 +208,8 @@ export default function AddEmployeePage() {
           >
             {/* Section 1: Personal & Credentials */}
             <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-wider text-orange-600 flex items-center gap-2">
-                <span>👤 Personal & Contact Info</span>
+              <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-2">
+                <span> Personal & Contact Info</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -259,8 +256,8 @@ export default function AddEmployeePage() {
 
             {/* Section 2: Password Security */}
             <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-wider text-orange-600 flex items-center gap-2">
-                <span>🔐 Password Security</span>
+              <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-2">
+                <span> Password Security</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -313,12 +310,12 @@ export default function AddEmployeePage() {
 
             {/* Section 3: System Access & Role */}
             <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-wider text-orange-600 flex items-center gap-2">
-                <span>💼 System Access & Role</span>
+              <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-2">
+                <span> System Access & Role</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">System Role *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">System Role </label>
                   <select
                     value={formData.roleId}
                     onChange={(e) => handleInputChange("roleId", e.target.value)}
@@ -366,7 +363,7 @@ export default function AddEmployeePage() {
                 disabled={loading}
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
               >
-                {loading ? "Creating Employee..." : "Save Employee Account"}
+                {loading ? "Creating..." : "Save"}
               </button>
             </div>
           </form>

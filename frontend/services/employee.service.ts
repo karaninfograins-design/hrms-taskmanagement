@@ -93,15 +93,20 @@ export async function getEmployees(
     queryParams.append("designationId", String(filters.designationId));
   if (filters.status) queryParams.append("status", filters.status);
 
-  const response = await apiRequest<EmployeeListResponse>(
-    `/api/employees?${queryParams.toString()}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-  return response;
+  try {
+    const response = await apiRequest<EmployeeListResponse>(
+      `/api/employees?${queryParams.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response;
+  } catch (err) {
+    console.warn("Failed to fetch employees:", err);
+    return { employees: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+  }
 }
 
 // Get single employee by ID

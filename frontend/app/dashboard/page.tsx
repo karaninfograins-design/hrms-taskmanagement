@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { getEmployees, type Employee } from "@/services/employee.service";
 import { getWorkspaceList } from "@/services/workspace.service";
+import { EmployeeDashboard } from "@/components/dashboard/EmployeeDashboard";
 
 type WorkItemStatus = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "BLOCKED";
 
@@ -88,99 +89,22 @@ export default function DashboardPage() {
   const [projectsCount, setProjectsCount] = useState<number>(0);
   const [sprintsCount, setSprintsCount] = useState<number>(0);
 
-  const activeSprints: ActiveSprintOverview[] = [
-    {
-      id: 12,
-      name: "Sprint 12 - Authentication & UI Refinement",
-      projectName: "E-Commerce Platform",
-      status: "ACTIVE",
-      type: "WEEKLY",
-      startDate: "2025-08-01",
-      endDate: "2025-08-15",
-      totalItems: 18,
-      completedItems: 14,
-    },
-    {
-      id: 14,
-      name: "Sprint 3 - HR Core API Integration",
-      projectName: "HRMS Enterprise",
-      status: "ACTIVE",
-      type: "WEEKLY",
-      startDate: "2025-08-05",
-      endDate: "2025-08-19",
-      totalItems: 12,
-      completedItems: 8,
-    },
-  ];
+  const [activeSprints, setActiveSprints] = useState<ActiveSprintOverview[]>([]);
+  const [recentWorkItems, setRecentWorkItems] = useState<WorkItem[]>([]);
 
-  const recentWorkItems: WorkItem[] = [
-    {
-      id: "1",
-      key: "HRMS-101",
-      title: "Authentication API & Role Permissions Guard",
-      type: "EPIC",
-      status: "IN_PROGRESS",
-      priority: "CRITICAL",
-      project: "HRMS Enterprise",
-      assignee: "Rahul Sharma",
-      updatedAt: "10 mins ago",
-    },
-    {
-      id: "2",
-      key: "HRMS-102",
-      title: "User Login & JWT Token Verification Form",
-      type: "STORY",
-      status: "IN_PROGRESS",
-      priority: "HIGH",
-      project: "HRMS Enterprise",
-      parentTitle: "Authentication API & Role Permissions Guard",
-      assignee: "Priya Patel",
-      updatedAt: "25 mins ago",
-    },
-    {
-      id: "3",
-      key: "HRMS-103",
-      title: "Create Database Schema for WorkItem & Parent Relationship",
-      type: "SUBTASK",
-      status: "DONE",
-      priority: "HIGH",
-      project: "HRMS Enterprise",
-      parentTitle: "User Login & JWT Token Verification Form",
-      assignee: "Amit Kumar",
-      updatedAt: "1 hour ago",
-    },
-    {
-      id: "4",
-      key: "HRMS-104",
-      title: "Project Hierarchy Tabular View Component",
-      type: "TASK",
-      status: "REVIEW",
-      priority: "MEDIUM",
-      project: "E-Commerce Platform",
-      parentTitle: "Workspace UI Overhaul",
-      assignee: "Neha Gupta",
-      updatedAt: "2 hours ago",
-    },
-    {
-      id: "5",
-      key: "HRMS-105",
-      title: "Fix Password Visibility Toggle Icon Margin",
-      type: "BUG",
-      status: "DONE",
-      priority: "LOW",
-      project: "HRMS Enterprise",
-      assignee: "Rahul Sharma",
-      updatedAt: "3 hours ago",
-    },
-  ];
+  const [rosterPage, setRosterPage] = useState<number>(1);
+  const [sprintsPage, setSprintsPage] = useState<number>(1);
+  const [workItemsPage, setWorkItemsPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 5;
 
   const loadDashboardMetrics = useCallback(async () => {
     if (!session?.token) return;
     try {
-      const [empData, projData, sprintData] = await Promise.all([
-        getEmployees({ limit: 5 }, session.token).catch(() => null),
+      const [empData, projData, sprintData, workItemData] = await Promise.all([
+        getEmployees({ limit: 10 }, session.token).catch(() => null),
         getWorkspaceList("projects", session.token).catch(() => null),
         getWorkspaceList("sprints", session.token).catch(() => null),
+        getWorkspaceList("work-items", session.token).catch(() => null),
       ]);
 
       if (empData) {
@@ -189,7 +113,26 @@ export default function DashboardPage() {
       }
 
       if (projData?.items) setProjectsCount(projData.items.length);
-      if (sprintData?.items) setSprintsCount(sprintData.items.length);
+
+      if (sprintData?.items) {
+        setSprintsCount(sprintData.items.length);
+        const formattedSprints: ActiveSprintOverview[] = sprintData.items.map((s: any) => ({
+          id: Number(s.id),
+          name: s.name,
+          projectName: typeof s.project === "object" ? s.project?.name : (s.project || "General"),
+          status: s.status || "ACTIVE",
+          type: s.type || "WEEKLY",
+          startDate: s.startDate ? new Date(s.startDate).toLocaleDateString() : "N/A",
+          endDate: s.endDate ? new Date(s.endDate).toLocaleDateString() : "N/A",
+          totalItems: s.totalItems || (s.workItems ? s.workItems.length : 0),
+          completedItems: s.completedItems || (s.workItems ? s.workItems.filter((w: any) => w.status === "DONE").length : 0),
+        }));
+        setActiveSprints(formattedSprints);
+      }
+
+      if (workItemData?.items) {
+        setRecentWorkItems(workItemData.items as unknown as WorkItem[]);
+      }
     } catch (err) {
       console.error("Dashboard metrics error:", err);
     } finally {
@@ -205,8 +148,8 @@ export default function DashboardPage() {
     if (session?.token) loadDashboardMetrics();
   }, [session?.token, loadDashboardMetrics]);
 
-  const roleName = typeof session?.user?.role === "string" 
-    ? session.user.role 
+  const roleName = typeof session?.user?.role === "string"
+    ? session.user.role
     : (session?.user?.role as any)?.name || (session?.user?.role === 1 ? "SUPER_ADMIN" : session?.user?.role === 2 ? "ADMIN" : "EMPLOYEE");
 
   const userRoleId = typeof session?.user?.role === "number"
@@ -244,6 +187,24 @@ export default function DashboardPage() {
 
   const activeEmployeesCount = employeesList.filter((e) => e.status === "ACTIVE").length;
   const adminCount = employeesList.filter((e) => e.role?.name === "ADMIN" || e.role?.name === "SUPER_ADMIN").length;
+
+  if (!isAdminUser) {
+    return (
+      <main className="app-shell">
+        <Navbar user={session.user} onSignOut={handleSignOut} />
+        <div className="dashboard-frame">
+          <Sidebar user={session.user} canCreateAdmins={canCreateAdmins} onSignOut={handleSignOut} />
+          <section className="dashboard-content">
+            <EmployeeDashboard
+              token={session.token}
+              userName={session.user.name}
+              userId={session.user.id || 0}
+            />
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell">
@@ -342,7 +303,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="text-base font-extrabold text-slate-900">Employee Roster & Roles</h2>
-                <p className="text-xs text-slate-500 font-medium">Recent employees and system role assignments.</p>
+                <p className="text-xs text-slate-500 font-medium">Recent employees and system role assignments (Showing {employeesList.length > 0 ? (rosterPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(rosterPage * ITEMS_PER_PAGE, employeesList.length)} of {employeesList.length}).</p>
               </div>
               <Link
                 href="/dashboard/employees"
@@ -373,7 +334,7 @@ export default function DashboardPage() {
                         </td>
                       </tr>
                     ) : (
-                      employeesList.slice(0, 5).map((emp) => (
+                      employeesList.slice((rosterPage - 1) * ITEMS_PER_PAGE, rosterPage * ITEMS_PER_PAGE).map((emp) => (
                         <tr key={emp.id}>
                           <td>
                             <div className="flex items-center gap-3">
@@ -406,11 +367,10 @@ export default function DashboardPage() {
                           </td>
                           <td>
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
-                                emp.status === "ACTIVE"
-                                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                  : "bg-rose-50 text-rose-800 border-rose-200"
-                              }`}
+                              className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${emp.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : "bg-rose-50 text-rose-800 border-rose-200"
+                                }`}
                             >
                               {emp.status || "ACTIVE"}
                             </span>
@@ -429,6 +389,29 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
+              {employeesList.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50 text-xs">
+                  <span className="font-semibold text-slate-500">
+                    Page {rosterPage} of {Math.ceil(employeesList.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={rosterPage === 1}
+                      onClick={() => setRosterPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded bg-white border border-slate-200 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      disabled={rosterPage >= Math.ceil(employeesList.length / ITEMS_PER_PAGE)}
+                      onClick={() => setRosterPage((p) => p + 1)}
+                      className="px-2.5 py-1 rounded bg-white border border-slate-200 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -437,7 +420,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="text-base font-extrabold text-slate-900">Active Iterations & Sprints</h2>
-                <p className="text-xs text-slate-500 font-medium">Sprint progress and timeline tracking.</p>
+                <p className="text-xs text-slate-500 font-medium">Sprint progress and timeline tracking (Showing {activeSprints.length > 0 ? (sprintsPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(sprintsPage * ITEMS_PER_PAGE, activeSprints.length)} of {activeSprints.length}).</p>
               </div>
               <Link href="/dashboard/sprints" className="text-xs font-bold text-orange-600 hover:text-orange-700">
                 View All Sprints →
@@ -459,40 +442,71 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeSprints.map((s) => {
-                      const pct = Math.round((s.completedItems / s.totalItems) * 100);
-                      return (
-                        <tr key={s.id}>
-                          <td>
-                            <strong>{s.name}</strong>
-                          </td>
-                          <td>{s.projectName}</td>
-                          <td>{s.type}</td>
-                          <td>
-                            <StatusBadge status={s.status} />
-                          </td>
-                          <td>
-                            {s.startDate} - {s.endDate}
-                          </td>
-                          <td>
-                            <div className="flex items-center gap-3">
-                              <div className="h-2 w-28 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                    {activeSprints.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-6 text-slate-500 text-xs font-medium">
+                          No active sprints found.
+                        </td>
+                      </tr>
+                    ) : (
+                      activeSprints.slice((sprintsPage - 1) * ITEMS_PER_PAGE, sprintsPage * ITEMS_PER_PAGE).map((s) => {
+                        const pct = s.totalItems > 0 ? Math.round((s.completedItems / s.totalItems) * 100) : 0;
+                        return (
+                          <tr key={s.id}>
+                            <td>
+                              <strong>{s.name}</strong>
+                            </td>
+                            <td>{s.projectName}</td>
+                            <td>{s.type}</td>
+                            <td>
+                              <StatusBadge status={s.status} />
+                            </td>
+                            <td>
+                              {s.startDate} - {s.endDate}
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-3">
+                                <div className="h-2 w-28 bg-slate-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs font-bold text-slate-700">{pct}% ({s.completedItems}/{s.totalItems})</span>
                               </div>
-                              <span className="text-xs font-bold text-slate-700">{pct}% ({s.completedItems}/{s.totalItems})</span>
-                            </div>
-                          </td>
-                          <td>
-                            <Link href={`/dashboard/projects`} className="text-button text-xs font-bold">
-                              Open Projects →
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td>
+                              <Link href={`/dashboard/projects`} className="text-button text-xs font-bold">
+                                Open Projects →
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
+              {activeSprints.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50 text-xs">
+                  <span className="font-semibold text-slate-500">
+                    Page {sprintsPage} of {Math.ceil(activeSprints.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={sprintsPage === 1}
+                      onClick={() => setSprintsPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded bg-white border border-slate-200 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      disabled={sprintsPage >= Math.ceil(activeSprints.length / ITEMS_PER_PAGE)}
+                      onClick={() => setSprintsPage((p) => p + 1)}
+                      className="px-2.5 py-1 rounded bg-white border border-slate-200 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -501,7 +515,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="text-base font-extrabold text-slate-900">Recent Work Items & Hierarchy</h2>
-                <p className="text-xs text-slate-500 font-medium">Latest Epics, Stories, Tasks, Bugs, and Subtasks.</p>
+                <p className="text-xs text-slate-500 font-medium">Latest Epics, Stories, Tasks, Bugs, and Subtasks (Showing {recentWorkItems.length > 0 ? (workItemsPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(workItemsPage * ITEMS_PER_PAGE, recentWorkItems.length)} of {recentWorkItems.length}).</p>
               </div>
               <Link href="/dashboard/projects" className="text-xs font-bold text-orange-600 hover:text-orange-700">
                 View Projects →
@@ -524,36 +538,70 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentWorkItems.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <span className="font-bold text-xs text-slate-900">{item.key}</span>
-                        </td>
-                        <td>
-                          <strong className="text-slate-900 text-sm block">{item.title}</strong>
-                          {item.parentTitle && (
-                            <small className="table-subtext">Parent: {item.parentTitle}</small>
-                          )}
-                        </td>
-                        <td>
-                          <TypeBadge type={item.type} />
-                        </td>
-                        <td>
-                          <StatusBadge status={item.status} />
-                        </td>
-                        <td>
-                          <PriorityPill priority={item.priority} />
-                        </td>
-                        <td>{item.project}</td>
-                        <td>{item.assignee}</td>
-                        <td>
-                          <span className="text-xs font-medium text-slate-500">{item.updatedAt}</span>
+                    {recentWorkItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center py-6 text-slate-500 text-xs font-medium">
+                          No work items created yet.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      recentWorkItems.slice((workItemsPage - 1) * ITEMS_PER_PAGE, workItemsPage * ITEMS_PER_PAGE).map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <span className="font-bold text-xs text-slate-900">{item.key}</span>
+                          </td>
+                          <td>
+                            <strong className="text-slate-900 text-sm block">
+                              {item.type === "SUBTASK" && <span className="text-orange-600 font-bold mr-1">↳</span>}
+                              {item.title}
+                            </strong>
+                            {item.parentTitle && (
+                              <small className="table-subtext font-semibold text-slate-500">Parent: {item.parentTitle}</small>
+                            )}
+                          </td>
+                          <td>
+                            <TypeBadge type={item.type} />
+                          </td>
+                          <td>
+                            <StatusBadge status={item.status} />
+                          </td>
+                          <td>
+                            <PriorityPill priority={item.priority} />
+                          </td>
+                          <td>{item.project}</td>
+                          <td>{item.assignee}</td>
+                          <td>
+                            <span className="text-xs font-medium text-slate-500">{item.updatedAt}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
+              {recentWorkItems.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50 text-xs">
+                  <span className="font-semibold text-slate-500">
+                    Page {workItemsPage} of {Math.ceil(recentWorkItems.length / ITEMS_PER_PAGE)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={workItemsPage === 1}
+                      onClick={() => setWorkItemsPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded bg-white border border-slate-200 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      disabled={workItemsPage >= Math.ceil(recentWorkItems.length / ITEMS_PER_PAGE)}
+                      onClick={() => setWorkItemsPage((p) => p + 1)}
+                      className="px-2.5 py-1 rounded bg-white border border-slate-200 font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </section>

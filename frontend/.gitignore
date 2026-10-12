@@ -23,3 +23,6 @@ next-env.d.ts
 *.temp
 .AGENTS.md
 .CLAUDE.md
+
+
+DEPLOYMENT_GUIDE.md

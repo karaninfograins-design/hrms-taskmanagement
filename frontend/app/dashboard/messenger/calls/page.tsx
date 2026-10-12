@@ -102,6 +102,42 @@ function CallsContent() {
     }
   };
 
+  const handleDeleteCall = async (callId: number) => {
+    if (!confirm("Are you sure you want to delete this call log?")) return;
+    try {
+      const res = await fetch(`${getApiUrl()}/api/calls/${callId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) {
+        alert("Failed to delete call log");
+        return;
+      }
+      setCalls((prev) => prev.filter((c) => c.id !== callId));
+    } catch (err) {
+      console.error("Error deleting call log:", err);
+      alert("Error deleting call log");
+    }
+  };
+
+  const handleClearAllCalls = async () => {
+    if (!confirm("Are you sure you want to clear all call logs?")) return;
+    try {
+      const res = await fetch(`${getApiUrl()}/api/calls`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) {
+        alert("Failed to clear call logs");
+        return;
+      }
+      setCalls([]);
+    } catch (err) {
+      console.error("Error clearing call logs:", err);
+      alert("Error clearing call logs");
+    }
+  };
+
   useEffect(() => {
     if (session?.token) {
       fetchCalls();
@@ -375,12 +411,22 @@ function CallsContent() {
                 Real-time WebRTC audio/video calling with instant signaling and session history.
               </p>
             </div>
-            <button
-              onClick={() => setShowStartModal(true)}
-              className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center gap-2"
-            >
-              <span>📞</span> Start New Call
-            </button>
+            <div className="flex items-center gap-2">
+              {calls.length > 0 && (
+                <button
+                  onClick={handleClearAllCalls}
+                  className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-bold rounded-xl transition-all border border-slate-200 text-xs cursor-pointer"
+                >
+                  Clear All Logs
+                </button>
+              )}
+              <button
+                onClick={() => setShowStartModal(true)}
+                className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center gap-2 cursor-pointer"
+              >
+                <span>📞</span> Start New Call
+              </button>
+            </div>
           </div>
 
           {/* Call History Table */}
@@ -401,6 +447,7 @@ function CallsContent() {
                       <th className="p-4">Participants</th>
                       <th className="p-4">Status</th>
                       <th className="p-4">Date & Time</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -431,6 +478,15 @@ function CallsContent() {
                         </td>
                         <td className="p-4 text-slate-500 font-medium">
                           {new Date(call.createdAt).toLocaleString()}
+                        </td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDeleteCall(call.id)}
+                            className="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 rounded-lg transition-colors cursor-pointer"
+                            title="Delete call log"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}

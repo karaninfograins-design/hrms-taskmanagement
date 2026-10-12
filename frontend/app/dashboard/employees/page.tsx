@@ -516,9 +516,9 @@ export default function EmployeesPage() {
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                     className="h-7 px-2 rounded-sm border border-slate-200 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                   >
-                    <option value={10}>10 per page</option>
-                    <option value={20}>20 per page</option>
-                    <option value={50}>50 per page</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
                   </select>
 
                   <div className="flex items-center gap-1.5">

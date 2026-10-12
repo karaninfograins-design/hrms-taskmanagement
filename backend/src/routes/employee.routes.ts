@@ -6,7 +6,7 @@ import {
   updateEmployee,
   deleteEmployee,
   getRolesAndDesignations,
-} from "../controllers/employee.controller";
+} from "../controllers/employee.controller.js";
 
 const router = Router();
 

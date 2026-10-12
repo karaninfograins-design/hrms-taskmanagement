@@ -17,6 +17,7 @@ import meetingRoutes from "./modules/meeting/meeting.routes.js";
 import messengerRoutes from "./modules/messenger/messenger.routes.js";
 import callsRoutes from "./modules/messenger/calls.routes.js";
 import holidayRoutes from "./modules/holiday/holiday.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import { setupSocketServer } from "./socket.js";
 
 import path from "path";
@@ -61,6 +62,7 @@ app.use("/api/meetings", meetingRoutes);
 app.use("/api/messenger", messengerRoutes);
 app.use("/api/calls", callsRoutes);
 app.use("/api/holidays", holidayRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Attach Socket.IO
 setupSocketServer(httpServer);

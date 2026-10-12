@@ -825,6 +825,20 @@ body:has(.app-shell) {
   border-top: 1px solid var(--line);
 }
 
+.enhanced-sprint-form-actions button {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
 /* ============================================================
    Team Assignment Editor
    ============================================================ */

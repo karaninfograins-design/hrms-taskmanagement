@@ -24,16 +24,16 @@ export const getConversations = async (req: Request, res: Response): Promise<voi
     const conversations = await prisma.conversation.findMany({
       where: isSuperAdmin
         ? {
-            OR: [
-              { participants: { some: { userId } } },
-              { type: "GROUP" },
-            ],
-          }
+          OR: [
+            { participants: { some: { userId } } },
+            { type: "GROUP" },
+          ],
+        }
         : {
-            participants: {
-              some: { userId },
-            },
+          participants: {
+            some: { userId },
           },
+        },
       include: {
         createdBy: { select: { id: true, name: true } },
         participants: {
@@ -600,5 +600,81 @@ export const updateGroupConversation = async (req: Request, res: Response): Prom
     res.status(500).json({ message: "Failed to update group" });
   }
 };
+
+export const deleteConversation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const convId = Number(req.params.id);
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: convId },
+      include: {
+        participants: true,
+      },
+    });
+
+    if (!conversation) {
+      res.status(404).json({ message: "Conversation not found" });
+      return;
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: { select: { name: true } } },
+    });
+    const isSuperAdmin = currentUser?.role?.name?.toUpperCase().includes("ADMIN");
+    const isCreator = conversation.createdById === userId;
+    const isParticipant = conversation.participants.some((p) => p.userId === userId);
+
+    if (!isSuperAdmin && !isCreator && !isParticipant) {
+      res.status(403).json({ message: "Not authorized to delete this conversation" });
+      return;
+    }
+
+    // 1. Delete associated messages
+    await prisma.message.deleteMany({
+      where: { conversationId: convId },
+    });
+
+    // 2. Delete participants
+    await prisma.conversationParticipant.deleteMany({
+      where: { conversationId: convId },
+    });
+
+    // 3. Set call sessions conversationId to null if any
+    await prisma.callSession.updateMany({
+      where: { conversationId: convId },
+      data: { conversationId: null },
+    });
+
+    // 4. Delete the conversation
+    await prisma.conversation.delete({
+      where: { id: convId },
+    });
+
+    // Real-Time Socket.IO Broadcast to participants
+    try {
+      const io = getIO();
+      conversation.participants.forEach((p) => {
+        io.to(`user_${p.userId}`).emit("conversation:deleted", { conversationId: convId });
+      });
+      io.to(`conversation_${convId}`).emit("conversation:deleted", { conversationId: convId });
+    } catch (err) {
+      console.error("Socket emit error on conversation delete:", err);
+    }
+
+    res.json({ message: "Conversation deleted successfully", id: convId });
+  } catch (error) {
+    console.error("Delete conversation error:", error);
+    res.status(500).json({ message: "Failed to delete conversation" });
+  }
+};
+
 
 

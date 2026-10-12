@@ -36,6 +36,8 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["e2e_test_suite.ts", "src/run-test.ts", "node_modules", "dist"]
 }

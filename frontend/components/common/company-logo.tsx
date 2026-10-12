@@ -16,8 +16,8 @@ export function CompanyLogo({ className = "" }: CompanyLogoProps) {
           priority
         />
       </div>
-      <span className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
-        <span>⚡</span> HRMS Workspace
+      <span className="hidden sm:inline-flex items-center gap-1 px-2 py-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
+        HRMS Workspace
       </span>
     </div>
   );

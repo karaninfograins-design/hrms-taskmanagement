@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 import { verifyToken } from "../utils/jwt.js";
+import { createNotificationsForUsers } from "./notification.controller.js";
 
 async function authenticate(req: Request, res: Response) {
   const token = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : undefined;
@@ -48,10 +49,43 @@ export async function listProjects(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
   const items = await prisma.project.findMany({
     where: { status: { not: "INACTIVE" } },
-    select: { id: true, key: true, name: true, status: true, startDate: true, endDate: true, createdBy: { select: { name: true } } },
+    select: {
+      id: true,
+      key: true,
+      name: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      createdBy: { select: { id: true, name: true, email: true } },
+      members: { select: { userId: true, user: { select: { id: true, name: true, email: true } } } },
+      workItems: {
+        select: {
+          id: true,
+          assigneeId: true,
+          assignees: { select: { userId: true } },
+        },
+      },
+    },
     orderBy: { updatedAt: "desc" },
   });
-  res.json({ items: items.map(({ createdBy, ...project }: { createdBy: { name: string };[key: string]: unknown }) => ({ ...project, owner: createdBy.name })) });
+  res.json({
+    items: items.map(({ createdBy, members, workItems, ...project }: any) => {
+      const workItemAssigneeIds = (workItems || []).flatMap((w: any) => [
+        ...(w.assigneeId ? [w.assigneeId] : []),
+        ...(w.assignees || []).map((a: any) => a.userId),
+      ]);
+      const memberUserIds = (members || []).map((m: any) => m.userId);
+      const assignedUserIds = Array.from(new Set([...memberUserIds, ...workItemAssigneeIds]));
+
+      return {
+        ...project,
+        owner: createdBy?.name || "Admin",
+        createdBy,
+        members: (members || []).map((m: any) => ({ userId: m.userId, user: m.user })),
+        assignedUserIds,
+      };
+    }),
+  });
 }
 
 export async function deleteProject(req: Request, res: Response) {
@@ -279,9 +313,20 @@ export async function createWorkItem(req: Request, res: Response) {
     },
   });
 
-  if (rawAssigneeIds.length > 0) {
+  const assigneesToRegister = Array.from(
+    new Set([
+      ...(primaryAssigneeId ? [primaryAssigneeId] : []),
+      ...rawAssigneeIds,
+    ])
+  );
+
+  if (assigneesToRegister.length > 0) {
     await prisma.workItemAssignee.createMany({
-      data: rawAssigneeIds.map((userId) => ({ workItemId: item.id, userId })),
+      data: assigneesToRegister.map((userId) => ({ workItemId: item.id, userId })),
+      skipDuplicates: true,
+    });
+    await prisma.projectMember.createMany({
+      data: assigneesToRegister.map((userId) => ({ projectId, userId })),
       skipDuplicates: true,
     });
   }
@@ -535,9 +580,14 @@ export async function getProject(req: Request, res: Response) {
           id: true,
           keyNumber: true,
           title: true,
+          description: true,
           type: true,
           status: true,
           priority: true,
+          parentId: true,
+          startDate: true,
+          dueDate: true,
+          storyPoints: true,
           sprint: { select: { id: true, name: true } },
           assignee: { select: { id: true, name: true, email: true } },
           assignees: { include: { user: { select: { id: true, name: true, email: true } } } },
@@ -578,6 +628,23 @@ export async function createProject(req: Request, res: Response) {
       createdById: user.id
     }
   });
+
+  // Non-blocking asynchronous notification dispatch
+  prisma.user.findMany({
+    where: { status: "ACTIVE", role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } } },
+    select: { id: true }
+  }).then((admins) => {
+    if (admins.length > 0) {
+      createNotificationsForUsers(
+        admins.map(a => a.id),
+        "PROJECT_CREATED",
+        "New Project Created",
+        `Project "${item.name}" (${projectKey}) was created by ${user.name}.`,
+        `/dashboard/workspace?projectId=${item.id}`
+      ).catch(err => console.error("Non-blocking notification error:", err));
+    }
+  }).catch(err => console.error("Error fetching admins for notification:", err));
+
   res.status(201).json({ item });
 }
 
@@ -863,4 +930,53 @@ export async function createPermission(req: Request, res: Response) {
 export async function getWorkspaceSettings(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
   res.json({ items: [{ workspace: "HRMS", timezone: "Asia/Kolkata", theme: "Black, white & orange", access: "Administrator managed" }] });
+}
+
+export async function listAllWorkItems(req: Request, res: Response) {
+  const user = await authenticate(req, res);
+  if (!user) return;
+
+  const isEmployeeRole = user.role.name === "EMPLOYEE";
+
+  const items = await prisma.workItem.findMany({
+    where: {
+      project: { status: { not: "INACTIVE" } },
+      ...(isEmployeeRole
+        ? {
+          OR: [
+            { assigneeId: user.id },
+            { assignees: { some: { userId: user.id } } },
+            { createdById: user.id },
+            { project: { members: { some: { userId: user.id } } } },
+          ],
+        }
+        : {}),
+    },
+    include: {
+      project: { select: { id: true, key: true, name: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+      assignees: { select: { userId: true } },
+      parent: { select: { id: true, title: true, type: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 100,
+  });
+
+  res.json({
+    items: items.map((item: any) => ({
+      id: String(item.id),
+      key: `${item.project.key || "PRJ"}-${item.keyNumber}`,
+      title: item.title,
+      type: item.type,
+      status: item.status,
+      priority: item.priority,
+      project: item.project.name,
+      projectId: item.projectId,
+      parentTitle: item.parent?.title,
+      assigneeId: item.assigneeId,
+      assignees: item.assignees,
+      assignee: item.assignee?.name || "Unassigned",
+      updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "Recently",
+    })),
+  });
 }

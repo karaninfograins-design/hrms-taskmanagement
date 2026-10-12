@@ -565,7 +565,7 @@ export default function ViewEmployeePage() {
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                 >
-                  📋 Overview
+                  Overview
                 </button>
                 <button
                   onClick={() => setActiveTab("credentials")}
@@ -574,7 +574,7 @@ export default function ViewEmployeePage() {
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                 >
-                  🔑 Credentials & Account
+                  Credentials & Account
                 </button>
                 <button
                   onClick={() => setActiveTab("hr")}
@@ -583,7 +583,7 @@ export default function ViewEmployeePage() {
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                 >
-                  🏢 HR & Personal Info
+                  HR & Personal Info
                 </button>
                 <button
                   onClick={() => setActiveTab("workItems")}
@@ -592,7 +592,7 @@ export default function ViewEmployeePage() {
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                 >
-                  📌 Assigned Work Items ({employee.assignedWorkItems?.length || 0})
+                  Assigned Work Items ({employee.assignedWorkItems?.length || 0})
                 </button>
               </div>
 

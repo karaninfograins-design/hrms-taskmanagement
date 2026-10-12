@@ -237,18 +237,54 @@ function ChatsContent() {
       }
     };
 
+    const onConversationDeleted = (data: { conversationId: number }) => {
+      setConversations((prev) => prev.filter((c) => c.id !== data.conversationId));
+      if (activeConvRef.current?.id === data.conversationId) {
+        setActiveConv(null);
+        setMessages([]);
+      }
+    };
+
     socket.on("message:new", onNewMessage);
     socket.on("conversation:updated", onConversationUpdated);
+    socket.on("conversation:deleted", onConversationDeleted);
     socket.on("user:typing", onUserTyping);
     socket.on("user:stop_typing", onUserStopTyping);
 
     return () => {
       socket.off("message:new", onNewMessage);
       socket.off("conversation:updated", onConversationUpdated);
+      socket.off("conversation:deleted", onConversationDeleted);
       socket.off("user:typing", onUserTyping);
       socket.off("user:stop_typing", onUserStopTyping);
     };
   }, [socket]);
+
+  // Delete Conversation Handler (Direct or Group)
+  const handleDeleteConversation = async (conversationId: number) => {
+    const conv = conversations.find((c) => c.id === conversationId);
+    const label = conv?.type === "GROUP" ? `group "${conv.name}"` : "this conversation";
+    if (!confirm(`Are you sure you want to delete ${label}? All messages and media will be permanently deleted.`)) return;
+
+    try {
+      const res = await fetch(`${getApiUrl()}/api/messenger/conversations/${conversationId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) {
+        alert("Failed to delete chat");
+        return;
+      }
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (activeConv?.id === conversationId) {
+        setActiveConv(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error("Error deleting conversation:", err);
+      alert("Error deleting conversation");
+    }
+  };
 
   // Handle typing input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -659,11 +695,25 @@ function ChatsContent() {
                               </div>
                             </div>
 
-                            {conv.unreadCount ? (
-                              <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-xs">
-                                {conv.unreadCount}
-                              </span>
-                            ) : null}
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {conv.unreadCount ? (
+                                <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-xs">
+                                  {conv.unreadCount}
+                                </span>
+                              ) : null}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteConversation(conv.id);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
+                                title="Delete chat"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -789,6 +839,13 @@ function ChatsContent() {
                       className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
                     >
                       🎥 Video
+                    </button>
+                    <button
+                      onClick={() => handleDeleteConversation(activeConv.id)}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-rose-200 flex items-center gap-1 cursor-pointer"
+                      title={isDirect ? "Delete chat conversation" : "Delete group conversation"}
+                    >
+                      Delete Chat
                     </button>
                     <button
                       onClick={() => setActiveConv(null)}

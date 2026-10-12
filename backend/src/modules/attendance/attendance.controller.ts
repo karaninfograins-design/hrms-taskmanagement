@@ -2,6 +2,22 @@ import type { Request, Response } from "express";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
 
+// Helper to get normalized UTC Date for MySQL @db.Date field (YYYY-MM-DD)
+function getTodayDbDate(d: Date = new Date()): Date {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+}
+
+// Helper to get local start and end of day for range queries
+function getDayRange(d: Date = new Date()) {
+  const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  const dbDate = getTodayDbDate(d);
+  return { startOfDay, endOfDay, dbDate };
+}
+
 export const getTodayAttendance = async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.replace("Bearer ", "");
@@ -11,13 +27,15 @@ export const getTodayAttendance = async (req: Request, res: Response): Promise<v
     }
 
     const { userId } = verifyToken(token);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { startOfDay, endOfDay, dbDate } = getDayRange();
 
     const attendance = await prisma.attendance.findFirst({
       where: {
         userId,
-        date: today,
+        OR: [
+          { date: dbDate },
+          { date: { gte: startOfDay, lte: endOfDay } },
+        ],
       },
     });
 
@@ -37,12 +55,17 @@ export const checkIn = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { userId } = verifyToken(token);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const now = new Date();
+    const { startOfDay, endOfDay, dbDate } = getDayRange(now);
 
     let attendance = await prisma.attendance.findFirst({
-      where: { userId, date: today },
+      where: {
+        userId,
+        OR: [
+          { date: dbDate },
+          { date: { gte: startOfDay, lte: endOfDay } },
+        ],
+      },
     });
 
     if (attendance && attendance.checkIn) {
@@ -50,23 +73,54 @@ export const checkIn = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const status = now.getHours() >= 10 ? "LATE" : "PRESENT";
+
     if (attendance) {
       attendance = await prisma.attendance.update({
         where: { id: attendance.id },
         data: {
           checkIn: now,
-          status: now.getHours() >= 10 ? "LATE" : "PRESENT",
+          status,
         },
       });
     } else {
-      attendance = await prisma.attendance.create({
-        data: {
-          userId,
-          date: today,
-          checkIn: now,
-          status: now.getHours() >= 10 ? "LATE" : "PRESENT",
-        },
-      });
+      try {
+        attendance = await prisma.attendance.create({
+          data: {
+            userId,
+            date: dbDate,
+            checkIn: now,
+            status,
+          },
+        });
+      } catch (createErr: any) {
+        // If race condition / unique constraint hit, attempt find & update fallback
+        if (createErr?.code === "P2002" || createErr?.message?.includes("Unique constraint")) {
+          const existing = await prisma.attendance.findFirst({
+            where: {
+              userId,
+              OR: [
+                { date: dbDate },
+                { date: { gte: startOfDay, lte: endOfDay } },
+              ],
+            },
+          });
+          if (existing) {
+            if (existing.checkIn) {
+              res.status(400).json({ message: "You have already checked in today" });
+              return;
+            }
+            attendance = await prisma.attendance.update({
+              where: { id: existing.id },
+              data: { checkIn: now, status },
+            });
+          } else {
+            throw createErr;
+          }
+        } else {
+          throw createErr;
+        }
+      }
     }
 
     res.json({ message: "Checked in successfully", attendance });
@@ -85,12 +139,17 @@ export const checkOut = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { userId } = verifyToken(token);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const now = new Date();
+    const { startOfDay, endOfDay, dbDate } = getDayRange(now);
 
     const attendance = await prisma.attendance.findFirst({
-      where: { userId, date: today },
+      where: {
+        userId,
+        OR: [
+          { date: dbDate },
+          { date: { gte: startOfDay, lte: endOfDay } },
+        ],
+      },
     });
 
     if (!attendance || !attendance.checkIn) {
@@ -131,7 +190,7 @@ export const getAttendanceLogs = async (req: Request, res: Response): Promise<vo
       include: { role: true },
     });
 
-    const isHR = user?.role.name === "SUPER_ADMIN" || user?.role.name === "ADMIN";
+    const isHR = user?.role?.name === "SUPER_ADMIN" || user?.role?.name === "ADMIN";
     const { page = 1, limit = 20, targetUserId, startDate, endDate, status } = req.query;
 
     const pageNum = Number(page);

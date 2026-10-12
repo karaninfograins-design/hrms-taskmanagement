@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 import { hashPassword } from "../utils/password.js";
 import { verifyToken } from "../utils/jwt.js";
+import { createNotificationsForUsers } from "./notification.controller.js";
 
 // Types for Employee operations
 type EmployeeInput = {
@@ -345,6 +346,23 @@ export const createEmployee = async (
         createdAt: true,
       },
     });
+
+    // Non-blocking asynchronous notification dispatch
+    prisma.user.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true },
+    }).then((allActiveUsers) => {
+      const notifyUserIds = allActiveUsers.map((u) => u.id).filter((id) => id !== userId);
+      if (notifyUserIds.length > 0) {
+        createNotificationsForUsers(
+          notifyUserIds,
+          "EMPLOYEE_CREATED",
+          "New Employee Joined",
+          `${employee.name} has joined as ${employee.role?.name || "Employee"}.`,
+          "/dashboard"
+        ).catch((err) => console.error("Non-blocking notification error:", err));
+      }
+    }).catch((err) => console.error("Error fetching users for notification:", err));
 
     res.status(201).json({ message: "Employee created", employee });
   } catch (error) {

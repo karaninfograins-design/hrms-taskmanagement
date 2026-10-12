@@ -204,32 +204,37 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {/* Today's Clock In Widget */}
-          <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl p-6 text-white shadow-lg shadow-orange-500/15 flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
-            <div className="space-y-2 text-center md:text-left">
-              <span className="px-3 py-1 bg-white/20 rounded-full text-[11px] font-bold uppercase tracking-wider">
+          {/* Today's Clock In Widget - Soft Peach Banner */}
+          <div className="relative overflow-hidden rounded-2xl border border-orange-100/80 bg-gradient-to-r from-orange-50 via-[#F9E9DD] to-[#F3E3D8] p-6 text-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
+            <div className="absolute -right-8 -top-16 h-44 w-44 rounded-full bg-white/40 blur-2xl" />
+            <div className="absolute right-28 top-8 h-20 w-20 rounded-full bg-orange-200/30 blur-xl" />
+            <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(#C49A80_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
+
+            <div className="relative z-10 space-y-2 text-center md:text-left">
+              <span className="inline-flex items-center rounded-full border border-orange-200/80 bg-orange-50/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#9A6245]">
                 Today ({new Date().toLocaleDateString()})
               </span>
-              <h2 className="text-2xl font-black">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-800">
                 {todayAttendance?.checkIn
                   ? `Clocked In at ${formatTime(todayAttendance.checkIn)}`
                   : "Not Clocked In Today"}
               </h2>
-              <p className="text-orange-100 text-xs font-medium">
+              <p className="text-xs font-medium text-slate-600">
                 {todayAttendance?.checkOut
                   ? `Clocked out at ${formatTime(todayAttendance.checkOut)} (${todayAttendance.workingHours} hrs worked)`
                   : todayAttendance?.checkIn
-                  ? "Shift in progress..."
-                  : "Click the button to record your shift start time."}
+                    ? "Shift in progress..."
+                    : "Click the button to record your shift start time."}
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="relative z-10 flex gap-3">
               {!todayAttendance?.checkIn ? (
                 <button
                   onClick={handleCheckIn}
                   disabled={actionLoading}
-                  className="px-6 py-3 bg-white text-orange-600 font-black rounded-xl shadow-md hover:bg-orange-50 transition-all text-xs disabled:opacity-50"
+                  style={{ backgroundColor: "#FDBA74" }}
+                  className="px-6 py-2.5 text-slate-900 font-extrabold rounded-xl shadow-xs hover:brightness-95 transition-all text-xs disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? "Processing..." : "Clock In"}
                 </button>
@@ -237,13 +242,14 @@ export default function AttendancePage() {
                 <button
                   onClick={handleCheckOut}
                   disabled={actionLoading}
-                  className="px-6 py-3 bg-slate-900 text-white font-black rounded-xl shadow-md hover:bg-slate-800 transition-all text-xs disabled:opacity-50"
+                  style={{ backgroundColor: "#FDBA74" }}
+                  className="px-6 py-2.5 text-slate-900 font-extrabold rounded-xl shadow-xs hover:brightness-95 transition-all text-xs disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? "Processing..." : "Clock Out"}
                 </button>
               ) : (
-                <span className="px-5 py-2.5 bg-white/20 text-white font-bold rounded-xl text-xs">
-                  Shift Completed
+                <span className="px-5 py-2.5 bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold rounded-xl text-xs">
+                  ✓ Shift Completed
                 </span>
               )}
             </div>
@@ -293,39 +299,38 @@ export default function AttendancePage() {
 
                       return displayLogs.map((row) => (
                         <tr key={row.id} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-bold text-slate-900">
-                          {row.user?.name || "Self"}
-                        </td>
-                        <td className="py-3 px-4 text-slate-600 font-medium">
-                          {new Date(row.date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-xs text-slate-700">
-                          {formatTime(row.checkIn)}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-xs text-slate-700">
-                          {formatTime(row.checkOut)}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-slate-800">
-                          {row.workingHours} hrs
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${
-                              row.status === "PRESENT"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : row.status === "LATE"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : row.status === "HALF_DAY"
-                                ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                : "bg-rose-50 text-rose-700 border border-rose-200"
-                            }`}
-                          >
-                            {row.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ));
-                  })()}
+                          <td className="py-3 px-4 font-bold text-slate-900">
+                            {row.user?.name || "Self"}
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 font-medium">
+                            {new Date(row.date).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-700">
+                            {formatTime(row.checkIn)}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-700">
+                            {formatTime(row.checkOut)}
+                          </td>
+                          <td className="py-3 px-4 font-bold text-slate-800">
+                            {row.workingHours} hrs
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${row.status === "PRESENT"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : row.status === "LATE"
+                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                    : row.status === "HALF_DAY"
+                                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                      : "bg-rose-50 text-rose-700 border border-rose-200"
+                                }`}
+                            >
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>

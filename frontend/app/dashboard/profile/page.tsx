@@ -304,31 +304,68 @@ export default function ProfilePage() {
           </button>
 
           {/* Profile Header Banner */}
-          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs mb-8">
-            <div className="h-32 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400 relative">
-              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div className="mb-8 overflow-hidden rounded-2xl border border-orange-100/80 bg-white shadow-sm">
+            {/* Soft peach banner */}
+            <div className="relative h-24 overflow-hidden bg-gradient-to-r from-orange-50 via-[#F9E9DD] to-[#F3E3D8]">
+              <div className="absolute -right-8 -top-16 h-44 w-44 rounded-full bg-white/40 blur-2xl" />
+              <div className="absolute right-28 top-8 h-20 w-20 rounded-full bg-orange-200/30 blur-xl" />
+              <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(#C49A80_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
             </div>
 
-            <div className="px-6 pb-6 pt-0 relative flex flex-col md:flex-row items-start md:items-end justify-between gap-4 -mt-12">
-              <div className="flex items-end gap-5">
-                <div className="w-24 h-24 rounded-2xl bg-slate-900 border-4 border-white shadow-md flex items-center justify-center text-white text-2xl font-black tracking-wider">
+            {/* Profile details */}
+            <div className="relative -mt-10 flex flex-col gap-4 px-5 pb-6 sm:px-7 md:flex-row md:items-end md:justify-between">
+
+              <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-end sm:gap-5">
+
+                {/* Avatar */}
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center
+        rounded-2xl border-4 border-white
+        bg-gradient-to-br from-[#C58D6D] to-[#A96F50]
+        text-2xl font-bold tracking-wider text-white
+        shadow-md shadow-orange-900/10">
                   {initials}
                 </div>
-                <div className="mb-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-2xl font-black text-slate-900">{profileData.name || "User Account"}</h1>
-                    <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-orange-100 text-orange-700 border border-orange-200">
+
+                {/* Name and metadata */}
+                <div className="min-w-0 pb-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2.5">
+
+                    <h1 className="text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">
+                      {profileData.name || "User Account"}
+                    </h1>
+
+                    {/* Role badge */}
+                    <span className="inline-flex items-center rounded-full
+            border border-orange-200/80 bg-orange-50
+            px-3 py-1 text-[11px] font-bold uppercase
+            tracking-wider text-[#9A6245]">
                       {userRoleStr}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active Account
+
+                    {/* Account status */}
+                    <span className="inline-flex items-center gap-1.5 rounded-full
+            border border-emerald-100 bg-emerald-50/80
+            px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Active Account
                     </span>
+
                   </div>
-                  <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center gap-2">
-                    <span>{profileData.designation || "Team Member"}</span>
-                    <span>•</span>
-                    <span>{profileData.email}</span>
-                  </p>
+
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1
+          text-sm text-slate-500">
+
+                    <span className="font-medium text-slate-600">
+                      {profileData.designation || "Team Member"}
+                    </span>
+
+                    <span className="hidden text-slate-300 sm:inline">•</span>
+
+                    <span className="break-all">
+                      {profileData.email}
+                    </span>
+
+                  </div>
                 </div>
               </div>
             </div>
@@ -366,7 +403,8 @@ export default function ProfilePage() {
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Leave Balances & Status</h3>
                   <button
                     onClick={() => setShowApplyModal(true)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-[11px] shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                    style={{ backgroundColor: "#FDBA74" }}
+                    className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-slate-900 font-bold text-[11px] shadow-2xs hover:brightness-95 transition-all cursor-pointer"
                   >
                     + Apply for Leave
                   </button>
@@ -374,26 +412,26 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase">Paid Leave</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Paid Leave</span>
                     <p className="text-lg font-black text-slate-900 mt-0.5">
                       {leaveBalances.find(b => b.leaveType?.name?.toLowerCase().includes("paid"))?.remaining ?? 12}d
                       <span className="text-[10px] text-slate-400 font-normal"> / {leaveBalances.find(b => b.leaveType?.name?.toLowerCase().includes("paid"))?.allocated ?? 18}d</span>
                     </p>
                   </div>
                   <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
-                    <span className="text-[10px] font-extrabold text-amber-600 uppercase">Vacant / Unpaid</span>
+                    <span className="text-[10px] font-bold text-amber-600 uppercase">Vacant / Unpaid</span>
                     <p className="text-lg font-black text-amber-900 mt-0.5">
                       {leaveRequests.filter(r => r.status === "APPROVED" && (r.type?.toLowerCase().includes("unpaid") || r.type?.toLowerCase().includes("vacant"))).length} days
                     </p>
                   </div>
                   <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                    <span className="text-[10px] font-extrabold text-emerald-600 uppercase">Half Day Leaves</span>
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase">Half Day Leaves</span>
                     <p className="text-lg font-black text-emerald-900 mt-0.5">
                       {leaveRequests.filter(r => r.isHalfDay || r.reason?.toLowerCase().includes("half")).length} Count
                     </p>
                   </div>
                   <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                    <span className="text-[10px] font-extrabold text-blue-600 uppercase">Pending Requests</span>
+                    <span className="text-[10px] font-bold text-blue-600 uppercase">Pending Requests</span>
                     <p className="text-lg font-black text-blue-900 mt-0.5">
                       {leaveRequests.filter(r => r.status === "PENDING").length} Active
                     </p>
@@ -422,14 +460,11 @@ export default function ProfilePage() {
 
               <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-xs">
                 <h3 className="text-sm font-extrabold mb-2 flex items-center gap-2">
-                  <span>🔒</span> Security & Privacy
+                  <span></span> Security & Privacy
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">
                   Keep your personal contact details accurate to receive real-time notifications regarding assigned projects and sprint iterations.
                 </p>
-                <div className="text-xs font-semibold text-orange-400 flex items-center gap-1">
-                  <span>✔</span> Protected by Enterprise RBAC
-                </div>
               </div>
             </div>
 
@@ -441,8 +476,8 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => { setActiveTab("profile"); setError(null); setSuccess(null); }}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${activeTab === "profile"
-                      ? "bg-orange-50 text-orange-600 border border-orange-200 shadow-2xs"
+                    className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile"
+                      ? "bg-orange-100/70 text-[#9A6245] border border-orange-200/80 shadow-2xs font-black"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                   >
@@ -451,8 +486,8 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => { setActiveTab("password"); setError(null); setSuccess(null); }}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 ${activeTab === "password"
-                      ? "bg-orange-50 text-orange-600 border border-orange-200 shadow-2xs"
+                    className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${activeTab === "password"
+                      ? "bg-orange-100/70 text-[#9A6245] border border-orange-200/80 shadow-2xs font-black"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                   >
@@ -603,9 +638,10 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={isLoadingProfile}
-                        className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50"
+                        style={{ backgroundColor: "#FDBA74" }}
+                        className="px-6 py-2.5 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
                       >
-                        {isLoadingProfile ? "Saving Profile..." : "Save Profile Changes"}
+                        {isLoadingProfile ? "Saving Profile..." : "Save Changes"}
                       </button>
                     </div>
                   </form>
@@ -681,7 +717,8 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={isLoadingPassword}
-                        className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50"
+                        style={{ backgroundColor: "#FDBA74" }}
+                        className="px-6 py-2.5 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
                       >
                         {isLoadingPassword ? "Updating Password..." : "Update Password"}
                       </button>
@@ -793,7 +830,8 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={submittingLeave}
-                  className="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50"
+                  style={{ backgroundColor: "#FDBA74" }}
+                  className="px-5 py-2 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {submittingLeave ? "Submitting..." : "Submit Leave Application"}
                 </button>
