@@ -1,10 +1,10 @@
-# 🛠️ HRMS DevOps Deployment & Configuration Guide
+#  HRMS DevOps Deployment & Configuration Guide
 
 This document provides step-by-step instructions for the DevOps & Infrastructure team to deploy, configure environment variables, run database migrations, seed initial user accounts, and configure **WebSockets & WebRTC Calling**.
 
 ---
 
-## 📁 Repository Structure Overview
+## Repository Structure Overview
 
 ```
 HRMS/
@@ -25,7 +25,7 @@ HRMS/
 
 ---
 
-## 📞 1. WebSockets & Audio/Video Calling Technology Stack
+##  1. WebSockets & Audio/Video Calling Technology Stack
 
 | Feature | Technology / Protocol Used | Architecture |
 |---|---|---|
@@ -36,7 +36,7 @@ HRMS/
 
 ---
 
-## 🌐 2. Critical DevOps Requirements for Calling & WebSockets
+##  2. Critical DevOps Requirements for Calling & WebSockets
 
 ### **2.1. Nginx Reverse Proxy Configuration (WebSocket Upgrades)**
 
@@ -80,7 +80,7 @@ server {
 
 ### **2.2. Mandatory SSL / HTTPS for Camera & Microphone Permissions**
 
-> ⚠️ **CRITICAL**: Modern browsers (Chrome, Edge, Safari, Firefox) **STRICTLY BLOCK** WebRTC camera and microphone access (`navigator.mediaDevices.getUserMedia`) over unencrypted HTTP (except on `localhost`).
+>  **CRITICAL**: Modern browsers (Chrome, Edge, Safari, Firefox) **STRICTLY BLOCK** WebRTC camera and microphone access (`navigator.mediaDevices.getUserMedia`) over unencrypted HTTP (except on `localhost`).
 > **Production deployment MUST use SSL / HTTPS (Let's Encrypt / Certbot).**
 
 ```bash
@@ -99,7 +99,7 @@ Ensure the server firewall permits:
 
 ---
 
-## 🔐 3. Environment Configurations (`.env`)
+##  3. Environment Configurations (`.env`)
 
 ### **Backend Environment (`backend/.env`)**
 
@@ -110,6 +110,8 @@ DB_PORT=3306
 DB_USER=hrms_prod_user
 DB_PASSWORD=YourStrongDatabasePassword123!
 DB_NAME=hrms_db
+# Keep false in production; enable only for trusted local MySQL connections if RSA key retrieval is required.
+DB_ALLOW_PUBLIC_KEY_RETRIEVAL=false
 DATABASE_URL="mysql://hrms_prod_user:YourStrongDatabasePassword123!@127.0.0.1:3306/hrms_db"
 JWT_SECRET="production_super_secret_jwt_key_please_change_this_in_prod"
 NODE_ENV=production
@@ -126,7 +128,7 @@ NODE_ENV=production
 
 ---
 
-## 🗄️ 4. Database Migration & Data Seeding
+##  4. Database Migration & Data Seeding
 
 ```bash
 cd backend
@@ -137,13 +139,13 @@ npm run seed
 ```
 
 ### **Default Accounts Created:**
-- 👑 **Super Admin**: `superadmin@hrms.com` / `Password@123`
-- 👔 **HR Manager**: `hr@hrms.com` / `Password@123`
-- 🛡️ **System Admin**: `admin@hrms.com` / `Password@123`
+- **Super Admin**: `superadmin@hrms.com` / 
+-  **HR Manager**: `hr@hrms.com` / 
+-  **System Admin**: `admin@hrms.com` / 
 
 ---
 
-## 🚀 5. Process Management (PM2)
+## 5. Process Management (PM2)
 
 ```bash
 npm install -g pm2

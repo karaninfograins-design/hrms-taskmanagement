@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CompanyLogo } from "@/components/common/company-logo";
 import type { User } from "@/types/auth";
 import { useAuth } from "@/hooks/use-auth";
+import { useSocket } from "@/hooks/use-socket";
 import {
   getNotifications,
   markNotificationAsRead,
@@ -22,6 +23,7 @@ type NavbarProps = {
 export function Navbar({ user, onSignOut }: NavbarProps) {
   const router = useRouter();
   const { session } = useAuth();
+  const { socket } = useSocket();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -45,6 +47,41 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
     const interval = setInterval(fetchNotifs, 20000); // Polling every 20 seconds
     return () => clearInterval(interval);
   }, [fetchNotifs]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onNotificationCreated = () => {
+      void fetchNotifs();
+    };
+    const onIncomingCall = (call: {
+      callSessionId: number;
+      channelName: string;
+      caller: { id: number; name: string };
+      type: "AUDIO" | "VIDEO";
+      conversationName?: string | null;
+      isGroupCall?: boolean;
+    }) => {
+      if (window.location.pathname.startsWith("/dashboard/messenger/calls")) return;
+      const params = new URLSearchParams({
+        incomingCall: "true",
+        callSessionId: String(call.callSessionId),
+        activeChannel: call.channelName,
+        callerId: String(call.caller.id),
+        callerName: call.caller.name,
+        type: call.type,
+        ...(call.conversationName ? { groupName: call.conversationName } : {}),
+        ...(call.isGroupCall ? { groupCall: "true" } : {}),
+      });
+      router.push(`/dashboard/messenger/calls?${params.toString()}`);
+    };
+
+    socket.on("notification:new", onNotificationCreated);
+    socket.on("incoming:call", onIncomingCall);
+    return () => {
+      socket.off("notification:new", onNotificationCreated);
+      socket.off("incoming:call", onIncomingCall);
+    };
+  }, [fetchNotifs, router, socket]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -213,9 +250,9 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                     style={{
                       background: "none",
                       border: "none",
-                      color: "#2563eb",
+                      color: "#f97316",
                       fontSize: "0.78rem",
-                      fontWeight: 600,
+                      fontWeight: 700,
                       cursor: "pointer",
                     }}
                   >
@@ -249,7 +286,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                       style={{
                         padding: "12px 16px",
                         borderBottom: "1px solid #f1f5f9",
-                        backgroundColor: notif.isRead ? "#ffffff" : "#f0f9ff",
+                        backgroundColor: notif.isRead ? "#ffffff" : "#fff7ed",
                         cursor: "pointer",
                         display: "flex",
                         gap: "12px",
@@ -257,16 +294,16 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                         transition: "background-color 0.15s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = notif.isRead ? "#f8fafc" : "#e0f2fe";
+                        e.currentTarget.style.backgroundColor = notif.isRead ? "#f8fafc" : "#ffedd5";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = notif.isRead ? "#ffffff" : "#f0f9ff";
+                        e.currentTarget.style.backgroundColor = notif.isRead ? "#ffffff" : "#fff7ed";
                       }}
                     >
                       <span
                         style={{
                           fontSize: "1.2rem",
-                          backgroundColor: "#f1f5f9",
+                          backgroundColor: notif.isRead ? "#f1f5f9" : "#ffedd5",
                           padding: "6px",
                           borderRadius: "10px",
                           lineHeight: 1,
@@ -276,7 +313,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                       </span>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
-                          <strong style={{ fontSize: "0.85rem", color: "#1e293b", fontWeight: 700 }}>
+                          <strong style={{ fontSize: "0.85rem", color: "#0f172a", fontWeight: 700 }}>
                             {notif.title}
                           </strong>
                           <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
@@ -293,7 +330,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                             height: "8px",
                             width: "8px",
                             borderRadius: "50%",
-                            backgroundColor: "#2563eb",
+                            backgroundColor: "#f97316",
                             marginTop: "6px",
                             flexShrink: 0,
                           }}
@@ -341,49 +378,91 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         </div>
 
         {/* Profile Dropdown */}
-        <div className="profile" ref={profileRef} style={{ position: "relative" }}>
+        <div className="relative" ref={profileRef}>
+          {/* Trigger Button */}
           <button
             type="button"
             onClick={() => {
               setIsProfileOpen(!isProfileOpen);
               setIsNotifOpen(false);
             }}
-            className="flex items-center gap-2"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            aria-expanded={isProfileOpen}
+            aria-haspopup="true"
+            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            style={{ background: "none", border: "none", cursor: "pointer" }}
           >
-            <span className="avatar" aria-hidden="true">
-              {user.name.slice(0, 1)}
-            </span>
-            <div>
-              <strong>{user.name}</strong>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-medium text-xs flex items-center justify-center shadow-inner">
+              {user.name.slice(0, 1).toUpperCase()}
             </div>
+            <span className="text-sm font-medium text-gray-700 hidden sm:inline-block">
+              {user.name}
+            </span>
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
 
+          {/* Dropdown Menu */}
           {isProfileOpen && (
-            <div className="absolute top-full right-0 mt-2 min-w-[150px] z-[1000] bg-white rounded-2xl shadow-lg border border-gray-200 p-1">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push("/dashboard/profile");
-                  setIsProfileOpen(false);
-                }}
-                className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm hover:bg-gray-50"
-              >
-                My Profile
-              </button>
-              {/* <div className="border-t border-gray-200 my-1"></div> */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsProfileOpen(false);
-                  if (onSignOut) onSignOut();
-                }}
-                className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-50 mt-1"
-              >
-                Logout
-              </button>
+            <div
+              role="menu"
+              className="absolute right-0 mt-2 w-50 origin-top-right rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl ring-1 ring-black/5 focus:outline-none z-[1000] p-1.5 animate-in fade-in zoom-in-95 duration-100"
+            >
+            {/* User Info Header */}
+              <div className="px-3 py-2.5 mb-1 rounded-xl bg-gray-50/80 border border-gray-100">
+                <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wider">Signed in as</p>
+                <p className="text-xs font-semibold text-gray-900 truncate mt-0.5">{user.email || user.name}</p>
+              </div>
+
+            {/* Menu Options */}
+              <div className="space-y-0.5 mt-2">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push("/dashboard/profile");
+                    setIsProfileOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-gray-700 rounded-xl hover:bg-gray-100/80 hover:text-gray-900 transition-all group"
+                >
+                  <div className="p-1 rounded-lg bg-gray-100 text-gray-500 group-hover:bg-white group-hover:shadow-sm transition-all">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  My Profile
+                </button>
+              </div>
+
+              <div className="my-1 border-t border-gray-100" />
+
+              {/* Logout Section */}
+              <div className="space-y-0.5">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsProfileOpen(false);
+                    if (onSignOut) onSignOut();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-red-600 rounded-xl hover:bg-red-50 transition-all group"
+                >
+                  <div className="p-1 rounded-lg bg-red-50 text-red-500 group-hover:bg-white group-hover:shadow-sm transition-all">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </div>
+                  Logout
+                </button>
+              </div>
             </div>
           )}
         </div>

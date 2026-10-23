@@ -4,13 +4,25 @@
 }
 
 .back-button {
-  border: 0;
-  background: transparent;
-  color: var(--orange);
-  font-size: .84rem;
-  font-weight: 750;
-  padding: 0;
-  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.875rem 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .project-detail-summary {
@@ -375,22 +387,36 @@ body:has(.app-shell) {
   min-width: 620px;
   border-collapse: collapse;
   text-align: left;
+  font-family: var(--font-sans);
 }
 
 .workspace-table th,
 .workspace-table td {
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
-  font-size: .85rem;
+  font-size: 0.85rem;
+  font-family: var(--font-sans) !important;
+  color: var(--ink) !important;
 }
 
 .workspace-table th {
-  color: var(--muted);
+  color: var(--muted) !important;
   background: #fafafa;
-  font-size: .68rem;
-  font-weight: 750;
-  letter-spacing: .08em;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  font-family: var(--font-sans) !important;
+}
+
+.workspace-table td {
+  color: var(--ink) !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+}
+
+.workspace-table tr:last-child td {
+  border-bottom: none;
 }
 
 .workspace-table tr:last-child td {
@@ -472,8 +498,9 @@ body:has(.app-shell) {
 }
 
 .role-choice.active {
-  background: var(--mint);
-  color: var(--forest-dark);
+  background: var(--orange-light);
+  color: #c2410c;
+  border-left: 3px solid var(--orange);
 }
 
 .permission-list {
@@ -639,8 +666,8 @@ body:has(.app-shell) {
   display: inline-block;
   border-radius: 999px;
   padding: 4px 8px;
-  background: var(--mint);
-  color: var(--forest-dark);
+  background: var(--orange-light);
+  color: #c2410c;
   font-size: .68rem;
   font-weight: 800;
 }
@@ -743,14 +770,15 @@ body:has(.app-shell) {
 }
 
 .sprint-btn-primary {
-  background: #fff7ed;
-  color: #c2410c;
-  border-color: #fed7aa;
+  background: #F97316;
+  color: #ffffff;
+  border-color: #EA580C;
 }
 
 .sprint-btn-primary:hover {
-  background: #ffedd5;
-  border-color: #fdba74;
+  background: #EA580C;
+  border-color: #C2410C;
+  color: #ffffff;
 }
 
 .sprint-btn-success {

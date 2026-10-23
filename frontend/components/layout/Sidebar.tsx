@@ -94,14 +94,14 @@ function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user
 
   if (isCollapsed) {
     return (
-      <div className="mt-auto pt-4 border-t border-slate-800 flex flex-col items-center gap-2">
+      <div className="mt-auto pt-4 border-t border-[#1e3a8a]/70 flex flex-col items-center gap-2">
         <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} title={`${user.name} (${roleName || "Employee"})`}>
           {user.name.slice(0, 1).toUpperCase()}
         </span>
         <button
           onClick={onSignOut}
           title="Sign out"
-          className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-rose-900 text-rose-300 flex items-center justify-center text-xs transition-colors"
+          className="w-8 h-8 rounded-lg bg-[#1e293b] hover:bg-rose-900 text-rose-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
         >
           🔒
         </button>
@@ -110,7 +110,7 @@ function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user
   }
 
   return (
-    <div style={{ padding: '16px 8px 10px', borderTop: '1px solid #1e293b', marginTop: 'auto' }}>
+    <div style={{ padding: '16px 8px 10px', borderTop: '1px solid rgba(30, 58, 138, 0.7)', marginTop: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '16px' }}>
         <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} aria-hidden="true">
           {user.name.slice(0, 1).toUpperCase()}
@@ -123,7 +123,7 @@ function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user
       <button
         type="button"
         onClick={onSignOut}
-        className="w-full py-2 rounded-lg bg-slate-800 hover:bg-rose-900/60 text-rose-300 font-bold text-xs border border-slate-700 transition-all"
+        className="w-full py-2 rounded-lg bg-[#1e293b] hover:bg-rose-950/70 text-rose-300 font-bold text-xs border border-[#1e3a8a]/80 transition-all cursor-pointer"
       >
         Sign out
       </button>
@@ -156,9 +156,9 @@ const peopleNavigation = {
 const messengerNavigation = {
   title: "Messenger",
   items: [
-    { label: "Chats", href: "/dashboard/messenger/chats", icon: "💬" },
-    { label: "Groups", href: "/dashboard/messenger/groups", icon: "👥" },
-    { label: "Calls", href: "/dashboard/messenger/calls", icon: "📞" },
+    { label: "Chats", href: "/dashboard/messenger/chats", icon: "CH" },
+    { label: "Groups", href: "/dashboard/messenger/groups", icon: "GR" },
+    { label: "Calls", href: "/dashboard/messenger/calls", icon: "CL" },
   ],
 };
 
@@ -175,8 +175,8 @@ const hrNavigation = {
 const collaborationNavigation = {
   title: "Collaboration",
   items: [
-    { label: "Meetings", href: "/dashboard/meetings", icon: "📅" },
-    { label: "Meeting Calendar", href: "/dashboard/meetings/calendar", icon: "📆" },
+    { label: "Meetings", href: "/dashboard/meetings", icon: "ME" },
+    { label: "Meeting Calendar", href: "/dashboard/meetings/calendar", icon: "MC" },
   ]
 };
 

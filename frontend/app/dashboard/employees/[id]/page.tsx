@@ -245,10 +245,10 @@ export default function ViewEmployeePage() {
                 }}
                 className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xs cursor-pointer ${editMode
                   ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300"
-                  : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+                  : "bg-[#F97316] hover:bg-[#EA580C] text-white"
                   }`}
               >
-                {editMode ? "✕ Cancel" : "✏️ Edit Employee Profile"}
+                {editMode ? "✕ Cancel" : "Edit Employee Profile"}
               </button>
             )}
           </div>
@@ -257,24 +257,24 @@ export default function ViewEmployeePage() {
           {success && <div className="success-message">{success}</div>}
 
           {/* Hero Profile Banner */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-800">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative overflow-hidden bg-gradient-to-r from-[#172554] via-[#1E3A8A] to-[#172554] text-white rounded-3xl p-4 md:p-4 shadow-xl border border-[#1E3A8A]/50">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
 
             <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex items-center gap-5">
                 <div className="relative">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 text-white font-black text-3xl md:text-4xl flex items-center justify-center border-4 border-slate-800 shadow-2xl">
+                  <div className="w-20 h-20 md:w-18 md:h-18 rounded-4xl bg-gradient-to-tr from-orange-400 to-amber-300 text-white font-black text-3xl md:text-2xl flex items-center justify-center border-4 border-slate-800 shadow-2xl">
                     {employee.name.slice(0, 1).toUpperCase()}
                   </div>
                   <span
-                    className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-slate-900 ${employee.status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"
+                    className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-slate-900 ${employee.status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"
                       }`}
                   />
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">{employee.name}</h1>
+                    <h1 className="text-xl md:text-xl font-black tracking-tight text-white">{employee.name}</h1>
                     <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-orange-500/20 text-orange-300 border border-orange-400/30">
                       {prof?.employeeCode || `EMP-${employee.id}`}
                     </span>
@@ -317,32 +317,32 @@ export default function ViewEmployeePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Employment Type</span>
-              <span className="text-base font-black text-slate-900 mt-1 block">{prof?.employmentType || "FULL TIME"}</span>
+              <span className="text-base font-black text-slate-800 mt-1 block">{prof?.employmentType || "FULL TIME"}</span>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Work Location</span>
-              <span className="text-base font-black text-slate-900 mt-1 block">{prof?.workLocation || "OFFICE"}</span>
+              <span className="text-base font-black text-slate-800 mt-1 block">{prof?.workLocation || "OFFICE"}</span>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Status</span>
-              <span className="text-base font-black text-slate-900 mt-1 block">{prof?.employmentStatus || "PERMANENT"}</span>
+              <span className="text-base font-black text-slate-800 mt-1 block">{prof?.employmentStatus || "PERMANENT"}</span>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Work Items</span>
-              <span className="text-base font-black text-orange-600 mt-1 block">{employee.assignedWorkItems?.length || 0} Assigned</span>
+              <span className="text-base font-black text-orange-800 mt-1 block">{employee.assignedWorkItems?.length || 0} Assigned</span>
             </div>
           </div>
 
           {/* Form or View Section */}
           {editMode ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
-              <h2 className="text-lg font-black text-slate-900 mb-6 pb-3 border-b border-slate-100 flex items-center gap-2">
-                <span>✏️ Edit Employee Record</span>
+              <h2 className="text-lg font-black text-slate-600 mb-2 pb-2 border-b border-slate-100 flex items-center gap-2">
+                <span> Edit Employee Record</span>  
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-600">User Account Credentials</h3>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-500">User Account Credentials</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
@@ -352,7 +352,7 @@ export default function ViewEmployeePage() {
                         onChange={(e) => handleInputChange("name", e.target.value)}
                         placeholder="Enter full name"
                         required
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -363,7 +363,7 @@ export default function ViewEmployeePage() {
                         onChange={(e) => handleInputChange("email", e.target.value)}
                         placeholder="Enter email address"
                         required
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -373,7 +373,7 @@ export default function ViewEmployeePage() {
                         value={formData.phoneNumber}
                         onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                         placeholder="Enter phone number"
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -386,7 +386,7 @@ export default function ViewEmployeePage() {
                           value={formData.roleId}
                           onChange={(e) => handleInputChange("roleId", e.target.value)}
                           required
-                          className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                          className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                         >
                           <option value="">Select Role</option>
                           {roles.map((role) => (
@@ -401,7 +401,7 @@ export default function ViewEmployeePage() {
                         <select
                           value={formData.designationId}
                           onChange={(e) => handleInputChange("designationId", e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                          className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                         >
                           <option value="">Select Designation</option>
                           {designations.map((designation) => (
@@ -416,7 +416,7 @@ export default function ViewEmployeePage() {
                         <select
                           value={formData.status}
                           onChange={(e) => handleInputChange("status", e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                          className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                         >
                           <option value="ACTIVE">Active</option>
                           <option value="INACTIVE">Inactive</option>
@@ -427,7 +427,7 @@ export default function ViewEmployeePage() {
                 </div>
 
                 <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-600">Employee Profile & HR Information</h3>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-500">Employee Profile & HR Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Employee Code</label>
@@ -436,7 +436,7 @@ export default function ViewEmployeePage() {
                         value={formData.employeeCode}
                         onChange={(e) => handleInputChange("employeeCode", e.target.value)}
                         placeholder="e.g. EMP-101"
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -445,7 +445,7 @@ export default function ViewEmployeePage() {
                         type="date"
                         value={formData.dob}
                         onChange={(e) => handleInputChange("dob", e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -453,7 +453,7 @@ export default function ViewEmployeePage() {
                       <select
                         value={formData.gender}
                         onChange={(e) => handleInputChange("gender", e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       >
                         <option value="">Select Gender</option>
                         <option value="MALE">Male</option>
@@ -467,7 +467,7 @@ export default function ViewEmployeePage() {
                         type="date"
                         value={formData.dateOfJoining}
                         onChange={(e) => handleInputChange("dateOfJoining", e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -475,7 +475,7 @@ export default function ViewEmployeePage() {
                       <select
                         value={formData.employmentType}
                         onChange={(e) => handleInputChange("employmentType", e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       >
                         <option value="FULL_TIME">Full Time</option>
                         <option value="PART_TIME">Part Time</option>
@@ -488,7 +488,7 @@ export default function ViewEmployeePage() {
                       <select
                         value={formData.workLocation}
                         onChange={(e) => handleInputChange("workLocation", e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       >
                         <option value="OFFICE">Office</option>
                         <option value="REMOTE">Remote</option>
@@ -504,13 +504,13 @@ export default function ViewEmployeePage() {
                       value={formData.address}
                       onChange={(e) => handleInputChange("address", e.target.value)}
                       placeholder="Enter full address..."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-600">Password & Security</h3>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-orange-500">Password & Security</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">New Password (Optional)</label>
@@ -519,7 +519,7 @@ export default function ViewEmployeePage() {
                         value={formData.password}
                         onChange={(e) => handleInputChange("password", e.target.value)}
                         placeholder="Leave blank to keep unchanged"
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -529,7 +529,7 @@ export default function ViewEmployeePage() {
                         value={formData.confirmPassword}
                         onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                         placeholder="Confirm password"
-                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-normal focus:ring-2 focus:ring-orange-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -546,7 +546,7 @@ export default function ViewEmployeePage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer transition-all"
                   >
                     {loading ? "Saving Record..." : "Save Changes"}
                   </button>

@@ -474,7 +474,7 @@ export default function DashboardPage() {
                             </td>
                             <td>
                               <Link href={`/dashboard/projects`} className="text-button text-xs font-bold">
-                                Open Projects →
+                                View →
                               </Link>
                             </td>
                           </tr>

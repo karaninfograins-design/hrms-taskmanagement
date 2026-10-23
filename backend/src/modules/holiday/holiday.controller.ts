@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
+import { createNotificationsForUsers } from "../../controllers/notification.controller.js";
 
 const isUserHrOrAdmin = async (userId: number): Promise<boolean> => {
   const user = await prisma.user.findUnique({
@@ -72,6 +73,20 @@ export const createHoliday = async (req: Request, res: Response): Promise<void> 
       },
     });
 
+    void (async () => {
+      const users = await prisma.user.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true },
+      });
+      await createNotificationsForUsers(
+        users.map((user) => user.id),
+        "HOLIDAY_CREATED",
+        "Company holiday announced",
+        `${holiday.title} is scheduled for ${holiday.date.toLocaleDateString()}.`,
+        "/dashboard/company-calendar"
+      );
+    })().catch((error) => console.error("Holiday notification error:", error));
+
     res.status(201).json({ holiday });
   } catch (error) {
     console.error("Create holiday error:", error);
@@ -107,6 +122,20 @@ export const updateHoliday = async (req: Request, res: Response): Promise<void> 
       },
     });
 
+    void (async () => {
+      const users = await prisma.user.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true },
+      });
+      await createNotificationsForUsers(
+        users.map((user) => user.id),
+        "HOLIDAY_UPDATED",
+        "Company holiday updated",
+        `${updated.title} is scheduled for ${updated.date.toLocaleDateString()}.`,
+        "/dashboard/company-calendar"
+      );
+    })().catch((error) => console.error("Holiday update notification error:", error));
+
     res.json({ holiday: updated });
   } catch (error) {
     console.error("Update holiday error:", error);
@@ -131,9 +160,32 @@ export const deleteHoliday = async (req: Request, res: Response): Promise<void> 
 
     const holidayId = Number(req.params.id);
 
+    const holiday = await prisma.companyHoliday.findUnique({
+      where: { id: holidayId },
+      select: { title: true, date: true },
+    });
+    if (!holiday) {
+      res.status(404).json({ message: "Holiday not found" });
+      return;
+    }
+
     await prisma.companyHoliday.delete({
       where: { id: holidayId },
     });
+
+    void (async () => {
+      const users = await prisma.user.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true },
+      });
+      await createNotificationsForUsers(
+        users.map((user) => user.id),
+        "HOLIDAY_CANCELLED",
+        "Company holiday cancelled",
+        `${holiday.title}, scheduled for ${holiday.date.toLocaleDateString()}, was cancelled.`,
+        "/dashboard/company-calendar"
+      );
+    })().catch((error) => console.error("Holiday cancellation notification error:", error));
 
     res.json({ message: "Holiday deleted successfully" });
   } catch (error) {

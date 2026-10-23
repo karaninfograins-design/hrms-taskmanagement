@@ -133,7 +133,7 @@ export default function SettingsPage() {
           <Sidebar user={session.user} canCreateAdmins={false} onSignOut={handleSignOut} />
           <section className="dashboard-content">
             <button onClick={() => router.push("/dashboard")} className="back-button">
-              ← Back to Dashboard
+              ← Back
             </button>
             <div className="error-message" style={{ margin: "20px 0", padding: "20px", borderRadius: "12px", background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }}>
               <h2 style={{ margin: "0 0 8px" }}>Access Restricted</h2>
@@ -158,13 +158,13 @@ export default function SettingsPage() {
       <div className="dashboard-frame">
         <Sidebar user={session.user} canCreateAdmins={true} onSignOut={handleSignOut} />
         <section className="dashboard-content" style={{ paddingBottom: "60px" }}>
-          <button onClick={() => router.push("/dashboard")} className="back-button">
-            ← Back to Dashboard
-          </button>
+          {/* <button onClick={() => router.push("/dashboard")} className="back-button">
+            ← Back
+          </button> */}
 
           <div className="welcome mb-6">
             <p className="eyebrow">SYSTEM CONFIGURATION</p>
-            <h1>Super Admin & Workspace Settings</h1>
+            <h1> Workspace Settings</h1>
             <p>Customize project workflows, dynamic Super Admin credentials, theme styling, and security settings.</p>
           </div>
 
@@ -174,7 +174,7 @@ export default function SettingsPage() {
           {/* Super Admin Credentials Card */}
           <form onSubmit={handleUpdateCreds} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs mb-6">
             <h2 className="text-sm font-extrabold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-              <span>👤</span> Super Admin Credentials & Account
+              Super Admin Credentials & Account
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
@@ -249,9 +249,9 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={isUpdatingCreds}
-                className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs shadow-xs"
+                className="px-4 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer"
               >
-                {isUpdatingCreds ? "Updating Account..." : "Update Super Admin Account"}
+                {isUpdatingCreds ? "Updating Account..." : "Update Account"}
               </button>
             </div>
           </form>
@@ -260,7 +260,7 @@ export default function SettingsPage() {
             {/* Organization & Branding */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
               <h2 className="text-sm font-extrabold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-                <span>🏢</span> Organization & Branding Settings
+                Organization & Branding Settings
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -288,7 +288,7 @@ export default function SettingsPage() {
             {/* Agile & Sprint Workflows */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
               <h2 className="text-sm font-extrabold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-                <span>⚡</span> Agile & Sprint Workflow Configuration
+                Agile & Sprint Workflow Configuration
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -334,7 +334,7 @@ export default function SettingsPage() {
             {/* Security & Access Policy */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
               <h2 className="text-sm font-extrabold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-                <span>🛡️</span> Security & Access Control
+                Security & Access Control
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -362,22 +362,21 @@ export default function SettingsPage() {
                   </label>
                 </div>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs shadow-xs"
-              >
-                Save Workspace Configuration
-              </button>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer"
+                >
+                  Save Configuration
+                </button>
+              </div>
             </div>
           </form>
         </section>

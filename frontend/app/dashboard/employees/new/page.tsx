@@ -187,10 +187,10 @@ export default function AddEmployeePage() {
           </div>
 
           {/* Hero Header Banner */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-4 md:p-6 shadow-xl border border-slate-800">
+          <div className="relative overflow-hidden bg-gradient-to-r from-[#172554] via-[#1E3A8A] to-[#172554] text-white rounded-2xl p-4 md:p-6 shadow-xl border border-[#1E3A8A]/50">
             <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="relative z-10 space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-orange-300 bg-orange-300/20 px-2 py-1 rounded-md border border-orange-500/30">
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-300 bg-orange-500/20 px-2 py-1 rounded-md border border-orange-500/30">
                 ADMINISTRATION WORKSPACE
               </span>
               <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1"> Add New Employee</h1>
@@ -204,10 +204,10 @@ export default function AddEmployeePage() {
           <form
             onSubmit={handleSubmit}
             autoComplete="off"
-            className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6"
+            className="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6"
           >
             {/* Section 1: Personal & Credentials */}
-            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+            <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-4">
               <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-2">
                 <span> Personal & Contact Info</span>
               </h3>
@@ -240,7 +240,7 @@ export default function AddEmployeePage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Phone Number <span className="text-slate-400 font-normal">(Optional)</span>
+                    Phone Number
                   </label>
                   <input
                     type="text"
@@ -255,7 +255,7 @@ export default function AddEmployeePage() {
             </div>
 
             {/* Section 2: Password Security */}
-            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+            <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-4">
               <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-2">
                 <span> Password Security</span>
               </h3>
@@ -309,7 +309,7 @@ export default function AddEmployeePage() {
             </div>
 
             {/* Section 3: System Access & Role */}
-            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+            <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-4">
               <h3 className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-2">
                 <span> System Access & Role</span>
               </h3>
@@ -361,7 +361,7 @@ export default function AddEmployeePage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer transition-all"
               >
                 {loading ? "Creating..." : "Save"}
               </button>

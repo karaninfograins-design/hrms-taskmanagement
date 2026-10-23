@@ -2474,6 +2474,7 @@ export const LeaveRequestScalarFieldEnum = {
   startDate: 'startDate',
   endDate: 'endDate',
   totalDays: 'totalDays',
+  halfDayPeriod: 'halfDayPeriod',
   reason: 'reason',
   status: 'status',
   approvedById: 'approvedById',
@@ -2707,6 +2708,7 @@ export const NotificationScalarFieldEnum = {
   title: 'title',
   message: 'message',
   link: 'link',
+  dedupeKey: 'dedupeKey',
   isRead: 'isRead',
   createdAt: 'createdAt'
 } as const
@@ -2929,7 +2931,8 @@ export const NotificationOrderByRelevanceFieldEnum = {
   type: 'type',
   title: 'title',
   message: 'message',
-  link: 'link'
+  link: 'link',
+  dedupeKey: 'dedupeKey'
 } as const
 
 export type NotificationOrderByRelevanceFieldEnum = (typeof NotificationOrderByRelevanceFieldEnum)[keyof typeof NotificationOrderByRelevanceFieldEnum]
@@ -2996,6 +2999,13 @@ export type EnumAttendanceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'LeaveHalfDayPeriod'
+ */
+export type EnumLeaveHalfDayPeriodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeaveHalfDayPeriod'>
     
 
 

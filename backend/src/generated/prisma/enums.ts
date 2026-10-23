@@ -102,6 +102,14 @@ export const LeaveStatus = {
 export type LeaveStatus = (typeof LeaveStatus)[keyof typeof LeaveStatus]
 
 
+export const LeaveHalfDayPeriod = {
+  FIRST_HALF: 'FIRST_HALF',
+  SECOND_HALF: 'SECOND_HALF'
+} as const
+
+export type LeaveHalfDayPeriod = (typeof LeaveHalfDayPeriod)[keyof typeof LeaveHalfDayPeriod]
+
+
 export const MeetingStatus = {
   SCHEDULED: 'SCHEDULED',
   IN_PROGRESS: 'IN_PROGRESS',

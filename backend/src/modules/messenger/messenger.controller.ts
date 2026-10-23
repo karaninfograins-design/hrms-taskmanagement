@@ -594,6 +594,28 @@ export const updateGroupConversation = async (req: Request, res: Response): Prom
       },
     });
 
+    if (updatedGroup) {
+      const io = getIO();
+      const updatedUserIds = updatedGroup.participants.map((participant) => participant.userId);
+      const removedUserIds = conversation.participants
+        .map((participant) => participant.userId)
+        .filter((participantId) => !updatedUserIds.includes(participantId));
+
+      for (const participantId of updatedUserIds) {
+        io.to(`user_${participantId}`).emit("conversation:members-updated", {
+          conversation: updatedGroup,
+        });
+      }
+
+      for (const participantId of removedUserIds) {
+        io.in(`user_${participantId}`).socketsLeave(`conversation_${convId}`);
+        io.to(`user_${participantId}`).emit("conversation:members-updated", {
+          conversationId: convId,
+          removed: true,
+        });
+      }
+    }
+
     res.json({ conversation: updatedGroup });
   } catch (error) {
     console.error("Update group error:", error);
@@ -675,6 +697,4 @@ export const deleteConversation = async (req: Request, res: Response): Promise<v
     res.status(500).json({ message: "Failed to delete conversation" });
   }
 };
-
-
 

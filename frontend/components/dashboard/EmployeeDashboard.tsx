@@ -27,6 +27,7 @@ type LeaveRequest = {
   startDate: string;
   endDate: string;
   totalDays: number;
+  halfDayPeriod?: "FIRST_HALF" | "SECOND_HALF" | null;
   reason: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   rejectionReason?: string;
@@ -130,20 +131,19 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
 
   return (
     <div className="space-y-6">
-      {/* Soft Peach Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-orange-100/80 bg-gradient-to-r from-orange-50 via-[#F9E9DD] to-[#F3E3D8] p-6 text-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="absolute -right-8 -top-16 h-44 w-44 rounded-full bg-white/40 blur-2xl" />
-        <div className="absolute right-28 top-8 h-20 w-20 rounded-full bg-orange-200/30 blur-xl" />
-        <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(#C49A80_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
+      {/* Employee overview banner */}
+      <div className="relative flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 p-5 text-white shadow-md md:flex-row md:items-center">
+        <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
 
         <div className="relative z-10 space-y-1">
-          <span className="inline-flex items-center rounded-full border border-orange-200/80 bg-orange-50/90 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#9A6245]">
+          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-100">
             Employee Overview
           </span>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+          <h1 className="text-2xl font-bold tracking-tight text-white">
             Welcome back, {userName}
           </h1>
-          <p className="text-xs font-medium text-slate-600">
+          <p className="text-xs font-medium text-blue-100/80">
             Overview of your current workspace projects and leave balances.
           </p>
         </div>
@@ -151,10 +151,9 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
         <div className="relative z-10 flex items-center gap-3">
           <Link
             href="/dashboard/leaves"
-            style={{ backgroundColor: "#FDBA74" }}
-            className="px-5 py-2.5 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all text-decoration-none"
+            className="rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-orange-600"
           >
-            Apply for Leave
+            + Apply for Leave
           </Link>
         </div>
       </div>
@@ -269,7 +268,14 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
                       <td className="py-2.5 text-slate-500">
                         {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
                       </td>
-                      <td className="py-2.5 font-semibold text-slate-800">{req.totalDays}d</td>
+                      <td className="py-2.5 font-semibold text-slate-800">
+                        {Number(req.totalDays).toLocaleString(undefined, { maximumFractionDigits: 1 })}d
+                        {req.halfDayPeriod && (
+                          <span className="ml-1 text-[10px] font-bold text-orange-600">
+                            {req.halfDayPeriod === "FIRST_HALF" ? "First half" : "Second half"}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2.5 text-right">{getStatusBadge(req.status)}</td>
                     </tr>
                   ))}

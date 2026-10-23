@@ -91,7 +91,7 @@ export default function SystemAdminsPage() {
         <Sidebar user={session.user} canCreateAdmins={canCreateAdmins} onSignOut={handleSignOut} />
         <section className="dashboard-content">
           <button onClick={() => router.push("/dashboard")} className="back-button">
-            ← Back to Dashboard
+            ← Back
           </button>
 
           <div className="welcome flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -105,7 +105,7 @@ export default function SystemAdminsPage() {
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
               >
                 <span>+</span> Add New Administrator
               </button>
@@ -158,11 +158,10 @@ export default function SystemAdminsPage() {
                         </td>
                         <td>
                           <span
-                            className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
-                              admin.role.name === "SUPER_ADMIN"
+                            className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${admin.role.name === "SUPER_ADMIN"
                                 ? "bg-slate-900 text-white border-slate-900"
                                 : "bg-orange-50 text-orange-800 border-orange-200"
-                            }`}
+                              }`}
                           >
                             {admin.role.name.replace("_", " ")}
                           </span>
@@ -173,11 +172,10 @@ export default function SystemAdminsPage() {
                         </td>
                         <td>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
-                              admin.status === "ACTIVE"
+                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${admin.status === "ACTIVE"
                                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                                 : "bg-rose-50 text-rose-800 border-rose-200"
-                            }`}
+                              }`}
                           >
                             {admin.status}
                           </span>
@@ -252,7 +250,7 @@ export default function SystemAdminsPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs disabled:opacity-50"
+                      className="px-5 py-2 rounded-lg bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs disabled:opacity-50 transition-all"
                     >
                       {submitting ? "Creating..." : "Save Administrator"}
                     </button>

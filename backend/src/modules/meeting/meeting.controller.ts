@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
+import { createNotificationsForUsers } from "../../controllers/notification.controller.js";
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
 const LIVEKIT_API_SECRET =
@@ -109,6 +110,17 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
       },
     });
 
+    const participantUserIds = meeting.members
+      .map((member) => member.userId)
+      .filter((participantId) => participantId !== userId);
+    void createNotificationsForUsers(
+      participantUserIds,
+      "MEETING_SCHEDULED",
+      "You were invited to a meeting",
+      `${meeting.organizer.name} invited you to "${meeting.title}" on ${meeting.startTime.toLocaleString()}.`,
+      "/dashboard/meetings/calendar"
+    ).catch((error) => console.error("Meeting invitation notification error:", error));
+
     res.status(201).json({ message: "Meeting scheduled successfully", meeting });
   } catch (error) {
     console.error("Create meeting error:", error);
@@ -171,6 +183,21 @@ export const updateMeeting = async (req: Request, res: Response): Promise<void> 
         },
       },
     });
+
+    const recipientIds = Array.from(new Set([
+      existing.organizerId,
+      ...updated.members.map((member) => member.userId),
+    ])).filter((recipientId) => recipientId !== userId);
+    const meetingStatusMessage = updated.status === "CANCELLED"
+      ? `"${updated.title}" was cancelled by ${user?.name || "the organizer"}.`
+      : `"${updated.title}" was updated by ${user?.name || "the organizer"}; it is scheduled for ${updated.startTime.toLocaleString()}.`;
+    void createNotificationsForUsers(
+      recipientIds,
+      "MEETING_UPDATED",
+      updated.status === "CANCELLED" ? "Meeting cancelled" : "Meeting updated",
+      meetingStatusMessage,
+      "/dashboard/meetings/calendar"
+    ).catch((error) => console.error("Meeting update notification error:", error));
 
     res.json({ message: "Meeting updated successfully", meeting: updated });
   } catch (error) {

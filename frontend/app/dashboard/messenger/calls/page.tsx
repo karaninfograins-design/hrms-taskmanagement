@@ -28,6 +28,60 @@ type Employee = {
   email: string;
 };
 
+type ActiveCall = {
+  callSessionId?: number;
+  channelName: string;
+  targetName: string;
+  type: "AUDIO" | "VIDEO";
+  peerUserId?: number;
+  isGroupCall?: boolean;
+  isHost?: boolean;
+};
+
+type RemoteParticipant = {
+  userId: number;
+  stream: MediaStream;
+};
+
+function RemoteParticipantMedia({
+  participant,
+  name,
+  type,
+}: {
+  participant: RemoteParticipant;
+  name: string;
+  type: "AUDIO" | "VIDEO";
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.srcObject = participant.stream;
+    if (audioRef.current) audioRef.current.srcObject = participant.stream;
+  }, [participant.stream]);
+
+  if (type === "AUDIO") {
+    return (
+      <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <audio ref={audioRef} autoPlay />
+        <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 text-2xl text-orange-400">
+          🎙️
+        </div>
+        <p className="text-sm font-bold text-white">{name}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-40 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+      <video ref={videoRef} autoPlay playsInline className="h-full min-h-40 w-full object-cover" />
+      <span className="absolute bottom-2 left-2 rounded bg-slate-950/70 px-2 py-1 text-xs font-semibold text-white">
+        {name}
+      </span>
+    </div>
+  );
+}
+
 export default function CallsPage() {
   return (
     <Suspense fallback={<main className="route-loading">Loading Calls...</main>}>
@@ -55,15 +109,12 @@ function CallsContent() {
     channelName: string;
     caller: { id: number; name: string; email: string };
     type: "AUDIO" | "VIDEO";
+    conversationName?: string | null;
+    isGroupCall?: boolean;
   } | null>(null);
 
-  const [activeCall, setActiveCall] = useState<{
-    callSessionId?: number;
-    channelName: string;
-    targetName: string;
-    type: "AUDIO" | "VIDEO";
-    peerUserId: number;
-  } | null>(null);
+  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [remoteParticipants, setRemoteParticipants] = useState<RemoteParticipant[]>([]);
 
   const [isMicMuted, setIsMicMuted] = useState<boolean>(false);
   const [isCamOff, setIsCamOff] = useState<boolean>(false);
@@ -72,8 +123,19 @@ function CallsContent() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const groupPeerConnectionsRef = useRef<Map<number, RTCPeerConnection>>(new Map());
+  const pendingGroupPeerConnectionsRef = useRef<Map<number, Promise<RTCPeerConnection>>>(new Map());
+  const pendingIceCandidatesRef = useRef<Map<number, RTCIceCandidateInit[]>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+  const localMediaPromiseRef = useRef<Promise<MediaStream> | null>(null);
+  const activeCallRef = useRef<ActiveCall | null>(null);
+  const startedChannelRef = useRef<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const setCurrentActiveCall = (call: ActiveCall | null) => {
+    activeCallRef.current = call;
+    setActiveCall(call);
+  };
 
   const handleSignOut = () => {
     logout();
@@ -144,6 +206,34 @@ function CallsContent() {
     }
   }, [session?.token]);
 
+  useEffect(() => {
+    if (searchParams.get("incomingCall") !== "true") return;
+    const callSessionId = Number(searchParams.get("callSessionId"));
+    const callerId = Number(searchParams.get("callerId"));
+    const channelName = searchParams.get("activeChannel");
+    const callerName = searchParams.get("callerName");
+    if (!callSessionId || !callerId || !channelName || !callerName) return;
+
+    setIncomingCall({
+      callSessionId,
+      channelName,
+      caller: {
+        id: callerId,
+        name: callerName,
+        email: searchParams.get("callerEmail") || "",
+      },
+      type: (searchParams.get("type") as "AUDIO" | "VIDEO") || "VIDEO",
+      conversationName: searchParams.get("groupName"),
+      isGroupCall: searchParams.get("groupCall") === "true",
+    });
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (activeCall?.type === "VIDEO" && localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [activeCall]);
+
   // Fetch employees
   useEffect(() => {
     if (!session?.token) return;
@@ -160,10 +250,32 @@ function CallsContent() {
     const channel = searchParams.get("activeChannel");
     const targetId = searchParams.get("target");
     const type = (searchParams.get("type") as "AUDIO" | "VIDEO") || "VIDEO";
+    const isGroupCall = searchParams.get("groupCall") === "true";
+    const isIncomingCall = searchParams.get("incomingCall") === "true";
+    const callSessionId = Number(searchParams.get("callSessionId")) || undefined;
+    const groupName = searchParams.get("groupName");
 
-    if (channel && targetId && session?.user) {
+    if (isIncomingCall || !channel || !session?.user || startedChannelRef.current === channel) return;
+    startedChannelRef.current = channel;
+
+    if (isGroupCall && callSessionId) {
+      setCurrentActiveCall({
+        callSessionId,
+        channelName: channel,
+        targetName: groupName || "Group",
+        type,
+        isGroupCall: true,
+        isHost: true,
+      });
+      void prepareGroupCallMedia(type).catch((error) => {
+        console.error("Unable to access group call media:", error);
+        alert("Allow microphone and camera access to start this call.");
+        endWebRTCCall();
+      });
+    } else if (targetId) {
       const targetEmp = employees.find((e) => e.id === Number(targetId));
-      setActiveCall({
+      setCurrentActiveCall({
+        callSessionId,
         channelName: channel,
         targetName: targetEmp?.name || `Employee #${targetId}`,
         type,
@@ -177,7 +289,14 @@ function CallsContent() {
   useEffect(() => {
     if (!socket) return;
 
-    const onIncomingCall = (data: any) => {
+    const onIncomingCall = (data: {
+      callSessionId: number;
+      channelName: string;
+      caller: { id: number; name: string; email: string };
+      type: "AUDIO" | "VIDEO";
+      conversationName?: string | null;
+      isGroupCall?: boolean;
+    }) => {
       setIncomingCall(data);
     };
 
@@ -186,15 +305,76 @@ function CallsContent() {
     };
 
     const onCallRejected = () => {
+      if (activeCallRef.current?.isGroupCall) return;
       alert("Call was rejected by recipient");
       endWebRTCCall();
     };
 
-    const onCallEnded = () => {
-      endWebRTCCall();
+    const onCallEnded = (data: { callSessionId: number }) => {
+      if (activeCallRef.current?.callSessionId !== data.callSessionId) return;
+      cleanupCall();
     };
 
-    const onWebRTCOffer = async ({ fromUserId, offer }: any) => {
+    const onParticipantJoined = async ({
+      callSessionId,
+      participantIds,
+    }: {
+      callSessionId: number;
+      participantIds: number[];
+    }) => {
+      const call = activeCallRef.current;
+      if (
+        !call?.isGroupCall ||
+        call.callSessionId !== callSessionId ||
+        typeof session?.user.id !== "number"
+      ) return;
+
+      startTimer();
+      for (const participantId of participantIds) {
+        if (
+          participantId !== session.user.id &&
+          session.user.id < participantId &&
+          !groupPeerConnectionsRef.current.has(participantId)
+        ) {
+          await createGroupPeerConnection(participantId, true);
+        }
+      }
+    };
+
+    const onParticipantLeft = ({
+      callSessionId,
+      userId,
+    }: {
+      callSessionId: number;
+      userId: number;
+    }) => {
+      if (activeCallRef.current?.callSessionId !== callSessionId) return;
+      groupPeerConnectionsRef.current.get(userId)?.close();
+      groupPeerConnectionsRef.current.delete(userId);
+      pendingIceCandidatesRef.current.delete(userId);
+      setRemoteParticipants((prev) => prev.filter((participant) => participant.userId !== userId));
+    };
+
+    const onWebRTCOffer = async ({
+      fromUserId,
+      offer,
+      callSessionId,
+    }: {
+      fromUserId: number;
+      offer: RTCSessionDescriptionInit;
+      callSessionId?: number;
+    }) => {
+      if (activeCallRef.current?.isGroupCall) {
+        const call = activeCallRef.current;
+        if (!call.callSessionId || call.callSessionId !== callSessionId) return;
+        const pc = await createGroupPeerConnection(fromUserId, false);
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        await flushPendingIceCandidates(fromUserId, pc);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit("webrtc:answer", { targetUserId: fromUserId, answer, callSessionId });
+        return;
+      }
       if (!peerConnectionRef.current) return;
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnectionRef.current.createAnswer();
@@ -202,13 +382,49 @@ function CallsContent() {
       socket.emit("webrtc:answer", { targetUserId: fromUserId, answer });
     };
 
-    const onWebRTCAnswer = async ({ offer, answer }: any) => {
+    const onWebRTCAnswer = async ({
+      fromUserId,
+      answer,
+      callSessionId,
+    }: {
+      fromUserId: number;
+      answer: RTCSessionDescriptionInit;
+      callSessionId?: number;
+    }) => {
+      if (activeCallRef.current?.isGroupCall) {
+        if (activeCallRef.current.callSessionId !== callSessionId) return;
+        const pc = groupPeerConnectionsRef.current.get(fromUserId);
+        if (!pc) return;
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        await flushPendingIceCandidates(fromUserId, pc);
+        return;
+      }
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
       }
     };
 
-    const onWebRTCIceCandidate = async ({ candidate }: any) => {
+    const onWebRTCIceCandidate = async ({
+      fromUserId,
+      candidate,
+      callSessionId,
+    }: {
+      fromUserId: number;
+      candidate: RTCIceCandidateInit;
+      callSessionId?: number;
+    }) => {
+      if (activeCallRef.current?.isGroupCall) {
+        if (activeCallRef.current.callSessionId !== callSessionId) return;
+        const pc = groupPeerConnectionsRef.current.get(fromUserId);
+        if (!pc || !pc.remoteDescription) {
+          const pending = pendingIceCandidatesRef.current.get(fromUserId) || [];
+          pending.push(candidate);
+          pendingIceCandidatesRef.current.set(fromUserId, pending);
+          return;
+        }
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        return;
+      }
       if (peerConnectionRef.current && candidate) {
         await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       }
@@ -218,31 +434,127 @@ function CallsContent() {
     socket.on("call:accepted", onCallAccepted);
     socket.on("call:rejected", onCallRejected);
     socket.on("call:ended", onCallEnded);
+    socket.on("call:participant-joined", onParticipantJoined);
+    socket.on("call:participant-left", onParticipantLeft);
     socket.on("webrtc:offer", onWebRTCOffer);
     socket.on("webrtc:answer", onWebRTCAnswer);
     socket.on("webrtc:ice-candidate", onWebRTCIceCandidate);
+
+    if (activeCallRef.current?.isGroupCall && activeCallRef.current.callSessionId) {
+      socket.emit("call:join", { callSessionId: activeCallRef.current.callSessionId });
+    }
 
     return () => {
       socket.off("incoming:call", onIncomingCall);
       socket.off("call:accepted", onCallAccepted);
       socket.off("call:rejected", onCallRejected);
       socket.off("call:ended", onCallEnded);
+      socket.off("call:participant-joined", onParticipantJoined);
+      socket.off("call:participant-left", onParticipantLeft);
       socket.off("webrtc:offer", onWebRTCOffer);
       socket.off("webrtc:answer", onWebRTCAnswer);
       socket.off("webrtc:ice-candidate", onWebRTCIceCandidate);
     };
-  }, [socket]);
+  }, [socket, session?.user.id]);
 
-  const startTimer = () => {
+  function startTimer() {
+    if (timerRef.current) return;
     setCallDuration(0);
-    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setCallDuration((prev) => prev + 1);
     }, 1000);
-  };
+  }
+
+  async function prepareGroupCallMedia(type: "AUDIO" | "VIDEO") {
+    if (!localStreamRef.current) {
+      if (!localMediaPromiseRef.current) {
+        localMediaPromiseRef.current = navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: type === "VIDEO",
+        });
+      }
+      try {
+        localStreamRef.current = await localMediaPromiseRef.current;
+      } finally {
+        localMediaPromiseRef.current = null;
+      }
+    }
+    if (localVideoRef.current && type === "VIDEO") {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }
+
+  async function flushPendingIceCandidates(userId: number, pc: RTCPeerConnection) {
+    const candidates = pendingIceCandidatesRef.current.get(userId) || [];
+    pendingIceCandidatesRef.current.delete(userId);
+    for (const candidate of candidates) {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    }
+  }
+
+  async function createGroupPeerConnection(targetUserId: number, isCaller: boolean) {
+    const existingConnection = groupPeerConnectionsRef.current.get(targetUserId);
+    if (existingConnection) return existingConnection;
+    const pendingConnection = pendingGroupPeerConnectionsRef.current.get(targetUserId);
+    if (pendingConnection) return pendingConnection;
+
+    const setupConnection = async () => {
+      const call = activeCallRef.current;
+      if (!call?.callSessionId) throw new Error("Group call session is not ready");
+      await prepareGroupCallMedia(call.type);
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
+      groupPeerConnectionsRef.current.set(targetUserId, pc);
+      localStreamRef.current?.getTracks().forEach((track) => {
+        pc.addTrack(track, localStreamRef.current!);
+      });
+      pc.ontrack = (event) => {
+        const stream = event.streams[0];
+        if (!stream) return;
+        setRemoteParticipants((prev) => [
+          ...prev.filter((participant) => participant.userId !== targetUserId),
+          { userId: targetUserId, stream },
+        ]);
+      };
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket?.emit("webrtc:ice-candidate", {
+            targetUserId,
+            callSessionId: call.callSessionId,
+            candidate: event.candidate,
+          });
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+          groupPeerConnectionsRef.current.delete(targetUserId);
+          setRemoteParticipants((prev) => prev.filter((participant) => participant.userId !== targetUserId));
+        }
+      };
+      if (isCaller) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket?.emit("webrtc:offer", {
+          targetUserId,
+          callSessionId: call.callSessionId,
+          offer,
+        });
+      }
+      return pc;
+    };
+
+    const connectionPromise = setupConnection();
+    pendingGroupPeerConnectionsRef.current.set(targetUserId, connectionPromise);
+    try {
+      return await connectionPromise;
+    } finally {
+      pendingGroupPeerConnectionsRef.current.delete(targetUserId);
+    }
+  }
 
   // WebRTC Media & PeerConnection Initialization
-  const initiateWebRTC = async (targetUserId: number, isCaller: boolean, type: "AUDIO" | "VIDEO") => {
+  async function initiateWebRTC(targetUserId: number, isCaller: boolean, type: "AUDIO" | "VIDEO") {
     try {
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -267,7 +579,7 @@ function CallsContent() {
         if (remoteVideoRef.current && event.streams[0]) {
           remoteVideoRef.current.srcObject = event.streams[0];
         }
-      };
+      }
 
       pc.onicecandidate = (event) => {
         if (event.candidate && socket) {
@@ -292,16 +604,33 @@ function CallsContent() {
   const handleAcceptIncomingCall = async () => {
     if (!incomingCall || !socket) return;
 
-    socket.emit("call:accept", { callSessionId: incomingCall.callSessionId });
-    setActiveCall({
+    if (incomingCall.isGroupCall) {
+      try {
+        await prepareGroupCallMedia(incomingCall.type);
+      } catch (error) {
+        console.error("Unable to access group call media:", error);
+        socket.emit("call:reject", { callSessionId: incomingCall.callSessionId });
+        setIncomingCall(null);
+        alert("Allow microphone and camera access to join this call.");
+        return;
+      }
+    }
+
+    const call = {
       callSessionId: incomingCall.callSessionId,
       channelName: incomingCall.channelName,
-      targetName: incomingCall.caller.name,
+      targetName: incomingCall.conversationName || incomingCall.caller.name,
       type: incomingCall.type,
       peerUserId: incomingCall.caller.id,
-    });
+      isGroupCall: Boolean(incomingCall.isGroupCall),
+      isHost: false,
+    };
+    setCurrentActiveCall(call);
+    socket.emit("call:accept", { callSessionId: incomingCall.callSessionId });
 
-    initiateWebRTC(incomingCall.caller.id, false, incomingCall.type);
+    if (!incomingCall.isGroupCall) {
+      initiateWebRTC(incomingCall.caller.id, false, incomingCall.type);
+    }
     setIncomingCall(null);
     startTimer();
   };
@@ -314,11 +643,7 @@ function CallsContent() {
   };
 
   // End Active Call
-  const endWebRTCCall = () => {
-    if (socket && activeCall?.callSessionId) {
-      socket.emit("call:end", { callSessionId: activeCall.callSessionId });
-    }
-
+  function cleanupCall() {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -328,16 +653,30 @@ function CallsContent() {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+    groupPeerConnectionsRef.current.forEach((connection) => connection.close());
+    groupPeerConnectionsRef.current.clear();
+    pendingGroupPeerConnectionsRef.current.clear();
+    pendingIceCandidatesRef.current.clear();
+    localMediaPromiseRef.current = null;
+    setRemoteParticipants([]);
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    setActiveCall(null);
+    setCurrentActiveCall(null);
     setCallDuration(0);
     fetchCalls();
-  };
+  }
+
+  function endWebRTCCall() {
+    const call = activeCallRef.current;
+    if (socket && call?.callSessionId) {
+      socket.emit("call:end", { callSessionId: call.callSessionId });
+    }
+    cleanupCall();
+  }
 
   // Mic & Camera Toggles
   const toggleMic = () => {
@@ -369,19 +708,31 @@ function CallsContent() {
     if (!targetEmp) return;
 
     const channelName = `call-${Date.now()}`;
-    socket.emit("call:initiate", {
-      targetUserId: targetEmp.id,
-      type: callType,
-      channelName,
-    });
-
     setShowStartModal(false);
-    setActiveCall({
+    const newCall: ActiveCall = {
       channelName,
       targetName: targetEmp.name,
       type: callType,
       peerUserId: targetEmp.id,
-    });
+    };
+    setCurrentActiveCall(newCall);
+
+    socket.emit(
+      "call:initiate",
+      {
+        targetUserId: targetEmp.id,
+        type: callType,
+        channelName,
+      },
+      (result: { callSessionId?: number; error?: string }) => {
+        if (!result?.callSessionId) {
+          alert(result?.error || "Unable to start the call");
+          cleanupCall();
+          return;
+        }
+        setCurrentActiveCall({ ...newCall, callSessionId: result.callSessionId });
+      }
+    );
 
     initiateWebRTC(targetEmp.id, true, callType);
   };
@@ -405,26 +756,25 @@ function CallsContent() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 welcome mb-6">
             <div>
-              <p className="eyebrow">MESSENGER</p>
-              <h1 className="text-2xl font-black text-slate-900">Audio & Video Calls</h1>
+              <h2 className="text-2xl font-black text-slate-800">Audio & Video Calls</h2>
               <p className="text-xs text-slate-500 font-medium">
-                Real-time WebRTC audio/video calling with instant signaling and session history.
+                Calling history
               </p>
             </div>
             <div className="flex items-center gap-2">
               {calls.length > 0 && (
                 <button
                   onClick={handleClearAllCalls}
-                  className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-bold rounded-xl transition-all border border-slate-200 text-xs cursor-pointer"
+                  className="px-3 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-500 text-slate-700 font-bold rounded-xl transition-all border border-slate-200 text-xs cursor-pointer"
                 >
                   Clear All Logs
                 </button>
               )}
               <button
                 onClick={() => setShowStartModal(true)}
-                className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center gap-2 cursor-pointer"
+                className="px-3 py-2  bg-[#171717] hover:bg-[#EA580C] text-white font-bold rounded-xl transition-all shadow-xs text-xs flex items-center gap-2 cursor-pointer"
               >
-                <span>📞</span> Start New Call
+                <span>📞</span> + New Call
               </button>
             </div>
           </div>
@@ -504,9 +854,11 @@ function CallsContent() {
                   {incomingCall.type === "VIDEO" ? "🎥" : "📞"}
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">{incomingCall.caller.name}</h3>
+                  <h3 className="text-lg font-black text-white">
+                    {incomingCall.conversationName || incomingCall.caller.name}
+                  </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Incoming {incomingCall.type} Call...
+                    Incoming {incomingCall.isGroupCall ? "group " : ""}{incomingCall.type} call from {incomingCall.caller.name}...
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-4">
@@ -537,7 +889,7 @@ function CallsContent() {
                   <div>
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                       <span>{activeCall.type === "VIDEO" ? "🎥" : "🎙️"}</span>
-                      <span>Call with {activeCall.targetName}</span>
+                      <span>{activeCall.isGroupCall ? `Group call: ${activeCall.targetName}` : `Call with ${activeCall.targetName}`}</span>
                     </h2>
                     <p className="text-xs text-emerald-400 font-mono font-bold mt-0.5">
                       ⏱️ Duration: {formatTime(callDuration)}
@@ -552,22 +904,41 @@ function CallsContent() {
                 </div>
 
                 {/* Video Streams Display */}
-                <div className="flex-1 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative flex items-center justify-center min-h-[360px]">
-                  {/* Remote Video Stream */}
-                  {activeCall.type === "VIDEO" ? (
-                    <video
-                      ref={remoteVideoRef}
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-cover rounded-2xl"
-                    />
+                <div className={`flex-1 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative min-h-[360px] ${activeCall.isGroupCall ? "p-3" : "flex items-center justify-center"}`}>
+                  {activeCall.isGroupCall ? (
+                    <div className="grid h-full min-h-[330px] grid-cols-1 gap-3 sm:grid-cols-2">
+                      {remoteParticipants.map((participant) => (
+                        <RemoteParticipantMedia
+                          key={participant.userId}
+                          participant={participant}
+                          name={employees.find((employee) => employee.id === participant.userId)?.name || `Employee #${participant.userId}`}
+                          type={activeCall.type}
+                        />
+                      ))}
+                      {remoteParticipants.length === 0 && (
+                        <div className="col-span-full flex items-center justify-center text-sm text-slate-400">
+                          Waiting for group members to join...
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    <div className="text-center space-y-3">
-                      <div className="w-24 h-24 bg-slate-800 text-orange-400 rounded-full flex items-center justify-center text-4xl mx-auto border border-slate-700">
-                        🎙️
-                      </div>
-                      <p className="text-sm font-bold text-white">{activeCall.targetName}</p>
-                      <p className="text-xs text-slate-400">Audio Stream Active</p>
+                    <div className="flex h-full w-full items-center justify-center">
+                      {activeCall.type === "VIDEO" ? (
+                        <video
+                          ref={remoteVideoRef}
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-cover rounded-2xl"
+                        />
+                      ) : (
+                        <div className="text-center space-y-3">
+                          <div className="w-24 h-24 bg-slate-800 text-orange-400 rounded-full flex items-center justify-center text-4xl mx-auto border border-slate-700">
+                            🎙️
+                          </div>
+                          <p className="text-sm font-bold text-white">{activeCall.targetName}</p>
+                          <p className="text-xs text-slate-400">Audio Stream Active</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -687,7 +1058,7 @@ function CallsContent() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2.5 text-xs bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl shadow-xs"
+                      className="px-4 py-2.5 text-xs bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all cursor-pointer"
                     >
                       Call Now ➔
                     </button>

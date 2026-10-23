@@ -73,6 +73,11 @@ enum LeaveStatus {
   CANCELLED
 }
 
+enum LeaveHalfDayPeriod {
+  FIRST_HALF
+  SECOND_HALF
+}
+
 enum MeetingStatus {
   SCHEDULED
   IN_PROGRESS
@@ -246,7 +251,7 @@ model Attendance {
 model LeaveType {
   id          Int       @id @default(autoincrement())
   name        String    @unique @db.VarChar(50)
-  daysAllowed Int       @default(12)
+  daysAllowed Float     @default(12)
   description String?   @db.VarChar(255)
   status      Boolean   @default(true)
 
@@ -261,9 +266,9 @@ model LeaveBalance {
   id          Int      @id @default(autoincrement())
   userId      Int
   leaveTypeId Int
-  allocated   Int      @default(12)
-  used        Int      @default(0)
-  remaining   Int      @default(12)
+  allocated   Float    @default(12)
+  used        Float    @default(0)
+  remaining   Float    @default(12)
   year        Int      @default(2026)
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -283,7 +288,8 @@ model LeaveRequest {
   leaveTypeId     Int
   startDate       DateTime    @db.Date
   endDate         DateTime    @db.Date
-  totalDays       Int
+  totalDays       Float
+  halfDayPeriod   LeaveHalfDayPeriod?
   reason          String      @db.Text
   status          LeaveStatus @default(PENDING)
   approvedById    Int?
@@ -631,6 +637,7 @@ model Notification {
   title     String   @db.VarChar(200)
   message   String   @db.Text
   link      String?  @db.VarChar(255)
+  dedupeKey String?  @unique @db.VarChar(191)
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 

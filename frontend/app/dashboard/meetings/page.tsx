@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarDays, Clock3, Plus, Users, Video } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -208,51 +209,90 @@ export default function MeetingsPage() {
     if (filterStatus === "ALL") return true;
     return m.status === filterStatus;
   });
+  const meetingCounts = {
+    all: meetings.length,
+    scheduled: meetings.filter((m) => m.status === "SCHEDULED").length,
+    inProgress: meetings.filter((m) => m.status === "IN_PROGRESS").length,
+  };
 
   return (
     <main className="app-shell">
       <Navbar user={session.user} onSignOut={handleSignOut} />
       <div className="dashboard-frame">
         <Sidebar user={session.user} onSignOut={handleSignOut} />
-        <section className="dashboard-content" style={{ paddingBottom: "80px" }}>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 welcome mb-6">
-            <div>
-              <p className="eyebrow">COLLABORATION</p>
-              <h1 className="text-2xl font-black text-slate-900">Meetings & Sync Sessions</h1>
-              <p className="text-xs text-slate-500 font-medium">
-                Manage team agendas, timezones, sync notes, and join real-time LiveKit audio/video rooms.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
+        <section className="dashboard-content !bg-slate-50/70" style={{ paddingBottom: "60px" }}>
+          <div className="w-full space-y-4">
+            <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 px-5 py-5 text-white shadow-md sm:px-7">
+              <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-blue-100">
+                    <Video size={13} />
+                    Collaboration
+                  </div>
+                  <h1 className="text-xl font-black tracking-tight sm:text-2xl">Meetings &amp; sync sessions</h1>
+                  <p className="mt-1 text-xs text-blue-100/80">
+                    Plan team discussions and join real-time video rooms.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => router.push("/dashboard/meetings/calendar")}
-                className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-all"
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/20"
               >
-                📆 Calendar View
+                <CalendarDays size={15} />
+                Calendar
               </button>
               <button
                 onClick={() => openScheduleModal()}
-                className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs"
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600"
               >
-                + Schedule Meeting
+                <Plus size={15} />
+                Schedule meeting
               </button>
             </div>
-          </div>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {[
+                { label: "Total meetings", count: meetingCounts.all, icon: CalendarDays, tone: "text-blue-700 bg-blue-50" },
+                { label: "Scheduled", count: meetingCounts.scheduled, icon: Clock3, tone: "text-orange-700 bg-orange-50" },
+                { label: "In progress", count: meetingCounts.inProgress, icon: Video, tone: "text-emerald-700 bg-emerald-50" },
+              ].map(({ label, count, icon: Icon, tone }) => (
+                <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone}`}>
+                    <Icon size={17} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className="text-lg font-black leading-tight text-slate-900">{count}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
 
           {/* Status Filters */}
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {["ALL", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((statusKey) => (
               <button
                 key={statusKey}
                 onClick={() => setFilterStatus(statusKey)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold transition-all border ${
                   filterStatus === statusKey
-                    ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                    ? "bg-[#172554] text-white border-[#172554] shadow-xs"
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                 }`}
               >
-                {statusKey === "ALL" ? "All Meetings" : statusKey.replace("_", " ")}
+                <span>{statusKey === "ALL" ? "All meetings" : statusKey.replace("_", " ")}</span>
+                <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[9px] ${
+                  filterStatus === statusKey ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"
+                }`}>
+                  {statusKey === "ALL"
+                    ? meetings.length
+                    : meetings.filter((meeting) => meeting.status === statusKey).length}
+                </span>
               </button>
             ))}
           </div>
@@ -267,19 +307,19 @@ export default function MeetingsPage() {
               <p className="text-slate-400 text-xs font-medium">No meetings found under this status filter.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-3">
               {filteredMeetings.map((m) => (
                 <div
                   key={m.id}
-                  className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
+                  className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5 lg:flex-row lg:items-center"
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="px-2.5 py-0.5 text-[10px] font-mono font-extrabold rounded-md bg-orange-50 text-orange-700 border border-orange-200">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="max-w-full truncate rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-700">
                         {m.roomName}
                       </span>
                       <span
-                        className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase ${
+                        className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
                           m.status === "SCHEDULED"
                             ? "bg-blue-100 text-blue-800"
                             : m.status === "IN_PROGRESS"
@@ -293,20 +333,22 @@ export default function MeetingsPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-black text-slate-900">{m.title}</h3>
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-base font-black text-slate-900">{m.title}</h3>
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
                         <button
                           onClick={() => openScheduleModal(m)}
-                          className="p-1 hover:bg-slate-100 rounded text-xs"
+                          className="rounded-lg p-2 text-xs hover:bg-slate-100"
                           title="Edit"
+                          aria-label={`Edit ${m.title}`}
                         >
                           ✏️
                         </button>
                         <button
                           onClick={() => handleDeleteMeeting(m.id)}
-                          className="p-1 hover:bg-rose-50 text-rose-600 rounded text-xs"
+                          className="rounded-lg p-2 text-xs text-rose-600 hover:bg-rose-50"
                           title="Cancel/Delete"
+                          aria-label={`Cancel or delete ${m.title}`}
                         >
                           🗑️
                         </button>
@@ -319,30 +361,40 @@ export default function MeetingsPage() {
                       </div>
                     )}
 
-                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">
+                    <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">
                       {m.description || "No detailed description."}
                     </p>
 
-                    <div className="mt-4 space-y-1 text-xs text-slate-500 font-medium">
-                      <p>📅 <strong>Start:</strong> {new Date(m.startTime).toLocaleString()} ({m.timezone || "UTC"})</p>
-                      <p>👤 <strong>Organizer:</strong> {m.organizer.name}</p>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] font-medium text-slate-500">
+                      <p className="inline-flex items-center gap-1.5">
+                        <CalendarDays size={13} className="text-slate-400" />
+                        <strong className="text-slate-700">{new Date(m.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</strong>
+                        {new Date(m.startTime).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                        <span>({m.timezone || "UTC"})</span>
+                      </p>
+                      <p>Organizer: <strong className="text-slate-700">{m.organizer.name}</strong></p>
                       {m.members.length > 0 && (
-                        <p>👥 <strong>Members:</strong> {m.members.map((mb) => mb.user.name).join(", ")}</p>
+                        <p className="inline-flex items-center gap-1.5">
+                          <Users size={13} className="text-slate-400" />
+                          <strong className="text-slate-700">{m.members.length}</strong> participants
+                        </p>
                       )}
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleJoinCall(m)}
-                    className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center justify-center gap-2"
+                    className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] text-xs font-extrabold text-white shadow-sm transition hover:bg-[#1E3A8A] lg:w-48"
                   >
-                    <span>🎥</span> Join LiveKit Room
+                    <Video size={15} />
+                    Join meeting
                   </button>
                 </div>
               ))}
             </div>
           )}
 
+          </div>
           {/* Schedule / Edit Modal */}
           {showScheduleModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
@@ -442,7 +494,7 @@ export default function MeetingsPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="px-4 py-2.5 text-xs bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl shadow-xs disabled:opacity-50"
+                      className="px-4 py-2.5 text-xs bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs disabled:opacity-50 transition-all"
                     >
                       {submitting ? "Saving..." : editingMeeting ? "Update Meeting" : "Schedule Meeting"}
                     </button>
@@ -458,7 +510,7 @@ export default function MeetingsPage() {
               <div className="bg-slate-900 text-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-800 space-y-6 flex flex-col max-h-[90vh]">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div>
-                    <span className="px-2.5 py-0.5 bg-orange-500/20 text-orange-400 rounded-full text-xs font-mono font-bold">
+                    <span className="px-2.5 py-0.5 bg-orange-500/20 text-orange-400 rounded-full text-xs font-bold">
                       LIVEKIT ROOM: {activeCallMeeting.roomName}
                     </span>
                     <h2 className="text-xl font-bold text-white mt-1">{activeCallMeeting.title}</h2>
@@ -485,12 +537,12 @@ export default function MeetingsPage() {
                       <div>
                         <h3 className="text-base font-bold text-white">LiveKit Audio/Video Connected</h3>
                         <p className="text-xs text-slate-400 mt-1">
-                          Server Target: <span className="font-mono text-orange-400">{livekitUrl}</span>
+                          Server Target: <span className="font-semibold text-orange-400">{livekitUrl}</span>
                         </p>
                       </div>
                       <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-left space-y-1">
-                        <p className="text-[11px] text-slate-500 font-mono">LIVEKIT_ROOM_TOKEN</p>
-                        <p className="text-xs font-mono text-emerald-400 truncate">{livekitToken}</p>
+                        <p className="text-[11px] text-slate-500 font-bold">LIVEKIT_ROOM_TOKEN</p>
+                        <p className="text-xs font-semibold text-emerald-400 truncate">{livekitToken}</p>
                       </div>
                     </div>
                   ) : (

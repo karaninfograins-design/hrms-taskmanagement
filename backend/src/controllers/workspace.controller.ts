@@ -47,27 +47,38 @@ function generateProjectKey(name: string): string {
 
 export async function listProjects(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
-  const items = await prisma.project.findMany({
-    where: { status: { not: "INACTIVE" } },
-    select: {
-      id: true,
-      key: true,
-      name: true,
-      status: true,
-      startDate: true,
-      endDate: true,
-      createdBy: { select: { id: true, name: true, email: true } },
-      members: { select: { userId: true, user: { select: { id: true, name: true, email: true } } } },
-      workItems: {
-        select: {
-          id: true,
-          assigneeId: true,
-          assignees: { select: { userId: true } },
+  
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  
+  const [items, total] = await Promise.all([
+    prisma.project.findMany({
+      where: { status: { not: "INACTIVE" } },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        members: { select: { userId: true, user: { select: { id: true, name: true, email: true } } } },
+        workItems: {
+          select: {
+            id: true,
+            assigneeId: true,
+            assignees: { select: { userId: true } },
+          },
         },
       },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+      orderBy: { updatedAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.project.count({ where: { status: { not: "INACTIVE" } } })
+  ]);
+  
   res.json({
     items: items.map(({ createdBy, members, workItems, ...project }: any) => {
       const workItemAssigneeIds = (workItems || []).flatMap((w: any) => [
@@ -85,6 +96,12 @@ export async function listProjects(req: Request, res: Response) {
         assignedUserIds,
       };
     }),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
   });
 }
 
@@ -349,6 +366,39 @@ export async function createWorkItem(req: Request, res: Response) {
     },
   });
 
+  if (assigneesToRegister.length > 0) {
+    void (async () => {
+      const adminUsers = await prisma.user.findMany({
+        where: {
+          status: "ACTIVE",
+          role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+        },
+        select: { id: true },
+      });
+      const assignedUserIds = assigneesToRegister.filter((assigneeId) => assigneeId !== user.id);
+      const adminUserIds = adminUsers
+        .map((admin) => admin.id)
+        .filter((adminId) => adminId !== user.id && !assigneesToRegister.includes(adminId));
+
+      await Promise.all([
+        createNotificationsForUsers(
+          assignedUserIds,
+          "TASK_ASSIGNED",
+          "Task assigned to you",
+          `"${item.title}" was assigned to you by ${user.name}.`,
+          `/dashboard/projects/${projectId}`
+        ),
+        createNotificationsForUsers(
+          adminUserIds,
+          "TASK_ASSIGNED",
+          "Task assignment created",
+          `"${item.title}" was assigned in a project by ${user.name}.`,
+          `/dashboard/projects/${projectId}`
+        ),
+      ]);
+    })().catch((error) => console.error("Task assignment notification error:", error));
+  }
+
   res.status(201).json({ item: fullItem || item });
 }
 
@@ -421,9 +471,18 @@ export async function updateWorkItem(req: Request, res: Response) {
     return;
   }
 
-  const item = await prisma.workItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.workItem.findUnique({
+    where: { id: itemId },
+    include: {
+      assignees: { select: { userId: true } },
+    },
+  });
   if (!item) { res.status(404).json({ message: "Work item not found" }); return; }
 
+  const previousAssigneeIds = new Set([
+    ...(item.assigneeId ? [item.assigneeId] : []),
+    ...item.assignees.map((assignee) => assignee.userId),
+  ]);
   let primaryAssigneeId = assigneeId;
   if (Array.isArray(assigneeIds)) {
     primaryAssigneeId = assigneeIds.length > 0 ? assigneeIds[0] : null;
@@ -457,6 +516,49 @@ export async function updateWorkItem(req: Request, res: Response) {
       assignees: { include: { user: { select: { id: true, name: true, email: true } } } },
     }
   });
+
+  const currentAssigneeIds = Array.from(new Set([
+    ...(updated.assigneeId ? [updated.assigneeId] : []),
+    ...updated.assignees.map((assignee) => assignee.userId),
+  ]));
+  const newlyAssignedUserIds = currentAssigneeIds.filter(
+    (assigneeId) => !previousAssigneeIds.has(assigneeId) && assigneeId !== user.id
+  );
+  if (newlyAssignedUserIds.length > 0) {
+    void (async () => {
+      const adminUsers = await prisma.user.findMany({
+        where: {
+          status: "ACTIVE",
+          role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+        },
+        select: { id: true },
+      });
+      const adminUserIds = adminUsers
+        .map((admin) => admin.id)
+        .filter((adminId) =>
+          adminId !== user.id &&
+          !previousAssigneeIds.has(adminId) &&
+          !newlyAssignedUserIds.includes(adminId)
+        );
+
+      await Promise.all([
+        createNotificationsForUsers(
+          newlyAssignedUserIds,
+          "TASK_ASSIGNED",
+          "Task assigned to you",
+          `"${updated.title}" was assigned to you by ${user.name}.`,
+          `/dashboard/projects/${updated.projectId}`
+        ),
+        createNotificationsForUsers(
+          adminUserIds,
+          "TASK_ASSIGNED",
+          "Task assignment updated",
+          `New assignees were added to "${updated.title}" by ${user.name}.`,
+          `/dashboard/projects/${updated.projectId}`
+        ),
+      ]);
+    })().catch((error) => console.error("Task reassignment notification error:", error));
+  }
 
   res.json({ item: updated });
 }
@@ -650,12 +752,31 @@ export async function createProject(req: Request, res: Response) {
 
 export async function listSprints(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
-  const items = await prisma.sprint.findMany({
-    where: { status: { not: "CANCELLED" } },
-    select: { id: true, name: true, type: true, status: true, startDate: true, endDate: true, project: { select: { name: true } } },
-    orderBy: { updatedAt: "desc" },
+  
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  
+  const [items, total] = await Promise.all([
+    prisma.sprint.findMany({
+      where: { status: { not: "CANCELLED" } },
+      select: { id: true, name: true, type: true, status: true, startDate: true, endDate: true, project: { select: { name: true } } },
+      orderBy: { updatedAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.sprint.count({ where: { status: { not: "CANCELLED" } } })
+  ]);
+  
+  res.json({
+    items: items.map(({ project, ...sprint }: { project: { name: string };[key: string]: unknown }) => ({ ...sprint, project: project.name })),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
   });
-  res.json({ items: items.map(({ project, ...sprint }: { project: { name: string };[key: string]: unknown }) => ({ ...sprint, project: project.name })) });
 }
 
 export async function deleteSprint(req: Request, res: Response) {

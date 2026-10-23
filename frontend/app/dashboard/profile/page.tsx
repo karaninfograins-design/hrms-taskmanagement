@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { updateProfile, changePassword } from "@/services/user.service";
 import { getAuthToken } from "@/lib/auth";
 import type { User } from "@/types/auth";
+import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
 
 type ProfileFormData = {
   name: string;
@@ -60,13 +61,6 @@ export default function ProfilePage() {
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
   const [showApplyModal, setShowApplyModal] = useState<boolean>(false);
-  const [selectedTypeId, setSelectedTypeId] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
-  const [reason, setReason] = useState<string>("");
-  const [submittingLeave, setSubmittingLeave] = useState<boolean>(false);
-  const [leaveModalError, setLeaveModalError] = useState<string | null>(null);
 
   const fetchProfileLeaveData = async () => {
     const token = getAuthToken();
@@ -81,9 +75,6 @@ export default function ProfilePage() {
         if (typesRes.ok) {
           const tData = await typesRes.json();
           setLeaveTypes(tData.types || []);
-          if (tData.types?.length > 0 && !selectedTypeId) {
-            setSelectedTypeId(String(tData.types[0].id));
-          }
         }
         if (balRes.ok) {
           const bData = await balRes.json();
@@ -121,47 +112,6 @@ export default function ProfilePage() {
       fetchProfileLeaveData();
     }
   }, [isLoading, router, session]);
-
-  const handleApplyLeaveSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTypeId || !startDate || !endDate || !reason.trim()) return;
-
-    setSubmittingLeave(true);
-    setLeaveModalError(null);
-    try {
-      const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/leaves/requests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          leaveTypeId: Number(selectedTypeId),
-          startDate,
-          endDate,
-          isHalfDay,
-          reason,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to submit leave request");
-      }
-
-      setShowApplyModal(false);
-      setStartDate("");
-      setEndDate("");
-      setReason("");
-      setIsHalfDay(false);
-      fetchProfileLeaveData();
-    } catch (err: any) {
-      setLeaveModalError(err.message || "Error applying for leave");
-    } finally {
-      setSubmittingLeave(false);
-    }
-  };
 
   const handleProfileInputChange = (field: keyof ProfileFormData, value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
@@ -281,92 +231,86 @@ export default function ProfilePage() {
           canCreateAdmins={canCreateAdmins}
           onSignOut={handleSignOut}
         />
-        <section className="dashboard-content" style={{ paddingBottom: "60px" }}>
+        <section className="dashboard-content" style={{ paddingBottom: "20px" }}>
           {/* Back Navigation */}
-          <button
+          {/* <button
             onClick={() => router.push("/dashboard")}
-            className="back-button"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#df7f4cff',
-              fontWeight: 700,
-              fontSize: '14px',
-              marginBottom: '20px',
-              padding: 0
-            }}
+            className="back-button mb-4 text-xs font-bold text-[#F97316] hover:text-[#EA580C] flex items-center gap-1 cursor-pointer transition-colors"
           >
             ← Back to Dashboard
-          </button>
+          </button> */}
 
           {/* Profile Header Banner */}
-          <div className="mb-8 overflow-hidden rounded-2xl border border-orange-100/80 bg-white shadow-sm">
-            {/* Soft peach banner */}
-            <div className="relative h-24 overflow-hidden bg-gradient-to-r from-orange-50 via-[#F9E9DD] to-[#F3E3D8]">
-              <div className="absolute -right-8 -top-16 h-44 w-44 rounded-full bg-white/40 blur-2xl" />
-              <div className="absolute right-28 top-8 h-20 w-20 rounded-full bg-orange-200/30 blur-xl" />
-              <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(#C49A80_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
-            </div>
+          <div className="relative mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 p-4 text-white shadow-md">
+            <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+            <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
 
-            {/* Profile details */}
-            <div className="relative -mt-10 flex flex-col gap-4 px-5 pb-6 sm:px-7 md:flex-row md:items-end md:justify-between">
-
-              <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-end sm:gap-5">
-
+            <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
                 {/* Avatar */}
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center
-        rounded-2xl border-4 border-white
-        bg-gradient-to-br from-[#C58D6D] to-[#A96F50]
-        text-2xl font-bold tracking-wider text-white
-        shadow-md shadow-orange-900/10">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-[#172554] to-[#1e3a8a] text-2xl font-bold tracking-wider text-white shadow-md shadow-slate-900/10">
                   {initials}
                 </div>
 
                 {/* Name and metadata */}
-                <div className="min-w-0 pb-1">
-                  <div className="mb-2 flex flex-wrap items-center gap-2.5">
-
-                    <h1 className="text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">
+                <div className="min-w-0">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+                    <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
                       {profileData.name || "User Account"}
                     </h1>
 
                     {/* Role badge */}
-                    <span className="inline-flex items-center rounded-full
-            border border-orange-200/80 bg-orange-50
-            px-3 py-1 text-[11px] font-bold uppercase
-            tracking-wider text-[#9A6245]">
+                    <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-orange-200">
                       {userRoleStr}
                     </span>
 
                     {/* Account status */}
-                    <span className="inline-flex items-center gap-1.5 rounded-full
-            border border-emerald-100 bg-emerald-50/80
-            px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       Active Account
                     </span>
-
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1
-          text-sm text-slate-500">
-
-                    <span className="font-medium text-slate-600">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-blue-100/80">
+                    <span className="font-semibold text-white">
                       {profileData.designation || "Team Member"}
                     </span>
-
-                    <span className="hidden text-slate-300 sm:inline">•</span>
-
+                    <span className="hidden text-blue-200/50 sm:inline">•</span>
                     <span className="break-all">
                       {profileData.email}
                     </span>
-
+                    {profileData.workLocation && (
+                      <>
+                        <span className="hidden text-blue-200/50 sm:inline">•</span>
+                        <span>📍 {profileData.workLocation}</span>
+                      </>
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {/* Action Tabs in Banner */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("profile")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "profile"
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "border border-white/15 bg-white/10 text-white hover:bg-white/20"
+                    }`}
+                >
+                  Edit Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("password")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "password"
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "border border-white/15 bg-white/10 text-white hover:bg-white/20"
+                    }`}
+                >
+                  Security
+                </button>
               </div>
             </div>
           </div>
@@ -392,7 +336,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-500">User ID</span>
-                    <span className="text-xs font-mono font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">#{session.user.id || 1}</span>
+                    <span className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">#{session.user.id || 1}</span>
                   </div>
                 </div>
               </div>
@@ -403,8 +347,7 @@ export default function ProfilePage() {
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Leave Balances & Status</h3>
                   <button
                     onClick={() => setShowApplyModal(true)}
-                    style={{ backgroundColor: "#FDBA74" }}
-                    className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-slate-900 font-bold text-[11px] shadow-2xs hover:brightness-95 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-[11px] shadow-xs transition-all cursor-pointer"
                   >
                     + Apply for Leave
                   </button>
@@ -421,13 +364,18 @@ export default function ProfilePage() {
                   <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
                     <span className="text-[10px] font-bold text-amber-600 uppercase">Vacant / Unpaid</span>
                     <p className="text-lg font-black text-amber-900 mt-0.5">
-                      {leaveRequests.filter(r => r.status === "APPROVED" && (r.type?.toLowerCase().includes("unpaid") || r.type?.toLowerCase().includes("vacant"))).length} days
+                      {leaveRequests
+                        .filter((request) =>
+                          request.status === "APPROVED" &&
+                          /unpaid|vacant/i.test(request.leaveType?.name || "")
+                        )
+                        .reduce((total, request) => total + Number(request.totalDays || 0), 0)} days
                     </p>
                   </div>
                   <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
                     <span className="text-[10px] font-bold text-emerald-600 uppercase">Half Day Leaves</span>
                     <p className="text-lg font-black text-emerald-900 mt-0.5">
-                      {leaveRequests.filter(r => r.isHalfDay || r.reason?.toLowerCase().includes("half")).length} Count
+                      {leaveRequests.filter((request) => request.halfDayPeriod).length} Count
                     </p>
                   </div>
                   <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
@@ -477,7 +425,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => { setActiveTab("profile"); setError(null); setSuccess(null); }}
                     className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${activeTab === "profile"
-                      ? "bg-orange-100/70 text-[#9A6245] border border-orange-200/80 shadow-2xs font-black"
+                      ? "bg-orange-50 text-orange-600 border border-orange-200 shadow-2xs font-black"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                   >
@@ -487,7 +435,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => { setActiveTab("password"); setError(null); setSuccess(null); }}
                     className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${activeTab === "password"
-                      ? "bg-orange-100/70 text-[#9A6245] border border-orange-200/80 shadow-2xs font-black"
+                      ? "bg-orange-50 text-orange-600 border border-orange-200 shadow-2xs font-black"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                   >
@@ -638,8 +586,7 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={isLoadingProfile}
-                        style={{ backgroundColor: "#FDBA74" }}
-                        className="px-6 py-2.5 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                       >
                         {isLoadingProfile ? "Saving Profile..." : "Save Changes"}
                       </button>
@@ -717,8 +664,7 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={isLoadingPassword}
-                        style={{ backgroundColor: "#FDBA74" }}
-                        className="px-6 py-2.5 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                       >
                         {isLoadingPassword ? "Updating Password..." : "Update Password"}
                       </button>
@@ -731,114 +677,12 @@ export default function ProfilePage() {
         </section>
       </div>
 
-      {/* Apply Leave Modal */}
       {showApplyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm">📅</span>
-                <h3 className="text-sm font-black text-slate-900">Apply for Leave</h3>
-              </div>
-              <button
-                onClick={() => setShowApplyModal(false)}
-                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center text-sm font-bold transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleApplyLeaveSubmit} className="p-6 space-y-4">
-              {leaveModalError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
-                  ⚠️ {leaveModalError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Leave Type</label>
-                <select
-                  value={selectedTypeId}
-                  onChange={(e) => setSelectedTypeId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                  required
-                >
-                  {leaveTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.daysAllowed} days/yr)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="profileIsHalfDay"
-                  checked={isHalfDay}
-                  onChange={(e) => setIsHalfDay(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
-                />
-                <label htmlFor="profileIsHalfDay" className="text-xs font-bold text-slate-700 cursor-pointer m-0">
-                  Half Day Application
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Reason for Leave</label>
-                <textarea
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Explain reason for leave..."
-                  className="w-full p-3 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowApplyModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingLeave}
-                  style={{ backgroundColor: "#FDBA74" }}
-                  className="px-5 py-2 rounded-xl text-slate-900 font-extrabold text-xs shadow-xs hover:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {submittingLeave ? "Submitting..." : "Submit Leave Application"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ApplyLeaveModal
+          leaveTypes={leaveTypes}
+          onClose={() => setShowApplyModal(false)}
+          onSubmitted={fetchProfileLeaveData}
+        />
       )}
     </main>
   );

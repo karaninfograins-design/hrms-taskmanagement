@@ -263,11 +263,28 @@ export type FloatWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedFloatFilter<$PrismaModel>
 }
 
+export type EnumLeaveHalfDayPeriodNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeaveHalfDayPeriod | Prisma.EnumLeaveHalfDayPeriodFieldRefInput<$PrismaModel> | null
+  in?: $Enums.LeaveHalfDayPeriod[] | null
+  notIn?: $Enums.LeaveHalfDayPeriod[] | null
+  not?: Prisma.NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel> | $Enums.LeaveHalfDayPeriod | null
+}
+
 export type EnumLeaveStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.LeaveStatus | Prisma.EnumLeaveStatusFieldRefInput<$PrismaModel>
   in?: $Enums.LeaveStatus[]
   notIn?: $Enums.LeaveStatus[]
   not?: Prisma.NestedEnumLeaveStatusFilter<$PrismaModel> | $Enums.LeaveStatus
+}
+
+export type EnumLeaveHalfDayPeriodNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeaveHalfDayPeriod | Prisma.EnumLeaveHalfDayPeriodFieldRefInput<$PrismaModel> | null
+  in?: $Enums.LeaveHalfDayPeriod[] | null
+  notIn?: $Enums.LeaveHalfDayPeriod[] | null
+  not?: Prisma.NestedEnumLeaveHalfDayPeriodNullableWithAggregatesFilter<$PrismaModel> | $Enums.LeaveHalfDayPeriod | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel>
 }
 
 export type EnumLeaveStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -722,11 +739,28 @@ export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedFloatFilter<$PrismaModel>
 }
 
+export type NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeaveHalfDayPeriod | Prisma.EnumLeaveHalfDayPeriodFieldRefInput<$PrismaModel> | null
+  in?: $Enums.LeaveHalfDayPeriod[] | null
+  notIn?: $Enums.LeaveHalfDayPeriod[] | null
+  not?: Prisma.NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel> | $Enums.LeaveHalfDayPeriod | null
+}
+
 export type NestedEnumLeaveStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.LeaveStatus | Prisma.EnumLeaveStatusFieldRefInput<$PrismaModel>
   in?: $Enums.LeaveStatus[]
   notIn?: $Enums.LeaveStatus[]
   not?: Prisma.NestedEnumLeaveStatusFilter<$PrismaModel> | $Enums.LeaveStatus
+}
+
+export type NestedEnumLeaveHalfDayPeriodNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeaveHalfDayPeriod | Prisma.EnumLeaveHalfDayPeriodFieldRefInput<$PrismaModel> | null
+  in?: $Enums.LeaveHalfDayPeriod[] | null
+  notIn?: $Enums.LeaveHalfDayPeriod[] | null
+  not?: Prisma.NestedEnumLeaveHalfDayPeriodNullableWithAggregatesFilter<$PrismaModel> | $Enums.LeaveHalfDayPeriod | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeaveHalfDayPeriodNullableFilter<$PrismaModel>
 }
 
 export type NestedEnumLeaveStatusWithAggregatesFilter<$PrismaModel = never> = {

@@ -49,6 +49,7 @@ export type LeaveRequestMinAggregateOutputType = {
   startDate: Date | null
   endDate: Date | null
   totalDays: number | null
+  halfDayPeriod: $Enums.LeaveHalfDayPeriod | null
   reason: string | null
   status: $Enums.LeaveStatus | null
   approvedById: number | null
@@ -65,6 +66,7 @@ export type LeaveRequestMaxAggregateOutputType = {
   startDate: Date | null
   endDate: Date | null
   totalDays: number | null
+  halfDayPeriod: $Enums.LeaveHalfDayPeriod | null
   reason: string | null
   status: $Enums.LeaveStatus | null
   approvedById: number | null
@@ -81,6 +83,7 @@ export type LeaveRequestCountAggregateOutputType = {
   startDate: number
   endDate: number
   totalDays: number
+  halfDayPeriod: number
   reason: number
   status: number
   approvedById: number
@@ -115,6 +118,7 @@ export type LeaveRequestMinAggregateInputType = {
   startDate?: true
   endDate?: true
   totalDays?: true
+  halfDayPeriod?: true
   reason?: true
   status?: true
   approvedById?: true
@@ -131,6 +135,7 @@ export type LeaveRequestMaxAggregateInputType = {
   startDate?: true
   endDate?: true
   totalDays?: true
+  halfDayPeriod?: true
   reason?: true
   status?: true
   approvedById?: true
@@ -147,6 +152,7 @@ export type LeaveRequestCountAggregateInputType = {
   startDate?: true
   endDate?: true
   totalDays?: true
+  halfDayPeriod?: true
   reason?: true
   status?: true
   approvedById?: true
@@ -250,6 +256,7 @@ export type LeaveRequestGroupByOutputType = {
   startDate: Date
   endDate: Date
   totalDays: number
+  halfDayPeriod: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status: $Enums.LeaveStatus
   approvedById: number | null
@@ -288,7 +295,8 @@ export type LeaveRequestWhereInput = {
   leaveTypeId?: Prisma.IntFilter<"LeaveRequest"> | number
   startDate?: Prisma.DateTimeFilter<"LeaveRequest"> | Date | string
   endDate?: Prisma.DateTimeFilter<"LeaveRequest"> | Date | string
-  totalDays?: Prisma.IntFilter<"LeaveRequest"> | number
+  totalDays?: Prisma.FloatFilter<"LeaveRequest"> | number
+  halfDayPeriod?: Prisma.EnumLeaveHalfDayPeriodNullableFilter<"LeaveRequest"> | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFilter<"LeaveRequest"> | string
   status?: Prisma.EnumLeaveStatusFilter<"LeaveRequest"> | $Enums.LeaveStatus
   approvedById?: Prisma.IntNullableFilter<"LeaveRequest"> | number | null
@@ -308,6 +316,7 @@ export type LeaveRequestOrderByWithRelationInput = {
   startDate?: Prisma.SortOrder
   endDate?: Prisma.SortOrder
   totalDays?: Prisma.SortOrder
+  halfDayPeriod?: Prisma.SortOrderInput | Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedById?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -330,7 +339,8 @@ export type LeaveRequestWhereUniqueInput = Prisma.AtLeast<{
   leaveTypeId?: Prisma.IntFilter<"LeaveRequest"> | number
   startDate?: Prisma.DateTimeFilter<"LeaveRequest"> | Date | string
   endDate?: Prisma.DateTimeFilter<"LeaveRequest"> | Date | string
-  totalDays?: Prisma.IntFilter<"LeaveRequest"> | number
+  totalDays?: Prisma.FloatFilter<"LeaveRequest"> | number
+  halfDayPeriod?: Prisma.EnumLeaveHalfDayPeriodNullableFilter<"LeaveRequest"> | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFilter<"LeaveRequest"> | string
   status?: Prisma.EnumLeaveStatusFilter<"LeaveRequest"> | $Enums.LeaveStatus
   approvedById?: Prisma.IntNullableFilter<"LeaveRequest"> | number | null
@@ -350,6 +360,7 @@ export type LeaveRequestOrderByWithAggregationInput = {
   startDate?: Prisma.SortOrder
   endDate?: Prisma.SortOrder
   totalDays?: Prisma.SortOrder
+  halfDayPeriod?: Prisma.SortOrderInput | Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedById?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -373,7 +384,8 @@ export type LeaveRequestScalarWhereWithAggregatesInput = {
   leaveTypeId?: Prisma.IntWithAggregatesFilter<"LeaveRequest"> | number
   startDate?: Prisma.DateTimeWithAggregatesFilter<"LeaveRequest"> | Date | string
   endDate?: Prisma.DateTimeWithAggregatesFilter<"LeaveRequest"> | Date | string
-  totalDays?: Prisma.IntWithAggregatesFilter<"LeaveRequest"> | number
+  totalDays?: Prisma.FloatWithAggregatesFilter<"LeaveRequest"> | number
+  halfDayPeriod?: Prisma.EnumLeaveHalfDayPeriodNullableWithAggregatesFilter<"LeaveRequest"> | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringWithAggregatesFilter<"LeaveRequest"> | string
   status?: Prisma.EnumLeaveStatusWithAggregatesFilter<"LeaveRequest"> | $Enums.LeaveStatus
   approvedById?: Prisma.IntNullableWithAggregatesFilter<"LeaveRequest"> | number | null
@@ -387,6 +399,7 @@ export type LeaveRequestCreateInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedAt?: Date | string | null
@@ -405,6 +418,7 @@ export type LeaveRequestUncheckedCreateInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedById?: number | null
@@ -417,7 +431,8 @@ export type LeaveRequestUncheckedCreateInput = {
 export type LeaveRequestUpdateInput = {
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -435,7 +450,8 @@ export type LeaveRequestUncheckedUpdateInput = {
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -452,6 +468,7 @@ export type LeaveRequestCreateManyInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedById?: number | null
@@ -464,7 +481,8 @@ export type LeaveRequestCreateManyInput = {
 export type LeaveRequestUpdateManyMutationInput = {
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -479,7 +497,8 @@ export type LeaveRequestUncheckedUpdateManyInput = {
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -512,6 +531,7 @@ export type LeaveRequestCountOrderByAggregateInput = {
   startDate?: Prisma.SortOrder
   endDate?: Prisma.SortOrder
   totalDays?: Prisma.SortOrder
+  halfDayPeriod?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedById?: Prisma.SortOrder
@@ -536,6 +556,7 @@ export type LeaveRequestMaxOrderByAggregateInput = {
   startDate?: Prisma.SortOrder
   endDate?: Prisma.SortOrder
   totalDays?: Prisma.SortOrder
+  halfDayPeriod?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedById?: Prisma.SortOrder
@@ -552,6 +573,7 @@ export type LeaveRequestMinOrderByAggregateInput = {
   startDate?: Prisma.SortOrder
   endDate?: Prisma.SortOrder
   totalDays?: Prisma.SortOrder
+  halfDayPeriod?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedById?: Prisma.SortOrder
@@ -695,6 +717,10 @@ export type LeaveRequestUncheckedUpdateManyWithoutLeaveTypeNestedInput = {
   deleteMany?: Prisma.LeaveRequestScalarWhereInput | Prisma.LeaveRequestScalarWhereInput[]
 }
 
+export type NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput = {
+  set?: $Enums.LeaveHalfDayPeriod | null
+}
+
 export type EnumLeaveStatusFieldUpdateOperationsInput = {
   set?: $Enums.LeaveStatus
 }
@@ -703,6 +729,7 @@ export type LeaveRequestCreateWithoutUserInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedAt?: Date | string | null
@@ -719,6 +746,7 @@ export type LeaveRequestUncheckedCreateWithoutUserInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedById?: number | null
@@ -742,6 +770,7 @@ export type LeaveRequestCreateWithoutApprovedByInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedAt?: Date | string | null
@@ -759,6 +788,7 @@ export type LeaveRequestUncheckedCreateWithoutApprovedByInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedAt?: Date | string | null
@@ -802,7 +832,8 @@ export type LeaveRequestScalarWhereInput = {
   leaveTypeId?: Prisma.IntFilter<"LeaveRequest"> | number
   startDate?: Prisma.DateTimeFilter<"LeaveRequest"> | Date | string
   endDate?: Prisma.DateTimeFilter<"LeaveRequest"> | Date | string
-  totalDays?: Prisma.IntFilter<"LeaveRequest"> | number
+  totalDays?: Prisma.FloatFilter<"LeaveRequest"> | number
+  halfDayPeriod?: Prisma.EnumLeaveHalfDayPeriodNullableFilter<"LeaveRequest"> | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFilter<"LeaveRequest"> | string
   status?: Prisma.EnumLeaveStatusFilter<"LeaveRequest"> | $Enums.LeaveStatus
   approvedById?: Prisma.IntNullableFilter<"LeaveRequest"> | number | null
@@ -832,6 +863,7 @@ export type LeaveRequestCreateWithoutLeaveTypeInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedAt?: Date | string | null
@@ -848,6 +880,7 @@ export type LeaveRequestUncheckedCreateWithoutLeaveTypeInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedById?: number | null
@@ -889,6 +922,7 @@ export type LeaveRequestCreateManyUserInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedById?: number | null
@@ -905,6 +939,7 @@ export type LeaveRequestCreateManyApprovedByInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedAt?: Date | string | null
@@ -916,7 +951,8 @@ export type LeaveRequestCreateManyApprovedByInput = {
 export type LeaveRequestUpdateWithoutUserInput = {
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -932,7 +968,8 @@ export type LeaveRequestUncheckedUpdateWithoutUserInput = {
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -947,7 +984,8 @@ export type LeaveRequestUncheckedUpdateManyWithoutUserInput = {
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -960,7 +998,8 @@ export type LeaveRequestUncheckedUpdateManyWithoutUserInput = {
 export type LeaveRequestUpdateWithoutApprovedByInput = {
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -977,7 +1016,8 @@ export type LeaveRequestUncheckedUpdateWithoutApprovedByInput = {
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -992,7 +1032,8 @@ export type LeaveRequestUncheckedUpdateManyWithoutApprovedByInput = {
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1007,6 +1048,7 @@ export type LeaveRequestCreateManyLeaveTypeInput = {
   startDate: Date | string
   endDate: Date | string
   totalDays: number
+  halfDayPeriod?: $Enums.LeaveHalfDayPeriod | null
   reason: string
   status?: $Enums.LeaveStatus
   approvedById?: number | null
@@ -1019,7 +1061,8 @@ export type LeaveRequestCreateManyLeaveTypeInput = {
 export type LeaveRequestUpdateWithoutLeaveTypeInput = {
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1035,7 +1078,8 @@ export type LeaveRequestUncheckedUpdateWithoutLeaveTypeInput = {
   userId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1050,7 +1094,8 @@ export type LeaveRequestUncheckedUpdateManyWithoutLeaveTypeInput = {
   userId?: Prisma.IntFieldUpdateOperationsInput | number
   startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  totalDays?: Prisma.IntFieldUpdateOperationsInput | number
+  totalDays?: Prisma.FloatFieldUpdateOperationsInput | number
+  halfDayPeriod?: Prisma.NullableEnumLeaveHalfDayPeriodFieldUpdateOperationsInput | $Enums.LeaveHalfDayPeriod | null
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumLeaveStatusFieldUpdateOperationsInput | $Enums.LeaveStatus
   approvedById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1069,6 +1114,7 @@ export type LeaveRequestSelect<ExtArgs extends runtime.Types.Extensions.Internal
   startDate?: boolean
   endDate?: boolean
   totalDays?: boolean
+  halfDayPeriod?: boolean
   reason?: boolean
   status?: boolean
   approvedById?: boolean
@@ -1090,6 +1136,7 @@ export type LeaveRequestSelectScalar = {
   startDate?: boolean
   endDate?: boolean
   totalDays?: boolean
+  halfDayPeriod?: boolean
   reason?: boolean
   status?: boolean
   approvedById?: boolean
@@ -1099,7 +1146,7 @@ export type LeaveRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type LeaveRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "leaveTypeId" | "startDate" | "endDate" | "totalDays" | "reason" | "status" | "approvedById" | "approvedAt" | "rejectionReason" | "createdAt" | "updatedAt", ExtArgs["result"]["leaveRequest"]>
+export type LeaveRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "leaveTypeId" | "startDate" | "endDate" | "totalDays" | "halfDayPeriod" | "reason" | "status" | "approvedById" | "approvedAt" | "rejectionReason" | "createdAt" | "updatedAt", ExtArgs["result"]["leaveRequest"]>
 export type LeaveRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   leaveType?: boolean | Prisma.LeaveTypeDefaultArgs<ExtArgs>
@@ -1120,6 +1167,7 @@ export type $LeaveRequestPayload<ExtArgs extends runtime.Types.Extensions.Intern
     startDate: Date
     endDate: Date
     totalDays: number
+    halfDayPeriod: $Enums.LeaveHalfDayPeriod | null
     reason: string
     status: $Enums.LeaveStatus
     approvedById: number | null
@@ -1504,7 +1552,8 @@ export interface LeaveRequestFieldRefs {
   readonly leaveTypeId: Prisma.FieldRef<"LeaveRequest", 'Int'>
   readonly startDate: Prisma.FieldRef<"LeaveRequest", 'DateTime'>
   readonly endDate: Prisma.FieldRef<"LeaveRequest", 'DateTime'>
-  readonly totalDays: Prisma.FieldRef<"LeaveRequest", 'Int'>
+  readonly totalDays: Prisma.FieldRef<"LeaveRequest", 'Float'>
+  readonly halfDayPeriod: Prisma.FieldRef<"LeaveRequest", 'LeaveHalfDayPeriod'>
   readonly reason: Prisma.FieldRef<"LeaveRequest", 'String'>
   readonly status: Prisma.FieldRef<"LeaveRequest", 'LeaveStatus'>
   readonly approvedById: Prisma.FieldRef<"LeaveRequest", 'Int'>

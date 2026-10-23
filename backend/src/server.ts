@@ -18,6 +18,7 @@ import messengerRoutes from "./modules/messenger/messenger.routes.js";
 import callsRoutes from "./modules/messenger/calls.routes.js";
 import holidayRoutes from "./modules/holiday/holiday.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import { notifyUpcomingSprintDeadlines } from "./controllers/notification.controller.js";
 import { setupSocketServer } from "./socket.js";
 
 import path from "path";
@@ -67,8 +68,12 @@ app.use("/api/notifications", notificationRoutes);
 // Attach Socket.IO
 setupSocketServer(httpServer);
 
+void notifyUpcomingSprintDeadlines();
+setInterval(() => {
+  void notifyUpcomingSprintDeadlines();
+}, 30 * 60 * 1000);
+
 httpServer.listen(PORT, () => {
   console.log(`HRMS Backend running on http://localhost:${PORT}`);
 });
-
 

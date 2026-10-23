@@ -135,12 +135,12 @@ export default function AttendancePage() {
         <Sidebar user={session.user} canCreateAdmins={isSuperAdmin} onSignOut={handleSignOut} />
         <section className="dashboard-content" style={{ paddingBottom: "80px" }}>
           {/* Back Button */}
-          <button
+          {/* <button
             onClick={() => router.push("/dashboard")}
-            className="back-button mb-4 text-xs font-bold text-orange-600 flex items-center gap-1"
+            className="back-button mb-4 text-xs font-bold text-[#F97316] hover:text-[#EA580C] flex items-center gap-1 cursor-pointer transition-colors"
           >
             ← Back to Dashboard
-          </button>
+          </button> */}
 
           {/* Header */}
           <div className="welcome mb-6">
@@ -204,24 +204,23 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {/* Today's Clock In Widget - Soft Peach Banner */}
-          <div className="relative overflow-hidden rounded-2xl border border-orange-100/80 bg-gradient-to-r from-orange-50 via-[#F9E9DD] to-[#F3E3D8] p-6 text-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
-            <div className="absolute -right-8 -top-16 h-44 w-44 rounded-full bg-white/40 blur-2xl" />
-            <div className="absolute right-28 top-8 h-20 w-20 rounded-full bg-orange-200/30 blur-xl" />
-            <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(#C49A80_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
+          {/* Today's Clock In Widget */}
+          <div className="relative mb-4 flex flex-col items-center justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 p-5 text-white shadow-md md:flex-row">
+            <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+            <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
 
             <div className="relative z-10 space-y-2 text-center md:text-left">
-              <span className="inline-flex items-center rounded-full border border-orange-200/80 bg-orange-50/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#9A6245]">
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-100">
                 Today ({new Date().toLocaleDateString()})
               </span>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+              <h2 className="text-2xl font-bold tracking-tight text-white">
                 {todayAttendance?.checkIn
                   ? `Clocked In at ${formatTime(todayAttendance.checkIn)}`
                   : "Not Clocked In Today"}
               </h2>
-              <p className="text-xs font-medium text-slate-600">
+              <p className="text-xs font-medium text-blue-100/80">
                 {todayAttendance?.checkOut
-                  ? `Clocked out at ${formatTime(todayAttendance.checkOut)} (${todayAttendance.workingHours} hrs worked)`
+                  ? `Clocked out at ${formatTime(todayAttendance.checkOut)} (${todayAttendance.workingHours.toFixed(2)} hrs worked)`
                   : todayAttendance?.checkIn
                     ? "Shift in progress..."
                     : "Click the button to record your shift start time."}
@@ -233,8 +232,7 @@ export default function AttendancePage() {
                 <button
                   onClick={handleCheckIn}
                   disabled={actionLoading}
-                  style={{ backgroundColor: "#FDBA74" }}
-                  className="px-6 py-2.5 text-slate-900 font-extrabold rounded-xl shadow-xs hover:brightness-95 transition-all text-xs disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? "Processing..." : "Clock In"}
                 </button>
@@ -242,8 +240,7 @@ export default function AttendancePage() {
                 <button
                   onClick={handleCheckOut}
                   disabled={actionLoading}
-                  style={{ backgroundColor: "#FDBA74" }}
-                  className="px-6 py-2.5 text-slate-900 font-extrabold rounded-xl shadow-xs hover:brightness-95 transition-all text-xs disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? "Processing..." : "Clock Out"}
                 </button>
@@ -305,24 +302,24 @@ export default function AttendancePage() {
                           <td className="py-3 px-4 text-slate-600 font-medium">
                             {new Date(row.date).toLocaleDateString()}
                           </td>
-                          <td className="py-3 px-4 font-mono text-xs text-slate-700">
+                          <td className="py-3 px-4 font-semibold text-xs text-slate-700">
                             {formatTime(row.checkIn)}
                           </td>
-                          <td className="py-3 px-4 font-mono text-xs text-slate-700">
+                          <td className="py-3 px-4 font-semibold text-xs text-slate-700">
                             {formatTime(row.checkOut)}
                           </td>
                           <td className="py-3 px-4 font-bold text-slate-800">
-                            {row.workingHours} hrs
+                            {row.workingHours.toFixed(2)} hrs
                           </td>
                           <td className="py-3 px-4">
                             <span
                               className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${row.status === "PRESENT"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : row.status === "LATE"
-                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                    : row.status === "HALF_DAY"
-                                      ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                      : "bg-rose-50 text-rose-700 border border-rose-200"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : row.status === "LATE"
+                                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                  : row.status === "HALF_DAY"
+                                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                    : "bg-rose-50 text-rose-700 border border-rose-200"
                                 }`}
                             >
                               {row.status}

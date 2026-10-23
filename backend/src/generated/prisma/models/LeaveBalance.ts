@@ -266,9 +266,9 @@ export type LeaveBalanceWhereInput = {
   id?: Prisma.IntFilter<"LeaveBalance"> | number
   userId?: Prisma.IntFilter<"LeaveBalance"> | number
   leaveTypeId?: Prisma.IntFilter<"LeaveBalance"> | number
-  allocated?: Prisma.IntFilter<"LeaveBalance"> | number
-  used?: Prisma.IntFilter<"LeaveBalance"> | number
-  remaining?: Prisma.IntFilter<"LeaveBalance"> | number
+  allocated?: Prisma.FloatFilter<"LeaveBalance"> | number
+  used?: Prisma.FloatFilter<"LeaveBalance"> | number
+  remaining?: Prisma.FloatFilter<"LeaveBalance"> | number
   year?: Prisma.IntFilter<"LeaveBalance"> | number
   createdAt?: Prisma.DateTimeFilter<"LeaveBalance"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"LeaveBalance"> | Date | string
@@ -298,9 +298,9 @@ export type LeaveBalanceWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.LeaveBalanceWhereInput | Prisma.LeaveBalanceWhereInput[]
   userId?: Prisma.IntFilter<"LeaveBalance"> | number
   leaveTypeId?: Prisma.IntFilter<"LeaveBalance"> | number
-  allocated?: Prisma.IntFilter<"LeaveBalance"> | number
-  used?: Prisma.IntFilter<"LeaveBalance"> | number
-  remaining?: Prisma.IntFilter<"LeaveBalance"> | number
+  allocated?: Prisma.FloatFilter<"LeaveBalance"> | number
+  used?: Prisma.FloatFilter<"LeaveBalance"> | number
+  remaining?: Prisma.FloatFilter<"LeaveBalance"> | number
   year?: Prisma.IntFilter<"LeaveBalance"> | number
   createdAt?: Prisma.DateTimeFilter<"LeaveBalance"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"LeaveBalance"> | Date | string
@@ -332,9 +332,9 @@ export type LeaveBalanceScalarWhereWithAggregatesInput = {
   id?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
   userId?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
   leaveTypeId?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
-  allocated?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
-  used?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
-  remaining?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
+  allocated?: Prisma.FloatWithAggregatesFilter<"LeaveBalance"> | number
+  used?: Prisma.FloatWithAggregatesFilter<"LeaveBalance"> | number
+  remaining?: Prisma.FloatWithAggregatesFilter<"LeaveBalance"> | number
   year?: Prisma.IntWithAggregatesFilter<"LeaveBalance"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"LeaveBalance"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"LeaveBalance"> | Date | string
@@ -364,9 +364,9 @@ export type LeaveBalanceUncheckedCreateInput = {
 }
 
 export type LeaveBalanceUpdateInput = {
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -378,9 +378,9 @@ export type LeaveBalanceUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   userId?: Prisma.IntFieldUpdateOperationsInput | number
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -399,9 +399,9 @@ export type LeaveBalanceCreateManyInput = {
 }
 
 export type LeaveBalanceUpdateManyMutationInput = {
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -411,9 +411,9 @@ export type LeaveBalanceUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   userId?: Prisma.IntFieldUpdateOperationsInput | number
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -629,9 +629,9 @@ export type LeaveBalanceScalarWhereInput = {
   id?: Prisma.IntFilter<"LeaveBalance"> | number
   userId?: Prisma.IntFilter<"LeaveBalance"> | number
   leaveTypeId?: Prisma.IntFilter<"LeaveBalance"> | number
-  allocated?: Prisma.IntFilter<"LeaveBalance"> | number
-  used?: Prisma.IntFilter<"LeaveBalance"> | number
-  remaining?: Prisma.IntFilter<"LeaveBalance"> | number
+  allocated?: Prisma.FloatFilter<"LeaveBalance"> | number
+  used?: Prisma.FloatFilter<"LeaveBalance"> | number
+  remaining?: Prisma.FloatFilter<"LeaveBalance"> | number
   year?: Prisma.IntFilter<"LeaveBalance"> | number
   createdAt?: Prisma.DateTimeFilter<"LeaveBalance"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"LeaveBalance"> | Date | string
@@ -696,9 +696,9 @@ export type LeaveBalanceCreateManyUserInput = {
 }
 
 export type LeaveBalanceUpdateWithoutUserInput = {
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -708,9 +708,9 @@ export type LeaveBalanceUpdateWithoutUserInput = {
 export type LeaveBalanceUncheckedUpdateWithoutUserInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -719,9 +719,9 @@ export type LeaveBalanceUncheckedUpdateWithoutUserInput = {
 export type LeaveBalanceUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   leaveTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -739,9 +739,9 @@ export type LeaveBalanceCreateManyLeaveTypeInput = {
 }
 
 export type LeaveBalanceUpdateWithoutLeaveTypeInput = {
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -751,9 +751,9 @@ export type LeaveBalanceUpdateWithoutLeaveTypeInput = {
 export type LeaveBalanceUncheckedUpdateWithoutLeaveTypeInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   userId?: Prisma.IntFieldUpdateOperationsInput | number
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -762,9 +762,9 @@ export type LeaveBalanceUncheckedUpdateWithoutLeaveTypeInput = {
 export type LeaveBalanceUncheckedUpdateManyWithoutLeaveTypeInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   userId?: Prisma.IntFieldUpdateOperationsInput | number
-  allocated?: Prisma.IntFieldUpdateOperationsInput | number
-  used?: Prisma.IntFieldUpdateOperationsInput | number
-  remaining?: Prisma.IntFieldUpdateOperationsInput | number
+  allocated?: Prisma.FloatFieldUpdateOperationsInput | number
+  used?: Prisma.FloatFieldUpdateOperationsInput | number
+  remaining?: Prisma.FloatFieldUpdateOperationsInput | number
   year?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1196,9 +1196,9 @@ export interface LeaveBalanceFieldRefs {
   readonly id: Prisma.FieldRef<"LeaveBalance", 'Int'>
   readonly userId: Prisma.FieldRef<"LeaveBalance", 'Int'>
   readonly leaveTypeId: Prisma.FieldRef<"LeaveBalance", 'Int'>
-  readonly allocated: Prisma.FieldRef<"LeaveBalance", 'Int'>
-  readonly used: Prisma.FieldRef<"LeaveBalance", 'Int'>
-  readonly remaining: Prisma.FieldRef<"LeaveBalance", 'Int'>
+  readonly allocated: Prisma.FieldRef<"LeaveBalance", 'Float'>
+  readonly used: Prisma.FieldRef<"LeaveBalance", 'Float'>
+  readonly remaining: Prisma.FieldRef<"LeaveBalance", 'Float'>
   readonly year: Prisma.FieldRef<"LeaveBalance", 'Int'>
   readonly createdAt: Prisma.FieldRef<"LeaveBalance", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"LeaveBalance", 'DateTime'>

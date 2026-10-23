@@ -228,31 +228,11 @@ export default function EmployeesPage() {
           onSignOut={handleSignOut}
         />
         <section className="dashboard-content" style={{ paddingBottom: "80px" }}>
-          {/* Back Navigation */}
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="back-button"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#ea580c',
-              fontWeight: 700,
-              fontSize: '14px',
-              marginBottom: '20px',
-              padding: 0
-            }}
-          >
-            ← Back to Dashboard
-          </button>
 
           <div className="welcome" style={{ marginBottom: "24px" }}>
             <p className="eyebrow">ADMINISTRATION</p>
-            <h1 className="text-2xl font-black text-slate-900">Employee Management</h1>
-            <p className="text-xs text-slate-500 font-medium">View, search, and manage team members and system permissions</p>
+            <h3 className="text-2xl font-black text-slate-900">Employee Management</h3>
+            <span className="text-xs text-slate-500 font-medium">View, search, and manage team members and system permissions</span>
           </div>
 
           {error && (
@@ -274,23 +254,23 @@ export default function EmployeesPage() {
                 <input
                   type="text"
                   id="employee-search"
-                  placeholder=" "
+                  placeholder="Search by name or email"
                   value={filters.search}
                   onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="floating-label-input "
+                  className="floating-label-input"
                 />
-                <label
+                {/* <label
                   htmlFor="employee-search"
                   className="floating-label-text"
                 >
                   Search by name or email...
-                </label>
+                </label> */}
               </div>
 
               <select
                 value={filters.roleId}
                 onChange={(e) => handleFilterChange("roleId", e.target.value)}
-                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[140px]"
+                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[140px]"
               >
                 <option value="">All System Roles</option>
                 {roles.map((role) => (
@@ -303,7 +283,7 @@ export default function EmployeesPage() {
               <select
                 value={filters.designationId}
                 onChange={(e) => handleFilterChange("designationId", e.target.value)}
-                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[150px]"
+                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[150px]"
               >
                 <option value="">All Designations</option>
                 {designations.map((designation) => (
@@ -316,7 +296,7 @@ export default function EmployeesPage() {
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[130px]"
+                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[130px]"
               >
                 {STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -329,9 +309,9 @@ export default function EmployeesPage() {
             {canManageEmployees && (
               <button
                 onClick={handleAddEmployee}
-                className="h-10 px-5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs shadow-xs transition-all flex items-center justify-center gap-2 shrink-0"
+                className="h-10 px-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-normal text-xs shadow-xs transition-all flex items-center justify-center gap-2 shrink-0"
               >
-                <span>+</span> Add Employee
+                <span>+</span> Add New
               </button>
             )}
           </div>
@@ -341,7 +321,7 @@ export default function EmployeesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200">
+                  <tr className="bg-slate-50/80 border-b border-slate-100">
                     <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
                       EMPLOYEE
                     </th>

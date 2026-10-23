@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -207,96 +208,108 @@ export default function GoogleStyleMeetingCalendarPage() {
     d.setDate(startOfWeek.getDate() + i);
     return d;
   });
+  const calendarHeading =
+    viewMode === "MONTH"
+      ? `${monthName} ${year}`
+      : viewMode === "WEEK"
+        ? `${weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+        : viewMode === "DAY"
+          ? currentDate.toLocaleDateString(undefined, {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Meeting agenda";
 
   return (
     <main className="app-shell bg-slate-50 min-h-screen">
       <Navbar user={session.user} onSignOut={handleSignOut} />
       <div className="dashboard-frame">
         <Sidebar user={session.user} onSignOut={handleSignOut} />
-        <section className="dashboard-content" style={{ paddingBottom: "60px" }}>
-          {/* Top Google Calendar Navigation Header */}
-          <div className="bg-white rounded-3xl p-4 md:p-6 border border-slate-200/80 shadow-xs mb-6 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white font-black text-xl flex items-center justify-center shadow-xs">
-                  📅
-                </div>
-                <div>
-                  <h1 className="text-xl font-black text-slate-900 leading-tight">
-                    HRMS Meeting Calendar
-                  </h1>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Google Calendar-inspired real-time meeting scheduling and timezone management.
-                  </p>
-                </div>
-              </div>
-
-              {/* Navigation Controls */}
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={handleToday}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all"
-                >
-                  Today
-                </button>
-
-                <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+        <section className="dashboard-content !bg-slate-50/70" style={{ paddingBottom: "60px" }}>
+          <div className="w-full space-y-4">
+            <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 px-5 py-5 text-white shadow-md sm:px-7">
+              <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
+              <div className="relative flex flex-col gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-blue-100">
+                      <CalendarDays size={13} />
+                      Collaboration
+                    </div>
+                    <h1 className="text-xl font-black tracking-tight sm:text-2xl">Meeting calendar</h1>
+                    <p className="mt-1 text-xs text-blue-100/80">
+                      Keep meetings and company dates in one place.
+                    </p>
+                  </div>
                   <button
-                    onClick={handlePrev}
-                    className="w-8 h-8 rounded-lg hover:bg-white text-slate-700 font-bold text-xs flex items-center justify-center transition-all shadow-xs"
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600"
                   >
-                    ◀
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="w-8 h-8 rounded-lg hover:bg-white text-slate-700 font-bold text-xs flex items-center justify-center transition-all shadow-xs"
-                  >
-                    ▶
+                    <Plus size={15} />
+                    Schedule meeting
                   </button>
                 </div>
-
-                <span className="text-sm font-black text-slate-900 min-w-[140px]">
-                  {monthName} {year}
-                </span>
-
-                {/* View Mode Toggle Pills */}
-                <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
-                  {(["MONTH", "WEEK", "DAY", "AGENDA"] as ViewMode[]).map((mode) => (
+                <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/20 p-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
-                      key={mode}
-                      onClick={() => setViewMode(mode)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                        viewMode === mode
-                          ? "bg-white text-orange-600 shadow-xs"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
+                      onClick={handleToday}
+                      className="rounded-lg bg-white/10 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-white/20"
                     >
-                      {mode.charAt(0) + mode.slice(1).toLowerCase()}
+                      Today
                     </button>
-                  ))}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handlePrev}
+                        aria-label="Previous period"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/15 hover:text-white"
+                      >
+                        <ChevronLeft size={17} />
+                      </button>
+                      <button
+                        onClick={handleNext}
+                        aria-label="Next period"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/15 hover:text-white"
+                      >
+                        <ChevronRight size={17} />
+                      </button>
+                    </div>
+                    <span className="min-w-36 text-xs font-bold text-white">{calendarHeading}</span>
+                  </div>
+                  <div className="flex w-fit items-center gap-1 rounded-lg bg-slate-950/25 p-1">
+                    {(["MONTH", "WEEK", "DAY", "AGENDA"] as ViewMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        aria-pressed={viewMode === mode}
+                        className={`rounded-md px-2.5 py-1.5 text-[10px] font-bold transition ${
+                          viewMode === mode
+                            ? "bg-white text-[#172554] shadow-sm"
+                            : "text-blue-100/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {mode.charAt(0) + mode.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-
-                {/* Prominent "+ Schedule Meeting" Button */}
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2"
-                >
-                  <span>+</span> Schedule Meeting
-                </button>
               </div>
-            </div>
-          </div>
+            </header>
 
           {/* Main Layout: Left Mini-Calendar Sidebar + Calendar Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
             {/* Left Sidebar Widgets */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="space-y-4 lg:col-span-3">
               {/* Mini Calendar Card */}
-              <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Mini Calendar
-                </h3>
-                <div className="text-center font-bold text-xs text-orange-600 mb-2">
+              <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                    Mini calendar
+                  </h3>
+                  <CalendarDays size={14} className="text-slate-400" />
+                </div>
+                <div className="text-center text-xs font-bold text-orange-600">
                   {monthName} {year}
                 </div>
                 <div className="grid grid-cols-7 text-center text-[10px] font-black text-slate-400 mb-1">
@@ -332,7 +345,7 @@ export default function GoogleStyleMeetingCalendarPage() {
               </div>
 
               {/* Status Filter Checklist */}
-              <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+              <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                   Meeting Filters
                 </h3>
@@ -373,12 +386,12 @@ export default function GoogleStyleMeetingCalendarPage() {
                 <>
                   {/* 1. MONTH VIEW */}
                   {viewMode === "MONTH" && (
-                    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
                       <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-black text-slate-500 uppercase tracking-wider py-3">
                         <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                       </div>
 
-                      <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 min-h-[550px]">
+                      <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 min-h-[470px]">
                         {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
                           <div key={`empty-${idx}`} className="bg-slate-50/40 p-2" />
                         ))}
@@ -403,7 +416,7 @@ export default function GoogleStyleMeetingCalendarPage() {
                           return (
                             <div
                               key={day}
-                              className={`p-2.5 min-h-[110px] transition-colors flex flex-col justify-start ${
+                              className={`p-2 min-h-[90px] transition-colors flex flex-col justify-start sm:p-2.5 ${
                                 isToday
                                   ? "bg-orange-50/40"
                                   : dayHoliday
@@ -413,7 +426,7 @@ export default function GoogleStyleMeetingCalendarPage() {
                             >
                               <div className="flex items-center justify-between mb-1.5">
                                 <span
-                                  className={`w-6 h-6 rounded-full text-xs font-black flex items-center justify-center ${
+                                  className={`w-6 h-6 rounded-full text-[11px] font-black flex items-center justify-center ${
                                     isToday
                                       ? "bg-orange-500 text-white"
                                       : dayHoliday
@@ -475,7 +488,7 @@ export default function GoogleStyleMeetingCalendarPage() {
 
                   {/* 2. WEEK VIEW */}
                   {viewMode === "WEEK" && (
-                    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
                       <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center py-3">
                         {weekDays.map((d, i) => {
                           const dStr = d.toISOString().split("T")[0];
@@ -540,7 +553,7 @@ export default function GoogleStyleMeetingCalendarPage() {
 
                   {/* 3. DAY VIEW */}
                   {viewMode === "DAY" && (
-                    <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
                       <div className="border-b border-slate-100 pb-3">
                         <h2 className="text-base font-black text-slate-900">
                           {currentDate.toLocaleDateString("default", {
@@ -620,7 +633,7 @@ export default function GoogleStyleMeetingCalendarPage() {
 
                   {/* 4. AGENDA VIEW */}
                   {viewMode === "AGENDA" && (
-                    <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                    <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
                       <h2 className="text-base font-black text-slate-900">Upcoming Agenda & Company Holidays</h2>
                       <div className="divide-y divide-slate-100 space-y-3">
                         {/* Render Holidays in Agenda */}
@@ -679,6 +692,7 @@ export default function GoogleStyleMeetingCalendarPage() {
                 </>
               )}
             </div>
+          </div>
           </div>
 
           {/* Schedule Meeting Modal */}

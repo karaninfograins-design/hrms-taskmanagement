@@ -2,7 +2,20 @@ import { apiRequest } from "./api";
 
 export type WorkspaceListItem = Record<string, string | number | boolean | null>;
 
-export type WorkspaceListResponse = { items: WorkspaceListItem[] };
+export type WorkspaceListResponse = {
+  items: WorkspaceListItem[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type PaginationParams = {
+  page?: number;
+  limit?: number;
+};
 
 export type ProjectDetails = {
   id: number;
@@ -84,12 +97,19 @@ export type SprintDetails = {
   }>;
 };
 
-export function getWorkspaceList(resource: string, token: string) {
-  return apiRequest<WorkspaceListResponse>(`/api/workspace/${resource}`, {
+export function getWorkspaceList(resource: string, token: string, params?: PaginationParams) {
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  
+  const queryString = queryParams.toString();
+  const url = `/api/workspace/${resource}${queryString ? `?${queryString}` : ''}`;
+  
+  return apiRequest<WorkspaceListResponse>(url, {
     headers: { Authorization: `Bearer ${token}` },
   }).catch((err) => {
     console.warn(`Failed to fetch workspace resource ${resource}:`, err?.message);
-    return { items: [] } as WorkspaceListResponse;
+    return { items: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } } as WorkspaceListResponse;
   });
 }
 

@@ -231,7 +231,7 @@ export type LeaveTypeWhereInput = {
   NOT?: Prisma.LeaveTypeWhereInput | Prisma.LeaveTypeWhereInput[]
   id?: Prisma.IntFilter<"LeaveType"> | number
   name?: Prisma.StringFilter<"LeaveType"> | string
-  daysAllowed?: Prisma.IntFilter<"LeaveType"> | number
+  daysAllowed?: Prisma.FloatFilter<"LeaveType"> | number
   description?: Prisma.StringNullableFilter<"LeaveType"> | string | null
   status?: Prisma.BoolFilter<"LeaveType"> | boolean
   createdAt?: Prisma.DateTimeFilter<"LeaveType"> | Date | string
@@ -259,7 +259,7 @@ export type LeaveTypeWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.LeaveTypeWhereInput | Prisma.LeaveTypeWhereInput[]
   OR?: Prisma.LeaveTypeWhereInput[]
   NOT?: Prisma.LeaveTypeWhereInput | Prisma.LeaveTypeWhereInput[]
-  daysAllowed?: Prisma.IntFilter<"LeaveType"> | number
+  daysAllowed?: Prisma.FloatFilter<"LeaveType"> | number
   description?: Prisma.StringNullableFilter<"LeaveType"> | string | null
   status?: Prisma.BoolFilter<"LeaveType"> | boolean
   createdAt?: Prisma.DateTimeFilter<"LeaveType"> | Date | string
@@ -289,7 +289,7 @@ export type LeaveTypeScalarWhereWithAggregatesInput = {
   NOT?: Prisma.LeaveTypeScalarWhereWithAggregatesInput | Prisma.LeaveTypeScalarWhereWithAggregatesInput[]
   id?: Prisma.IntWithAggregatesFilter<"LeaveType"> | number
   name?: Prisma.StringWithAggregatesFilter<"LeaveType"> | string
-  daysAllowed?: Prisma.IntWithAggregatesFilter<"LeaveType"> | number
+  daysAllowed?: Prisma.FloatWithAggregatesFilter<"LeaveType"> | number
   description?: Prisma.StringNullableWithAggregatesFilter<"LeaveType"> | string | null
   status?: Prisma.BoolWithAggregatesFilter<"LeaveType"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"LeaveType"> | Date | string
@@ -321,7 +321,7 @@ export type LeaveTypeUncheckedCreateInput = {
 
 export type LeaveTypeUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -333,7 +333,7 @@ export type LeaveTypeUpdateInput = {
 export type LeaveTypeUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -354,7 +354,7 @@ export type LeaveTypeCreateManyInput = {
 
 export type LeaveTypeUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -364,7 +364,7 @@ export type LeaveTypeUpdateManyMutationInput = {
 export type LeaveTypeUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -489,7 +489,7 @@ export type LeaveTypeUpdateToOneWithWhereWithoutLeaveBalancesInput = {
 
 export type LeaveTypeUpdateWithoutLeaveBalancesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -500,7 +500,7 @@ export type LeaveTypeUpdateWithoutLeaveBalancesInput = {
 export type LeaveTypeUncheckedUpdateWithoutLeaveBalancesInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -547,7 +547,7 @@ export type LeaveTypeUpdateToOneWithWhereWithoutLeaveRequestsInput = {
 
 export type LeaveTypeUpdateWithoutLeaveRequestsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -558,7 +558,7 @@ export type LeaveTypeUpdateWithoutLeaveRequestsInput = {
 export type LeaveTypeUncheckedUpdateWithoutLeaveRequestsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  daysAllowed?: Prisma.IntFieldUpdateOperationsInput | number
+  daysAllowed?: Prisma.FloatFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1025,7 +1025,7 @@ export interface Prisma__LeaveTypeClient<T, Null = never, ExtArgs extends runtim
 export interface LeaveTypeFieldRefs {
   readonly id: Prisma.FieldRef<"LeaveType", 'Int'>
   readonly name: Prisma.FieldRef<"LeaveType", 'String'>
-  readonly daysAllowed: Prisma.FieldRef<"LeaveType", 'Int'>
+  readonly daysAllowed: Prisma.FieldRef<"LeaveType", 'Float'>
   readonly description: Prisma.FieldRef<"LeaveType", 'String'>
   readonly status: Prisma.FieldRef<"LeaveType", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"LeaveType", 'DateTime'>

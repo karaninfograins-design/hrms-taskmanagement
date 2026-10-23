@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Settings2, Phone, Video, Trash2, X, Users, Search, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
 import { Navbar } from "@/components/layout/Navbar";
@@ -96,6 +97,8 @@ function ChatsContent() {
   const [groupName, setGroupName] = useState<string>("");
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<number[]>([]);
   const [creatingGroup, setCreatingGroup] = useState<boolean>(false);
+  const [groupMemberSearch, setGroupMemberSearch] = useState("");
+  const [groupSubmitError, setGroupSubmitError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -221,6 +224,34 @@ function ChatsContent() {
       );
     };
 
+    const onGroupMembersUpdated = (data: {
+      conversationId?: number;
+      conversation?: Conversation;
+      removed?: boolean;
+    }) => {
+      if (data.removed && data.conversationId) {
+        setConversations((prev) =>
+          prev.filter((conversation) => conversation.id !== data.conversationId)
+        );
+        if (activeConvRef.current?.id === data.conversationId) {
+          setActiveConv(null);
+          setMessages([]);
+        }
+        return;
+      }
+      if (!data.conversation) return;
+      const updatedConversation = data.conversation;
+
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === updatedConversation.id ? updatedConversation : conversation
+        )
+      );
+      if (activeConvRef.current?.id === updatedConversation.id) {
+        setActiveConv(updatedConversation);
+      }
+    };
+
     const onUserTyping = (data: { conversationId: number; userId: number }) => {
       if (activeConvRef.current && data.conversationId === activeConvRef.current.id) {
         setTypingUsers((prev) => new Set(prev).add(data.userId));
@@ -247,6 +278,7 @@ function ChatsContent() {
 
     socket.on("message:new", onNewMessage);
     socket.on("conversation:updated", onConversationUpdated);
+    socket.on("conversation:members-updated", onGroupMembersUpdated);
     socket.on("conversation:deleted", onConversationDeleted);
     socket.on("user:typing", onUserTyping);
     socket.on("user:stop_typing", onUserStopTyping);
@@ -254,6 +286,7 @@ function ChatsContent() {
     return () => {
       socket.off("message:new", onNewMessage);
       socket.off("conversation:updated", onConversationUpdated);
+      socket.off("conversation:members-updated", onGroupMembersUpdated);
       socket.off("conversation:deleted", onConversationDeleted);
       socket.off("user:typing", onUserTyping);
       socket.off("user:stop_typing", onUserStopTyping);
@@ -323,6 +356,8 @@ function ChatsContent() {
     setEditingGroupId(null);
     setGroupName("");
     setSelectedParticipantIds([]);
+    setGroupMemberSearch("");
+    setGroupSubmitError(null);
     setShowGroupModal(true);
   };
 
@@ -330,15 +365,21 @@ function ChatsContent() {
     setEditingGroupId(conv.id);
     setGroupName(conv.name || "");
     setSelectedParticipantIds(conv.participants.map((p) => p.userId));
+    setGroupMemberSearch("");
+    setGroupSubmitError(null);
     setShowGroupModal(true);
   };
 
   // Create or Update Group Modal Submission
   const handleSaveGroupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupName.trim()) return;
+    if (!groupName.trim()) {
+      setGroupSubmitError("Enter a group name before continuing.");
+      return;
+    }
 
     setCreatingGroup(true);
+    setGroupSubmitError(null);
     try {
       if (editingGroupId) {
         // Update existing group
@@ -354,7 +395,10 @@ function ChatsContent() {
           }),
         });
 
-        if (!res.ok) throw new Error("Failed to update group");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null);
+          throw new Error(errorData?.message || "Failed to update group. Please try again.");
+        }
         const data = await res.json();
         setConversations((prev) =>
           prev.map((c) => (c.id === data.conversation.id ? data.conversation : c))
@@ -376,7 +420,10 @@ function ChatsContent() {
           }),
         });
 
-        if (!res.ok) throw new Error("Failed to create group");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null);
+          throw new Error(errorData?.message || "Failed to create group. Please try again.");
+        }
         const data = await res.json();
         setConversations((prev) => [data.conversation, ...prev]);
         setActiveConv(data.conversation);
@@ -385,8 +432,8 @@ function ChatsContent() {
       setGroupName("");
       setSelectedParticipantIds([]);
       setEditingGroupId(null);
-    } catch (err: any) {
-      alert(err.message || "Error saving group");
+    } catch (err) {
+      setGroupSubmitError(err instanceof Error ? err.message : "Unable to save the group. Please try again.");
     } finally {
       setCreatingGroup(false);
     }
@@ -524,19 +571,63 @@ function ChatsContent() {
   // Trigger call session
   const handleInitiateCall = (type: "AUDIO" | "VIDEO") => {
     if (!activeConv || !socket) return;
+    if (activeConv.type === "GROUP") {
+      const channelName = `call-${Date.now()}`;
+      socket.emit(
+        "call:initiate",
+        {
+          targetUserIds: activeConv.participants
+            .map((participant) => participant.userId)
+            .filter((participantId) => participantId !== session?.user.id),
+          conversationId: activeConv.id,
+          type,
+          channelName,
+        },
+        (result: { callSessionId?: number; error?: string }) => {
+          if (!result?.callSessionId) {
+            alert(result?.error || "Unable to start the group call");
+            return;
+          }
+          const params = new URLSearchParams({
+            activeChannel: channelName,
+            groupCall: "true",
+            callSessionId: String(result.callSessionId),
+            groupName: activeConv.name || "Group",
+            type,
+          });
+          router.push(`/dashboard/messenger/calls?${params.toString()}`);
+        }
+      );
+      return;
+    }
+
     const partner = activeConv.participants.find((p) => p.userId !== session?.user.id);
     if (!partner && activeConv.type === "DIRECT") return;
 
     const targetUserId = partner ? partner.userId : activeConv.participants[0]?.userId;
     const channelName = `call-${Date.now()}`;
-    socket.emit("call:initiate", {
-      targetUserId,
-      conversationId: activeConv.id,
-      type,
-      channelName,
-    });
-
-    router.push(`/dashboard/messenger/calls?activeChannel=${channelName}&target=${targetUserId}&type=${type}`);
+    socket.emit(
+      "call:initiate",
+      {
+        targetUserId,
+        conversationId: activeConv.id,
+        type,
+        channelName,
+      },
+      (result: { callSessionId?: number; error?: string }) => {
+        if (!result?.callSessionId) {
+          alert(result?.error || "Unable to start the call");
+          return;
+        }
+        const params = new URLSearchParams({
+          activeChannel: channelName,
+          target: String(targetUserId),
+          callSessionId: String(result.callSessionId),
+          type,
+        });
+        router.push(`/dashboard/messenger/calls?${params.toString()}`);
+      }
+    );
   };
 
   if (isLoading || !session) {
@@ -588,21 +679,19 @@ function ChatsContent() {
               }`}
           >
             {/* Sidebar Top Controls: Header + "+ New Group" Button */}
-            <div className="p-4 border-b border-slate-100 space-y-3 bg-white">
+            <div className="space-y-3 border-b border-orange-100 bg-gradient-to-r from-orange-50/80 via-white to-white p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  {/* <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    HRMS COLLABORATION
-                  </span> */}
-                  <h2 className="text-lg font-black text-slate-900 leading-tight">Messages & Team</h2>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">Team communication</span>
+                  <h2 className="mt-0.5 text-lg font-black leading-tight text-slate-900">Messages &amp; Team</h2>
                 </div>
 
                 {/* Prominent "+ New Group" Button */}
                 <button
                   onClick={handleOpenCreateGroupModal}
-                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5"
+                  className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600"
                 >
-                  <span>👥</span> + New Group
+                  + New Group
                 </button>
               </div>
 
@@ -637,7 +726,7 @@ function ChatsContent() {
                   {/* Active Conversations (Direct & Group) */}
                   {filteredConversations.length > 0 && (
                     <div className="p-2 space-y-1">
-                      <p className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      <p className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         Active Chats & Groups ({filteredConversations.length})
                       </p>
                       {filteredConversations.map((conv) => {
@@ -753,7 +842,7 @@ function ChatsContent() {
                             </div>
                           </div>
                           <span className="text-[10px] text-orange-600 font-extrabold opacity-0 group-hover:opacity-100 transition-opacity">
-                            + Chat ➔
+                            + Chat
                           </span>
                         </div>
                       );
@@ -772,7 +861,7 @@ function ChatsContent() {
             {activeConv ? (
               <>
                 {/* Chat Header with PROMINENT BACK BUTTON */}
-                <div className="h-16 px-6 bg-white border-b border-slate-200/80 flex items-center justify-between shadow-xs flex-shrink-0">
+                <div className="flex h-16 flex-shrink-0 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200/80 bg-white px-4 shadow-sm sm:px-6">
                   <div className="flex items-center gap-3">
 
                     <div className="flex items-center gap-3">
@@ -818,47 +907,62 @@ function ChatsContent() {
                   </div>
 
                   {/* WebRTC Call Triggers & Group Member Management */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {!isDirect && (
                       <button
                         onClick={() => handleOpenManageMembersModal(activeConv)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-800 hover:text-orange-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
-                        title="Add or remove group participants"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                        title="Manage group members"
+                        aria-label="Manage group members"
                       >
-                        ⚙️ Manage team
+                        <Settings2 size={16} strokeWidth={2} />
                       </button>
                     )}
                     <button
                       onClick={() => handleInitiateCall("AUDIO")}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-800 hover:text-orange-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-600 hover:text-orange-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                      title="Audio call"
                     >
-                      📞 Call
+                      <Phone size={13} strokeWidth={2} />
+
                     </button>
                     <button
                       onClick={() => handleInitiateCall("VIDEO")}
-                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs"
+                      title="Video call"
                     >
-                      🎥 Video
+                      <Video size={13} strokeWidth={2} />
+
                     </button>
                     <button
                       onClick={() => handleDeleteConversation(activeConv.id)}
-                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-rose-200 flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl text-xs font-semibold transition-all border border-rose-200 flex items-center gap-1.5 cursor-pointer"
                       title={isDirect ? "Delete chat conversation" : "Delete group conversation"}
                     >
-                      Delete Chat
+                      <Trash2 size={13} strokeWidth={2} />
+
                     </button>
                     <button
                       onClick={() => setActiveConv(null)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-xl text-slate-600 hover:text-slate-900 transition-all border border-slate-200/60"
+                      className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-all border border-slate-200/60"
                       title="Close"
                     >
-                      <span className="text-lg font-bold leading-none">×</span>
+                      <X size={15} strokeWidth={2} />
                     </button>
                   </div>
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                <div className="flex-1 space-y-4 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
+                  {messages.length === 0 && (
+                    <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+                      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-2xl shadow-sm">
+                        💬
+                      </span>
+                      <p className="text-sm font-bold text-slate-700">Start the conversation</p>
+                      <p className="mt-1 text-xs text-slate-500">Send a message to get things going.</p>
+                    </div>
+                  )}
                   {messages.map((m) => {
                     const isMe = m.senderId === currentUserId;
                     const isDeleted = Boolean(m.deletedAt);
@@ -1119,7 +1223,7 @@ function ChatsContent() {
 
                     <button
                       type="submit"
-                      className="h-11 px-6 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center gap-1.5"
+                      className="h-11 px-6 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center gap-1.5"
                     >
                       <span>{editingMsg ? "Update" : "Send"}</span>
                       <span>➔</span>
@@ -1132,118 +1236,205 @@ function ChatsContent() {
                 <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-4xl mb-4 shadow-xs">
                   💬
                 </div>
-                <h3 className="text-base font-black text-slate-800">Select a Chat or Contact for messaging</h3>
+                <h3 className="text-base font-black text-slate-800">Select Contact for messaging</h3>
               </div>
             )}
           </div>
 
           {/* Modular "+ New Group" Creation Modal */}
           {showGroupModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200/90 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 font-black text-base flex items-center justify-center">
-                      👥
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
+              <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="messenger-modal-header relative shrink-0 overflow-hidden px-5 py-5 text-white sm:px-6">
+                  <div className="pointer-events-none absolute -right-8 -top-20 h-48 w-48 rounded-full border border-white/10" />
+                  <div className="relative flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white">
+                        <Users size={19} />
+                      </span>
+                      <div>
+                        <h2 className="text-base font-black">
+                          {editingGroupId ? "Manage group members" : "Create a team group"}
+                        </h2>
+                        <p className="mt-1 max-w-lg text-xs text-orange-50">
+                          {editingGroupId
+                            ? "Update the people who can participate in this team conversation."
+                            : "Give your group a name and choose the employees who should be part of the conversation."}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-sm font-black text-slate-900 leading-tight">
-                        {editingGroupId ? "Manage Group Members" : "Create Team Group"}
-                      </h2>
-                      <p className="text-[11px] text-slate-500">
-                        {editingGroupId
-                          ? "Add or remove member participants for this team group."
-                          : "Configure team group name and select member participants."}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowGroupModal(false)}
-                    className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveGroupSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Group Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Frontend Engineering Sync"
-                      value={groupName}
-                      onChange={(e) => setGroupName(e.target.value)}
-                      className="w-full h-10 px-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-medium text-slate-900"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
-                        Select Group Members ({selectedParticipantIds.length})
-                      </label>
-                      <span className="text-[10px] text-slate-400 font-bold">Only members can view group</span>
-                    </div>
-                    <div className="max-h-52 overflow-y-auto border border-slate-200/80 rounded-2xl p-1.5 divide-y divide-slate-100 space-y-1 bg-slate-50/50">
-                      {employees
-                        .filter((e) => e.id !== currentUserId)
-                        .map((emp) => {
-                          const isSelected = selectedParticipantIds.includes(emp.id);
-                          return (
-                            <label
-                              key={emp.id}
-                              className={`flex items-center justify-between w-full p-2.5 rounded-2xl cursor-pointer text-xs transition-all ${isSelected
-                                ? "bg-orange-50/90 border border-orange-200 shadow-2xs"
-                                : "hover:bg-white border border-transparent"
-                                }`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                                  {emp.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-extrabold text-slate-900 leading-tight truncate">{emp.name}</p>
-                                  <p className="text-[10px] text-slate-400 font-medium truncate">{emp.email}</p>
-                                </div>
-                              </div>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {
-                                  if (isSelected) {
-                                    setSelectedParticipantIds((prev) =>
-                                      prev.filter((id) => id !== emp.id)
-                                    );
-                                  } else {
-                                    setSelectedParticipantIds((prev) => [...prev, emp.id]);
-                                  }
-                                }}
-                                className="w-4.5 h-4.5 text-orange-500 rounded border-slate-300 focus:ring-orange-500 flex-shrink-0 ml-4 cursor-pointer"
-                              />
-                            </label>
-                          );
-                        })}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2.5 pt-2">
                     <button
                       type="button"
                       onClick={() => setShowGroupModal(false)}
-                      className="px-4 py-2 text-xs text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
+                      aria-label="Close group dialog"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-orange-50 transition hover:bg-white/15 hover:text-white"
                     >
-                      Cancel
+                      <X size={17} />
                     </button>
-                    <button
-                      type="submit"
-                      disabled={creatingGroup}
-                      className="px-4 py-2.5 text-xs bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl shadow-xs disabled:opacity-50 transition-all"
-                    >
-                      {creatingGroup ? "Saving..." : editingGroupId ? "Save Changes" : "Create Group"}
-                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveGroupSubmit} className="flex min-h-0 flex-1 flex-col">
+                  <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-4 sm:p-6 md:grid-cols-[0.85fr_1.15fr]">
+                    <div className="space-y-5">
+                      {!editingGroupId && (
+                        <div>
+                          <label htmlFor="chat-group-name" className="!mt-0 !mb-2 !block text-xs font-bold text-slate-800">
+                            Group name <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            id="chat-group-name"
+                            type="text"
+                            placeholder="e.g. Frontend Engineering"
+                            value={groupName}
+                            onChange={(e) => {
+                              setGroupName(e.target.value);
+                              setGroupSubmitError(null);
+                            }}
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                            required
+                            autoFocus
+                          />
+                          <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                            Use a name that makes the purpose of this group easy to recognize.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">Your group</p>
+                            <p className="mt-1 text-[11px] text-slate-500">You’ll be included automatically.</p>
+                          </div>
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#172554] text-sm font-bold text-white">
+                            {session.user.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-orange-100 bg-orange-50/70 p-4">
+                        <div className="flex items-center gap-2 text-orange-700">
+                          <UserPlus size={15} />
+                          <span className="text-xs font-bold">Selected employees</span>
+                          <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-orange-700">
+                            {selectedParticipantIds.length}
+                          </span>
+                        </div>
+                        {selectedParticipantIds.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {employees
+                              .filter((employee) => selectedParticipantIds.includes(employee.id))
+                              .map((employee) => (
+                                <span key={employee.id} className="rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-700">
+                                  {employee.name}
+                                </span>
+                              ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-[11px] text-slate-500">Add employees to bring teammates into this conversation.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex min-h-[300px] flex-col">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-xs font-bold text-slate-800">Add employees</h3>
+                          <p className="mt-0.5 text-[11px] text-slate-500">Select the teammates who need access.</p>
+                        </div>
+                        <span className="shrink-0 text-[10px] font-semibold text-slate-400">
+                          {employees.filter((employee) => employee.id !== currentUserId).length} available
+                        </span>
+                      </div>
+                      <div className="relative mb-2">
+                        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="search"
+                          value={groupMemberSearch}
+                          onChange={(e) => setGroupMemberSearch(e.target.value)}
+                          placeholder="Search by employee name or email"
+                          aria-label="Search employees"
+                          className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10"
+                        />
+                      </div>
+                      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/60 p-2">
+                        {employees
+                          .filter((employee) => employee.id !== currentUserId)
+                          .filter((employee) => `${employee.name} ${employee.email}`.toLowerCase().includes(groupMemberSearch.trim().toLowerCase()))
+                          .map((emp) => {
+                            const isSelected = selectedParticipantIds.includes(emp.id);
+                            return (
+                              <label
+                                key={emp.id}
+                                className={`!mt-0 !flex cursor-pointer items-center !gap-3 rounded-xl border p-2.5 transition ${
+                                  isSelected
+                                    ? "border-orange-200 bg-orange-50"
+                                    : "border-transparent bg-white hover:border-slate-200 hover:bg-white"
+                                }`}
+                              >
+                                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                  isSelected ? "bg-orange-500 text-white" : "bg-[#172554] text-white"
+                                }`}>
+                                  {emp.name.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-bold text-slate-800">{emp.name}</span>
+                                  <span className="mt-0.5 block truncate text-[10px] text-slate-500">{emp.email}</span>
+                                </span>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setSelectedParticipantIds((prev) =>
+                                      isSelected ? prev.filter((id) => id !== emp.id) : [...prev, emp.id]
+                                    );
+                                    setGroupSubmitError(null);
+                                  }}
+                                  className="h-4 w-4 shrink-0 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                                />
+                              </label>
+                            );
+                          })}
+                        {employees.filter((employee) =>
+                          employee.id !== currentUserId &&
+                          `${employee.name} ${employee.email}`.toLowerCase().includes(groupMemberSearch.trim().toLowerCase())
+                        ).length === 0 && (
+                          <p className="px-3 py-8 text-center text-xs text-slate-500">No employees match your search.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 bg-white px-4 py-3 sm:px-6">
+                    {groupSubmitError && (
+                      <p role="alert" className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+                        {groupSubmitError}
+                      </p>
+                    )}
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-[11px] text-slate-500">
+                      {selectedParticipantIds.length
+                        ? `${selectedParticipantIds.length} employee${selectedParticipantIds.length === 1 ? "" : "s"} selected`
+                        : "You can add employees now or invite them later"}
+                    </p>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowGroupModal(false)}
+                        className="rounded-lg px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={creatingGroup}
+                        className="rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {creatingGroup ? "Saving..." : editingGroupId ? "Save members" : "Create group"}
+                      </button>
+                    </div>
+                    </div>
                   </div>
                 </form>
               </div>

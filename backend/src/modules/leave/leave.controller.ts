@@ -359,23 +359,57 @@ export const applyLeave = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const { leaveTypeId, startDate, endDate, reason } = req.body;
+    const { leaveTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason } = req.body;
 
-    if (!leaveTypeId || !startDate || !endDate || !reason) {
+    if (
+      !Number.isInteger(Number(leaveTypeId)) ||
+      Number(leaveTypeId) <= 0 ||
+      !startDate ||
+      !endDate ||
+      typeof reason !== "string" ||
+      !reason.trim() ||
+      (req.body.isHalfDay !== undefined && typeof req.body.isHalfDay !== "boolean")
+    ) {
       res.status(400).json({ message: "Leave type, start date, end date, and reason are required" });
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    if (typeof startDate !== "string" || typeof endDate !== "string") {
+      res.status(400).json({ message: "Start date and end date must be valid dates" });
+      return;
+    }
+
+    const start = new Date(`${startDate}T00:00:00.000Z`);
+    const end = new Date(`${endDate}T00:00:00.000Z`);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      start.toISOString().slice(0, 10) !== startDate ||
+      end.toISOString().slice(0, 10) !== endDate
+    ) {
+      res.status(400).json({ message: "Start date and end date must be valid dates" });
+      return;
+    }
 
     if (end < start) {
       res.status(400).json({ message: "End date cannot be before start date" });
       return;
     }
 
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const isHalfDayRequest = isHalfDay === true;
+    if (
+      isHalfDayRequest &&
+      (startDate !== endDate || !["FIRST_HALF", "SECOND_HALF"].includes(halfDayPeriod))
+    ) {
+      res.status(400).json({
+        message: "Half-day leave must be for one date and specify first half or second half",
+      });
+      return;
+    }
+
+    const totalDays = isHalfDayRequest
+      ? 0.5
+      : Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     const request = await prisma.leaveRequest.create({
       data: {
@@ -384,6 +418,7 @@ export const applyLeave = async (req: Request, res: Response): Promise<void> => 
         startDate: start,
         endDate: end,
         totalDays,
+        halfDayPeriod: isHalfDayRequest ? halfDayPeriod : null,
         reason: reason.trim(),
         status: "PENDING",
       },

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
 
 type LeaveType = {
   id: number;
@@ -27,6 +28,7 @@ type LeaveRequest = {
   startDate: string;
   endDate: string;
   totalDays: number;
+  halfDayPeriod: "FIRST_HALF" | "SECOND_HALF" | null;
   reason: string;
   status: string;
   user: {
@@ -50,11 +52,6 @@ export default function LeavesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [showApplyModal, setShowApplyModal] = useState<boolean>(false);
-  const [selectedTypeId, setSelectedTypeId] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [reason, setReason] = useState<string>("");
-  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const handleSignOut = () => {
     logout();
@@ -82,7 +79,6 @@ export default function LeavesPage() {
       if (typesRes.ok) {
         const typesData = await typesRes.json();
         setLeaveTypes(typesData.types || []);
-        if (typesData.types?.length > 0) setSelectedTypeId(String(typesData.types[0].id));
       }
 
       if (balancesRes.ok) {
@@ -106,42 +102,6 @@ export default function LeavesPage() {
       fetchData();
     }
   }, [session?.token]);
-
-  const handleApply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTypeId || !startDate || !endDate || !reason.trim()) return;
-
-    setSubmitting(true);
-    try {
-      const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/leaves/requests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          leaveTypeId: Number(selectedTypeId),
-          startDate,
-          endDate,
-          reason: reason.trim(),
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Failed to submit leave request");
-      }
-
-      setShowApplyModal(false);
-      setReason("");
-      fetchData();
-    } catch (err: any) {
-      alert(err.message || "Error submitting leave request");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleAction = async (requestId: number, status: "APPROVED" | "REJECTED") => {
     try {
@@ -187,12 +147,12 @@ export default function LeavesPage() {
         <Sidebar user={session.user} canCreateAdmins={isSuperAdmin} onSignOut={handleSignOut} />
         <section className="dashboard-content" style={{ paddingBottom: "80px" }}>
           {/* Back Button */}
-          <button
+          {/* <button
             onClick={() => router.push("/dashboard")}
             className="back-button mb-4 text-xs font-bold text-orange-600 flex items-center gap-1"
           >
-            ← Back to Dashboard
-          </button>
+            ← Back
+          </button> */}
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 welcome mb-6">
@@ -206,7 +166,7 @@ export default function LeavesPage() {
             {!isSuperAdmin && (
               <button
                 onClick={() => setShowApplyModal(true)}
-                className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl transition-all shadow-xs text-xs"
+                className="px-4 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl transition-all shadow-xs text-xs"
               >
                 + Apply For Leave
               </button>
@@ -352,7 +312,12 @@ export default function LeavesPage() {
                             {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
                           </td>
                           <td className="py-3 px-4 font-black text-slate-900">
-                            {req.totalDays}
+                            {Number(req.totalDays).toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                            {req.halfDayPeriod && (
+                              <span className="ml-1.5 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+                                {req.halfDayPeriod === "FIRST_HALF" ? "First half" : "Second half"}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-slate-500 max-w-xs truncate text-xs">
                             {req.reason}
@@ -360,10 +325,10 @@ export default function LeavesPage() {
                           <td className="py-3 px-4">
                             <span
                               className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${req.status === "APPROVED"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : req.status === "REJECTED"
-                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : req.status === "REJECTED"
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
                                 }`}
                             >
                               {req.status}
@@ -400,89 +365,12 @@ export default function LeavesPage() {
             )}
           </div>
 
-          {/* Apply Leave Modal */}
           {showApplyModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-                <h2 className="text-base font-black text-slate-900">Apply for Leave</h2>
-                <form onSubmit={handleApply} className="space-y-4">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Leave Type
-                    </label>
-                    <select
-                      value={selectedTypeId}
-                      onChange={(e) => setSelectedTypeId(e.target.value)}
-                      className="w-full h-10 px-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                    >
-                      {leaveTypes.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} ({t.daysAllowed} days allowed)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full h-10 px-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full h-10 px-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Reason for Leave
-                    </label>
-                    <textarea
-                      placeholder="Provide reason for request..."
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                      rows={3}
-                      required
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowApplyModal(false)}
-                      className="px-4 py-2.5 text-xs text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-4 py-2.5 text-xs bg-orange-500 hover:bg-orange-600 text-white font-extrabold rounded-xl shadow-xs disabled:opacity-50"
-                    >
-                      {submitting ? "Submitting..." : "Submit Application"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <ApplyLeaveModal
+              leaveTypes={leaveTypes}
+              onClose={() => setShowApplyModal(false)}
+              onSubmitted={fetchData}
+            />
           )}
         </section>
       </div>
