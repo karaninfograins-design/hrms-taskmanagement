@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 
 type HRSetting = {
   id: number;
@@ -136,7 +137,7 @@ export default function HRSettingsPage() {
     setError(null);
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/hr-settings?category=${activeCategory}`, {
+      const res = await fetch(buildApiUrl(`/api/hr-settings?category=${activeCategory}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch HR settings");
@@ -153,7 +154,7 @@ export default function HRSettingsPage() {
     setLoadingLeaveTypes(true);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/leaves/types", {
+      const res = await fetch(buildApiUrl("/api/leaves/types"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -171,7 +172,7 @@ export default function HRSettingsPage() {
     setLoadingBalances(true);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/leaves/admin/balances", {
+      const res = await fetch(buildApiUrl("/api/leaves/admin/balances"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -209,7 +210,7 @@ export default function HRSettingsPage() {
     setSubmitting(true);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/hr-settings", {
+      const res = await fetch(buildApiUrl("/api/hr-settings"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -244,7 +245,7 @@ export default function HRSettingsPage() {
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/hr-settings/${editingSetting.id}`, {
+      const res = await fetch(buildApiUrl(`/api/hr-settings/${editingSetting.id}`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -274,7 +275,7 @@ export default function HRSettingsPage() {
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/hr-settings/${id}`, {
+      const res = await fetch(buildApiUrl(`/api/hr-settings/${id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -298,7 +299,7 @@ export default function HRSettingsPage() {
     setSubmittingLT(true);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/leaves/types", {
+      const res = await fetch(buildApiUrl("/api/leaves/types"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -334,7 +335,7 @@ export default function HRSettingsPage() {
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/leaves/types/${editingLT.id}`, {
+      const res = await fetch(buildApiUrl(`/api/leaves/types/${editingLT.id}`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -365,7 +366,7 @@ export default function HRSettingsPage() {
 
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/leaves/types/${id}`, {
+      const res = await fetch(buildApiUrl(`/api/leaves/types/${id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -386,7 +387,7 @@ export default function HRSettingsPage() {
     setUpdatingBalance(true);
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/leaves/admin/balances/${balanceId}`, {
+      const res = await fetch(buildApiUrl(`/api/leaves/admin/balances/${balanceId}`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -473,7 +474,7 @@ export default function HRSettingsPage() {
                   onClick={async () => {
                     try {
                       const token = getAuthToken();
-                      await fetch("http://localhost:5000/api/hr-settings", {
+                      await fetch(buildApiUrl("/api/hr-settings"), {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",

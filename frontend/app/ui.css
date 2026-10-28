@@ -312,6 +312,14 @@ body:has(.app-shell) {
 .app-shell .sidebar {
   position: sticky;
   top: 0;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.app-shell .sidebar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .password-input input {

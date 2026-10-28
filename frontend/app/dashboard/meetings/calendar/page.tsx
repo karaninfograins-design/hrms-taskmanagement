@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 
 type Meeting = {
   id: number;
@@ -66,7 +67,7 @@ export default function GoogleStyleMeetingCalendarPage() {
 
   const fetchMeetings = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/meetings", {
+      const res = await fetch(buildApiUrl("/api/meetings"), {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (res.ok) {
@@ -82,7 +83,7 @@ export default function GoogleStyleMeetingCalendarPage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/employees", {
+      const res = await fetch(buildApiUrl("/api/employees"), {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (res.ok) {
@@ -96,7 +97,7 @@ export default function GoogleStyleMeetingCalendarPage() {
 
   const fetchHolidays = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/holidays", {
+      const res = await fetch(buildApiUrl("/api/holidays"), {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (res.ok) {
@@ -154,7 +155,7 @@ export default function GoogleStyleMeetingCalendarPage() {
       const startDateTime = new Date(`${newDate}T${newStartTime}:00`).toISOString();
       const endDateTime = new Date(`${newDate}T${newEndTime}:00`).toISOString();
 
-      const res = await fetch("http://localhost:5000/api/meetings", {
+      const res = await fetch(buildApiUrl("/api/meetings"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

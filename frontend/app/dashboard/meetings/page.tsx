@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 
 type Meeting = {
   id: number;
@@ -61,7 +62,7 @@ export default function MeetingsPage() {
   // Active LiveKit Call State
   const [activeCallMeeting, setActiveCallMeeting] = useState<Meeting | null>(null);
   const [livekitToken, setLivekitToken] = useState<string | null>(null);
-  const [livekitUrl, setLivekitUrl] = useState<string>("ws://localhost:7880");
+  const [livekitUrl, setLivekitUrl] = useState<string>(process.env.NEXT_PUBLIC_LIVEKIT_URL || "");
   const [tokenLoading, setTokenLoading] = useState<boolean>(false);
 
   const handleSignOut = () => {
@@ -80,7 +81,7 @@ export default function MeetingsPage() {
     setError(null);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/meetings", {
+      const res = await fetch(buildApiUrl("/api/meetings"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch meetings");
@@ -100,22 +101,40 @@ export default function MeetingsPage() {
   }, [session?.token]);
 
   const openScheduleModal = (meetingToEdit?: Meeting) => {
+    const toLocalISO = (isoStr: string) => {
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return "";
+      const offset = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - offset * 60000);
+      return local.toISOString().slice(0, 16);
+    };
+
     if (meetingToEdit) {
       setEditingMeeting(meetingToEdit);
       setTitle(meetingToEdit.title);
       setDescription(meetingToEdit.description || "");
       setAgenda(meetingToEdit.agenda || "");
-      setStartTime(new Date(meetingToEdit.startTime).toISOString().slice(0, 16));
-      setEndTime(new Date(meetingToEdit.endTime).toISOString().slice(0, 16));
+      setStartTime(toLocalISO(meetingToEdit.startTime));
+      setEndTime(toLocalISO(meetingToEdit.endTime));
       setTimezone(meetingToEdit.timezone || "UTC");
       setNotes(meetingToEdit.notes || "");
     } else {
+      const nextHour = new Date();
+      nextHour.setMinutes(0, 0, 0);
+      nextHour.setHours(nextHour.getHours() + 1);
+      const defaultStart = new Date(nextHour.getTime() - nextHour.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      const defaultEnd = new Date(nextHour.getTime() + 3600000 - nextHour.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+
       setEditingMeeting(null);
       setTitle("");
       setDescription("");
       setAgenda("");
-      setStartTime("");
-      setEndTime("");
+      setStartTime(defaultStart);
+      setEndTime(defaultEnd);
       setTimezone("UTC");
       setNotes("");
     }
@@ -126,12 +145,17 @@ export default function MeetingsPage() {
     e.preventDefault();
     if (!title.trim() || !startTime || !endTime) return;
 
+    if (new Date(endTime) <= new Date(startTime)) {
+      alert("End time must be after start time");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const token = getAuthToken();
       const url = editingMeeting
-        ? `http://localhost:5000/api/meetings/${editingMeeting.id}`
-        : "http://localhost:5000/api/meetings";
+        ? buildApiUrl(`/api/meetings/${editingMeeting.id}`)
+        : buildApiUrl("/api/meetings");
       const method = editingMeeting ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -152,7 +176,7 @@ export default function MeetingsPage() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || "Failed to save meeting");
       }
 
@@ -169,15 +193,19 @@ export default function MeetingsPage() {
     if (!confirm("Are you sure you want to cancel and delete this meeting?")) return;
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/meetings/${meetingId}`, {
+      const res = await fetch(buildApiUrl(`/api/meetings/${meetingId}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.message || "Failed to delete meeting");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting meeting:", err);
+      alert(err.message || "Error deleting meeting");
     }
   };
 
@@ -186,13 +214,15 @@ export default function MeetingsPage() {
     setTokenLoading(true);
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/meetings/${meeting.id}/token`, {
+      const res = await fetch(buildApiUrl(`/api/meetings/${meeting.id}/token`), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to get LiveKit room token");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to get LiveKit room token");
       setLivekitToken(data.token);
-      setLivekitUrl(data.url || "ws://localhost:7880");
+      setLivekitUrl(data.url || process.env.NEXT_PUBLIC_LIVEKIT_URL || "");
+      // Refresh list to update status if transitioned to IN_PROGRESS
+      fetchMeetings();
     } catch (err: any) {
       alert(err.message);
       setActiveCallMeeting(null);

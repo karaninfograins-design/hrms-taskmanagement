@@ -2,13 +2,20 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Settings2, Phone, Video, Trash2, X, Users, Search, UserPlus } from "lucide-react";
+import { Settings2, Phone, Video, Trash2, X, Users, Search, UserPlus, Copy, Forward, CornerUpLeft, Pencil, MessageSquare, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
 import { getApiUrl } from "@/lib/api-config";
+import {
+  showConfirmDialog,
+  showSuccessToast,
+  showErrorToast,
+  showNotification,
+  showPromptDialog,
+} from "@/lib/swal";
 
 type Employee = {
   id: number;
@@ -59,9 +66,29 @@ type Conversation = {
   }>;
 };
 
+function ChatsLoadingFallback() {
+  const { session, logout } = useAuth();
+  const router = useRouter();
+  const handleSignOut = () => {
+    logout();
+    router.replace("/");
+  };
+  return (
+    <main className="app-shell">
+      <Navbar user={session?.user as any} onSignOut={handleSignOut} />
+      <div className="dashboard-frame">
+        <Sidebar user={session?.user} onSignOut={handleSignOut} />
+        <section className="dashboard-content" style={{ padding: 0, height: "calc(100vh - 64px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <p className="text-slate-400 font-medium text-sm">Loading conversations...</p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default function DirectChatsPage() {
   return (
-    <Suspense fallback={<main className="route-loading">Loading Messenger...</main>}>
+    <Suspense fallback={<ChatsLoadingFallback />}>
       <ChatsContent />
     </Suspense>
   );
@@ -81,6 +108,10 @@ function ChatsContent() {
   const [msgInput, setMsgInput] = useState<string>("");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  const [forwardingMsg, setForwardingMsg] = useState<Message | null>(null);
+  const [forwardTargetId, setForwardTargetId] = useState<number | null>(null);
+  const [forwardLoading, setForwardLoading] = useState<boolean>(false);
+  const [copyFeedbackId, setCopyFeedbackId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
 
@@ -120,11 +151,15 @@ function ChatsContent() {
       const res = await fetch(`${getApiUrl()}/api/employees`, {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        showErrorToast("Failed to load employees");
+        return;
+      }
       const data = await res.json();
       setEmployees(data.employees || []);
     } catch (err) {
       console.error("Error fetching employees:", err);
+      showErrorToast("Could not load employees");
     }
   };
 
@@ -134,11 +169,15 @@ function ChatsContent() {
       const res = await fetch(`${getApiUrl()}/api/messenger/conversations`, {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        showErrorToast("Failed to load conversations");
+        return;
+      }
       const data = await res.json();
       setConversations(data.conversations || []);
     } catch (err) {
       console.error("Error fetching conversations:", err);
+      showErrorToast("Could not load conversations");
     } finally {
       setLoading(false);
     }
@@ -297,7 +336,13 @@ function ChatsContent() {
   const handleDeleteConversation = async (conversationId: number) => {
     const conv = conversations.find((c) => c.id === conversationId);
     const label = conv?.type === "GROUP" ? `group "${conv.name}"` : "this conversation";
-    if (!confirm(`Are you sure you want to delete ${label}? All messages and media will be permanently deleted.`)) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Conversation?",
+      text: `Are you sure you want to delete ${label}? All messages and media will be permanently deleted.`,
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`${getApiUrl()}/api/messenger/conversations/${conversationId}`, {
@@ -305,7 +350,7 @@ function ChatsContent() {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!res.ok) {
-        alert("Failed to delete chat");
+        showErrorToast("Failed to delete chat");
         return;
       }
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
@@ -313,9 +358,10 @@ function ChatsContent() {
         setActiveConv(null);
         setMessages([]);
       }
+      showSuccessToast("Conversation deleted successfully");
     } catch (err) {
       console.error("Error deleting conversation:", err);
-      alert("Error deleting conversation");
+      showErrorToast("Error deleting conversation");
     }
   };
 
@@ -343,12 +389,17 @@ function ChatsContent() {
         },
         body: JSON.stringify({ targetUserId: empId }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        showErrorToast("Could not start direct chat");
+        return;
+      }
       const data = await res.json();
       await fetchConversations();
       setActiveConv(data.conversation);
+      showSuccessToast("Chat opened");
     } catch (err) {
       console.error("Error starting direct chat:", err);
+      showErrorToast("Network error starting chat");
     }
   };
 
@@ -406,6 +457,7 @@ function ChatsContent() {
         if (activeConv?.id === data.conversation.id) {
           setActiveConv(data.conversation);
         }
+        showSuccessToast("Group updated successfully");
       } else {
         // Create new group
         const res = await fetch(`${getApiUrl()}/api/messenger/conversations/group`, {
@@ -427,13 +479,16 @@ function ChatsContent() {
         const data = await res.json();
         setConversations((prev) => [data.conversation, ...prev]);
         setActiveConv(data.conversation);
+        showSuccessToast("Group created successfully");
       }
       setShowGroupModal(false);
       setGroupName("");
       setSelectedParticipantIds([]);
       setEditingGroupId(null);
     } catch (err) {
-      setGroupSubmitError(err instanceof Error ? err.message : "Unable to save the group. Please try again.");
+      const errMsg = err instanceof Error ? err.message : "Unable to save the group. Please try again.";
+      setGroupSubmitError(errMsg);
+      showErrorToast(errMsg);
     } finally {
       setCreatingGroup(false);
     }
@@ -466,9 +521,10 @@ function ChatsContent() {
           setAttachmentUrl(data.url);
           setAttachmentFileName(data.fileName);
           setAttachmentType(data.type);
+          showSuccessToast("Attachment uploaded successfully");
         } catch (err: any) {
           console.error("Upload error:", err);
-          alert("Failed to upload file to server storage");
+          showErrorToast("Failed to upload file to server storage");
         }
       }
     };
@@ -476,13 +532,17 @@ function ChatsContent() {
     setShowAttachmentMenu(false);
   };
 
-  const handleAddLinkPrompt = () => {
-    const link = prompt("Enter Web URL / Document Link:");
+  const handleAddLinkPrompt = async () => {
+    const link = await showPromptDialog({
+      title: "Add Document / Web Link",
+      inputPlaceholder: "https://example.com/document...",
+    });
     if (link && link.trim()) {
       setAttachmentUrl(link.trim());
       setAttachmentFileName(link.trim().replace(/^https?:\/\//, ""));
       setAttachmentType("LINK");
       setShowAttachmentMenu(false);
+      showSuccessToast("Link attached");
     }
   };
 
@@ -509,9 +569,13 @@ function ChatsContent() {
           );
           setEditingMsg(null);
           setMsgInput("");
+          showSuccessToast("Message updated");
+        } else {
+          showErrorToast("Failed to edit message");
         }
       } catch (err) {
         console.error("Error editing message:", err);
+        showErrorToast("Network error editing message");
       }
       return;
     }
@@ -540,15 +604,78 @@ function ChatsContent() {
         setAttachmentUrl("");
         setReplyingTo(null);
         fetchConversations();
+      } else {
+        showErrorToast("Failed to send message");
       }
     } catch (err) {
       console.error("Error sending message:", err);
+      showErrorToast("Network error sending message");
+    }
+  };
+
+  // Copy Message to clipboard
+  const handleCopyMessage = (msg: Message) => {
+    if (!msg.content) return;
+    navigator.clipboard.writeText(msg.content).then(() => {
+      setCopyFeedbackId(msg.id);
+      setTimeout(() => setCopyFeedbackId(null), 1500);
+    }).catch(() => {
+      // Fallback for non-secure context
+      const ta = document.createElement("textarea");
+      ta.value = msg.content;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopyFeedbackId(msg.id);
+      setTimeout(() => setCopyFeedbackId(null), 1500);
+    });
+  };
+
+  // Forward Message to another conversation
+  const handleForwardMessage = async () => {
+    if (!forwardingMsg || !forwardTargetId) return;
+    setForwardLoading(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          conversationId: forwardTargetId,
+          content: forwardingMsg.content,
+          attachmentUrl: forwardingMsg.attachmentUrl || null,
+          attachmentType: forwardingMsg.attachmentType || null,
+        }),
+      });
+      if (res.ok) {
+        showSuccessToast("Message forwarded successfully");
+        setForwardingMsg(null);
+        setForwardTargetId(null);
+        fetchConversations();
+      } else {
+        showErrorToast("Failed to forward message");
+      }
+    } catch (err) {
+      console.error("Error forwarding message:", err);
+      showErrorToast("Network error forwarding message");
+    } finally {
+      setForwardLoading(false);
     }
   };
 
   // Soft Delete Message
   const handleDeleteMessage = async (msgId: number) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Message?",
+      text: "Are you sure you want to delete this message? This action cannot be undone.",
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`${getApiUrl()}/api/messenger/messages/${msgId}`, {
         method: "DELETE",
@@ -562,9 +689,13 @@ function ChatsContent() {
               : m
           )
         );
+        showSuccessToast("Message deleted");
+      } else {
+        showErrorToast("Failed to delete message");
       }
     } catch (err) {
       console.error("Error deleting message:", err);
+      showErrorToast("Error deleting message");
     }
   };
 
@@ -585,7 +716,11 @@ function ChatsContent() {
         },
         (result: { callSessionId?: number; error?: string }) => {
           if (!result?.callSessionId) {
-            alert(result?.error || "Unable to start the group call");
+            showNotification({
+              title: "Call Initiation Failed",
+              text: result?.error || "Unable to start the group call",
+              icon: "error",
+            });
             return;
           }
           const params = new URLSearchParams({
@@ -616,12 +751,17 @@ function ChatsContent() {
       },
       (result: { callSessionId?: number; error?: string }) => {
         if (!result?.callSessionId) {
-          alert(result?.error || "Unable to start the call");
+          showNotification({
+            title: "Call Initiation Failed",
+            text: result?.error || "Unable to start the call",
+            icon: "error",
+          });
           return;
         }
         const params = new URLSearchParams({
           activeChannel: channelName,
           target: String(targetUserId),
+          targetName: partner?.user?.name || "",
           callSessionId: String(result.callSessionId),
           type,
         });
@@ -755,7 +895,7 @@ function ChatsContent() {
                                     }`}
                                 >
                                   {isGrp
-                                    ? "👥"
+                                    ? <Users size={16} />
                                     : partner?.name.charAt(0).toUpperCase() || "E"}
                                 </div>
                                 {!isGrp && (
@@ -863,7 +1003,14 @@ function ChatsContent() {
                 {/* Chat Header with PROMINENT BACK BUTTON */}
                 <div className="flex h-16 flex-shrink-0 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200/80 bg-white px-4 shadow-sm sm:px-6">
                   <div className="flex items-center gap-3">
-
+                    <button
+                      type="button"
+                      onClick={() => setActiveConv(null)}
+                      aria-label="Back to conversations"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 md:hidden"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <div
@@ -873,7 +1020,7 @@ function ChatsContent() {
                             }`}
                         >
                           {!isDirect
-                            ? "👥"
+                            ? <Users size={18} />
                             : partnerUser?.name.charAt(0).toUpperCase() || "E"}
                         </div>
                         {isDirect && (
@@ -956,8 +1103,8 @@ function ChatsContent() {
                 <div className="flex-1 space-y-4 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
-                      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-2xl shadow-sm">
-                        💬
+                      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
+                        <MessageSquare size={24} />
                       </span>
                       <p className="text-sm font-bold text-slate-700">Start the conversation</p>
                       <p className="mt-1 text-xs text-slate-500">Send a message to get things going.</p>
@@ -1067,33 +1214,59 @@ function ChatsContent() {
 
                           {/* Hover Actions */}
                           {!isDeleted && (
-                            <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                            <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-0.5 bg-white p-1 rounded-xl shadow-md border border-slate-200">
+                              {/* Reply */}
                               <button
                                 onClick={() => setReplyingTo(m)}
-                                className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:text-orange-600"
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                                 title="Reply"
                               >
-                                ↩️
+                                <CornerUpLeft size={14} strokeWidth={2} />
                               </button>
+                              {/* Copy */}
+                              <button
+                                onClick={() => handleCopyMessage(m)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  copyFeedbackId === m.id
+                                    ? "text-emerald-600 bg-emerald-50"
+                                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                }`}
+                                title={copyFeedbackId === m.id ? "Copied!" : "Copy"}
+                              >
+                                <Copy size={14} strokeWidth={2} />
+                              </button>
+                              {/* Forward */}
+                              <button
+                                onClick={() => {
+                                  setForwardingMsg(m);
+                                  setForwardTargetId(null);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="Forward"
+                              >
+                                <Forward size={14} strokeWidth={2} />
+                              </button>
+                              {/* Edit (own messages only) */}
                               {isMe && (
                                 <button
                                   onClick={() => {
                                     setEditingMsg(m);
                                     setMsgInput(m.content);
                                   }}
-                                  className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                                   title="Edit"
                                 >
-                                  ✏️
+                                  <Pencil size={14} strokeWidth={2} />
                                 </button>
                               )}
+                              {/* Delete (own or Admin) */}
                               {(isMe || session.user.role === "ADMIN") && (
                                 <button
                                   onClick={() => handleDeleteMessage(m.id)}
-                                  className="px-1.5 py-0.5 text-[10px] font-bold text-rose-600"
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                   title="Delete"
                                 >
-                                  🗑️
+                                  <Trash2 size={14} strokeWidth={2} />
                                 </button>
                               )}
                             </div>
@@ -1437,6 +1610,92 @@ function ChatsContent() {
                     </div>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+          {/* ── Forward Message Modal ─────────────────────────────── */}
+          {forwardingMsg && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">Forward Message</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate max-w-xs">
+                      &quot;{forwardingMsg.content.length > 60 ? forwardingMsg.content.slice(0, 57) + "..." : forwardingMsg.content}&quot;
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setForwardingMsg(null); setForwardTargetId(null); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all"
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                </div>
+
+                {/* Conversation List */}
+                <div className="flex-1 overflow-y-auto max-h-72 divide-y divide-slate-50 p-2">
+                  {conversations
+                    .filter((c) => c.id !== activeConv?.id)
+                    .map((conv) => {
+                      const isGrp = conv.type === "GROUP";
+                      const partner = !isGrp
+                        ? conv.participants.find((p) => p.userId !== currentUserId)?.user
+                        : null;
+                      const isSelected = forwardTargetId === conv.id;
+                      return (
+                        <button
+                          key={conv.id}
+                          onClick={() => setForwardTargetId(conv.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
+                            isSelected
+                              ? "bg-blue-50 border border-blue-200"
+                              : "hover:bg-slate-50 border border-transparent"
+                          }`}
+                        >
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                            isGrp ? "bg-slate-900 text-orange-400" : "bg-slate-800 text-white"
+                          }`}>
+                            {isGrp ? <Users size={16} /> : partner?.name.charAt(0).toUpperCase() || "E"}
+                          </div>
+                          <div className="truncate">
+                            <p className="text-xs font-bold text-slate-900 truncate">
+                              {isGrp ? conv.name : partner?.name || "Employee"}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {isGrp ? `${conv.participants.length} members` : partner?.email}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <span className="ml-auto w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-[9px] font-black">✓</span>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  {conversations.filter((c) => c.id !== activeConv?.id).length === 0 && (
+                    <p className="py-8 text-center text-xs text-slate-400">No other conversations available.</p>
+                  )}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60">
+                  <button
+                    onClick={() => { setForwardingMsg(null); setForwardTargetId(null); }}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleForwardMessage}
+                    disabled={!forwardTargetId || forwardLoading}
+                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <Forward size={13} strokeWidth={2} />
+                    {forwardLoading ? "Forwarding..." : "Forward"}
+                  </button>
+                </div>
               </div>
             </div>
           )}

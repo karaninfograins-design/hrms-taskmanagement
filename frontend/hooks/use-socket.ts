@@ -5,8 +5,11 @@ import { Socket } from "socket.io-client";
 import { getSocket } from "@/lib/socket";
 
 export function useSocket() {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [socket, setSocket] = useState<Socket | null>(() => getSocket());
+  const [isConnected, setIsConnected] = useState<boolean>(() => {
+    const s = getSocket();
+    return s?.connected ?? false;
+  });
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
   useEffect(() => {

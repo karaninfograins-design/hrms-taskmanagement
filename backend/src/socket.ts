@@ -23,13 +23,13 @@ async function canSignalCallParticipant(
       participants: {
         where: {
           userId: { in: [senderUserId, targetUserId] },
-          status: "ACCEPTED",
+          status: { in: ["ACCEPTED", "INVITED"] },
         },
         select: { userId: true },
       },
     },
   });
-  if (!session || session.status !== "ACTIVE") return false;
+  if (!session || (session.status !== "ACTIVE" && session.status !== "RINGING")) return false;
   const participants = session.participants;
   return participants.some((participant) => participant.userId === senderUserId) &&
     participants.some((participant) => participant.userId === targetUserId);
@@ -209,6 +209,123 @@ export function setupSocketServer(httpServer: HttpServer) {
         } catch (error) {
           console.error("Call initiation error:", error);
           acknowledge?.({ error: "Unable to start call" });
+        }
+      }
+    );
+
+    socket.on(
+      "call:invite",
+      async (
+        data: { callSessionId: number; targetUserId: number },
+        acknowledge?: (result: { success?: boolean; error?: string }) => void
+      ) => {
+        try {
+          const { callSessionId, targetUserId } = data;
+          if (!callSessionId || !targetUserId) {
+            acknowledge?.({ error: "Call session ID and target user ID are required" });
+            return;
+          }
+
+          if (targetUserId === userId) {
+            acknowledge?.({ error: "You cannot invite yourself" });
+            return;
+          }
+
+          const inviter = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true },
+          });
+          if (!inviter) {
+            acknowledge?.({ error: "Inviter not found" });
+            return;
+          }
+
+          const invitedUser = await prisma.user.findUnique({
+            where: { id: targetUserId },
+            select: { id: true, name: true, email: true },
+          });
+          if (!invitedUser) {
+            acknowledge?.({ error: "User to invite not found" });
+            return;
+          }
+
+          const session = await prisma.callSession.findUnique({
+            where: { id: callSessionId },
+            include: {
+              participants: true,
+              conversation: { select: { name: true } },
+            },
+          });
+
+          if (!session || (session.status !== "ACTIVE" && session.status !== "RINGING")) {
+            acknowledge?.({ error: "Active call session not found" });
+            return;
+          }
+
+          // Check if inviter is part of this call
+          const isParticipant = session.participants.some(
+            (p) => p.userId === userId && (p.status === "ACCEPTED" || session.hostId === userId)
+          );
+          if (!isParticipant) {
+            acknowledge?.({ error: "You are not an active participant of this call" });
+            return;
+          }
+
+          // Check if already in call
+          const existingParticipant = session.participants.find((p) => p.userId === targetUserId);
+          if (existingParticipant && existingParticipant.status === "ACCEPTED") {
+            acknowledge?.({ error: "User is already connected in this call" });
+            return;
+          }
+
+          // Upsert CallParticipant
+          await prisma.callParticipant.upsert({
+            where: {
+              callSessionId_userId: {
+                callSessionId,
+                userId: targetUserId,
+              },
+            },
+            create: {
+              callSessionId,
+              userId: targetUserId,
+              status: "INVITED",
+            },
+            update: {
+              status: "INVITED",
+              joinedAt: null,
+              leftAt: null,
+            },
+          });
+
+          // Send incoming call to the invited user
+          io.to(`user_${targetUserId}`).emit("incoming:call", {
+            callSessionId: session.id,
+            channelName: session.channelName,
+            caller: inviter,
+            type: session.type,
+            conversationId: session.conversationId,
+            conversationName: session.conversation?.name || "Group Call",
+            isGroupCall: true,
+          });
+
+          // Inform all current accepted participants that an invitation was sent
+          const acceptedParticipants = session.participants.filter(
+            (p) => p.status === "ACCEPTED"
+          );
+          for (const p of acceptedParticipants) {
+            io.to(`user_${p.userId}`).emit("call:participant-invited", {
+              callSessionId: session.id,
+              invitedUserId: targetUserId,
+              invitedUser,
+              invitedBy: inviter,
+            });
+          }
+
+          acknowledge?.({ success: true });
+        } catch (error) {
+          console.error("Call invitation error:", error);
+          acknowledge?.({ error: "Failed to invite user to call" });
         }
       }
     );

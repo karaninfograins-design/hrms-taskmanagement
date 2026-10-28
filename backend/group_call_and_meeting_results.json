@@ -1,0 +1,124 @@
+{
+  "timestamp": "2026-10-26T11:26:13.443Z",
+  "livekitApiKey": "APIjer8vsAVVSS9",
+  "total": 19,
+  "passed": 19,
+  "failed": 0,
+  "allPassed": true,
+  "results": [
+    {
+      "section": "AUTH",
+      "name": "1.1 Admin token generated",
+      "passed": true,
+      "details": "Admin: System Super Admin (ID: 17)"
+    },
+    {
+      "section": "AUTH",
+      "name": "1.2 Group call participants ready",
+      "passed": true,
+      "details": "Member 1: Super Admin (ID: 1), Member 2: HR Manager (ID: 18)"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.1 Schedule meeting with participants",
+      "passed": true,
+      "details": "Meeting ID: 8, Room: room-1793013971992-170"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.2 Retrieve LiveKit room token (/api/meetings/:id/token)",
+      "passed": true,
+      "details": "LiveKit URL: ws://192.168.1.25:7880"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.3 Token matches user's LIVEKIT_API_KEY as issuer (iss)",
+      "passed": true,
+      "details": "Token iss: 'APIjer8vsAVVSS9' (Expected: 'APIjer8vsAVVSS9')"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.4 Token successfully cryptographically verified with LIVEKIT_API_SECRET",
+      "passed": true,
+      "details": "Algorithm: HS256, Signature valid: true"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.5 Token video room permissions match meeting room name",
+      "passed": true,
+      "details": "Room: room-1793013971992-170, roomJoin: true"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.6 Meeting auto-transitions to 'IN_PROGRESS' upon participant join",
+      "passed": true,
+      "details": "Status: IN_PROGRESS"
+    },
+    {
+      "section": "MEETINGS",
+      "name": "2.7 Delete meeting and cascade purge from database",
+      "passed": true,
+      "details": "Status: 200"
+    },
+    {
+      "section": "CHAT_GROUP",
+      "name": "3.1 Group conversation available with multiple members",
+      "passed": true,
+      "details": "Group ID: 22, Name: 'E2E Test Group Call - 1793013864126', Members: 3"
+    },
+    {
+      "section": "GROUP_CALL_REST",
+      "name": "3.2 Initiate group call via REST (POST /api/calls)",
+      "passed": true,
+      "details": "Call ID: 24, Channel: call-1793013972091-518, Status: RINGING"
+    },
+    {
+      "section": "GROUP_CALL_REST",
+      "name": "3.3 Host marked ACCEPTED and all group members marked INVITED",
+      "passed": true,
+      "details": "Participants: 3 (Host ACCEPTED, Members INVITED)"
+    },
+    {
+      "section": "GROUP_CALL_REST",
+      "name": "3.4 Update group call status to 'ACTIVE' (call answered)",
+      "passed": true,
+      "details": "Call Status: ACTIVE"
+    },
+    {
+      "section": "GROUP_CALL_REST",
+      "name": "3.5 End group call (status 'ENDED')",
+      "passed": true,
+      "details": "Call Status: ENDED"
+    },
+    {
+      "section": "SOCKET_SIGNALING",
+      "name": "4.1 Admin initiates group call via Socket.IO ('call:initiate')",
+      "passed": true,
+      "details": "Socket call initiation acknowledged by server"
+    },
+    {
+      "section": "SOCKET_SIGNALING",
+      "name": "4.2 Member receives real-time 'incoming:call' event with isGroupCall=true",
+      "passed": true,
+      "details": "Target group member received incoming call signal with group metadata"
+    },
+    {
+      "section": "CALL_HISTORY",
+      "name": "5.1 Retrieve call logs (/api/calls)",
+      "passed": true,
+      "details": "Total call logs: 1"
+    },
+    {
+      "section": "FRONTEND",
+      "name": "5.2 Groups messenger page reachable (http://localhost:3000/dashboard/messenger/groups)",
+      "passed": true,
+      "details": "Status: 200"
+    },
+    {
+      "section": "FRONTEND",
+      "name": "5.3 Video/Audio calls page reachable (http://localhost:3000/dashboard/messenger/calls)",
+      "passed": true,
+      "details": "Status: 200"
+    }
+  ]
+}

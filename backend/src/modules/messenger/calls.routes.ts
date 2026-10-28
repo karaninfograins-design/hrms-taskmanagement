@@ -5,6 +5,7 @@ import {
   updateCallStatus,
   deleteCallLog,
   clearAllCallLogs,
+  inviteParticipant,
 } from "./calls.controller.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ const router = Router();
 router.get("/", getCallHistory);
 router.post("/", initiateCall);
 router.delete("/", clearAllCallLogs);
+router.post("/:id/invite", inviteParticipant);
 router.put("/:id", updateCallStatus);
 router.delete("/:id", deleteCallLog);
 

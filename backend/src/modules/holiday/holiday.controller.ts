@@ -10,7 +10,8 @@ const isUserHrOrAdmin = async (userId: number): Promise<boolean> => {
   });
   if (!user) return false;
   const roleName = user.role?.name || "";
-  return roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR";
+  const roleId = user.roleId;
+  return roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR" || roleId === 1 || roleId === 2 || roleId === 4;
 };
 
 export const getHolidays = async (req: Request, res: Response): Promise<void> => {

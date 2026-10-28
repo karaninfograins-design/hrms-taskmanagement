@@ -14,6 +14,8 @@ export async function apiRequest<T>(
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "1",
+    "Bypass-Tunnel-Reminder": "1",
     ...(customHeaders as Record<string, string>),
   };
 

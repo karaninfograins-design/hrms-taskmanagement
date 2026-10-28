@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 
 type Holiday = {
   id: number;
@@ -66,7 +67,7 @@ export default function CompanyCalendarPage() {
 
   const fetchHolidays = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/holidays", {
+      const res = await fetch(buildApiUrl("/api/holidays"), {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!res.ok) return;
@@ -85,16 +86,25 @@ export default function CompanyCalendarPage() {
     }
   }, [session?.token]);
 
-  const roleName = session?.user?.role || "";
-  const isHrOrAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR";
+  const roleName = typeof session?.user?.role === "string"
+    ? session.user.role
+    : (session?.user?.role as any)?.name || (session?.user?.role === 1 ? "SUPER_ADMIN" : session?.user?.role === 2 ? "ADMIN" : session?.user?.role === 4 ? "HR" : "EMPLOYEE");
+  const userRoleId = typeof session?.user?.role === "number"
+    ? session.user.role
+    : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 4 : 3);
+  const isHrOrAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR" || userRoleId === 1 || userRoleId === 2 || userRoleId === 4;
 
   const handleCreateHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isHrOrAdmin) {
+      alert("Only HR, Admins, and Super Admins can create company holidays.");
+      return;
+    }
     if (!title.trim() || !date) return;
 
     setSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5000/api/holidays", {
+      const res = await fetch(buildApiUrl("/api/holidays"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -108,7 +118,10 @@ export default function CompanyCalendarPage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to create company holiday");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Failed to create company holiday");
+      }
       setShowModal(false);
       setTitle("");
       setDescription("");
@@ -122,15 +135,21 @@ export default function CompanyCalendarPage() {
   };
 
   const handleDeleteHoliday = async (id: number) => {
+    if (!isHrOrAdmin) {
+      alert("Only HR, Admins, and Super Admins can delete company holidays.");
+      return;
+    }
     if (!confirm("Are you sure you want to delete this company holiday?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/holidays/${id}`, {
+      const res = await fetch(buildApiUrl(`/api/holidays/${id}`), {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
-      if (res.ok) {
-        setHolidays((prev) => prev.filter((h) => h.id !== id));
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Failed to delete company holiday");
       }
+      setHolidays((prev) => prev.filter((h) => h.id !== id));
     } catch (err) {
       console.error("Error deleting holiday:", err);
     }

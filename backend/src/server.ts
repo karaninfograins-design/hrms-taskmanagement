@@ -38,7 +38,13 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "ngrok-skip-browser-warning", "bypass-tunnel-reminder"],
+  })
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/uploads", express.static(uploadsDir));
@@ -73,7 +79,6 @@ setInterval(() => {
   void notifyUpcomingSprintDeadlines();
 }, 30 * 60 * 1000);
 
-httpServer.listen(PORT, () => {
-  console.log(`HRMS Backend running on http://localhost:${PORT}`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`HRMS Backend listening on port ${PORT} [DB: ${process.env.DB_NAME}]`);
 });
-

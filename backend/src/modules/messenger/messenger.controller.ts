@@ -216,20 +216,65 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const messages = await prisma.message.findMany({
-      where: { conversationId },
-      include: {
-        sender: { select: { id: true, name: true, email: true } },
-        replyTo: {
-          select: {
-            id: true,
-            content: true,
-            sender: { select: { id: true, name: true } },
+    const limitParam = req.query.limit || req.query.take;
+    const limit = limitParam ? Math.min(Math.max(Number(limitParam), 1), 100) : 50;
+    const cursorId = req.query.cursor ? Number(req.query.cursor) : undefined;
+    const beforeId = req.query.before ? Number(req.query.before) : undefined;
+    const fetchAll = req.query.all === "true";
+
+    let messages: any[];
+    let hasMore = false;
+    let nextCursor: number | null = null;
+
+    if (fetchAll) {
+      messages = await prisma.message.findMany({
+        where: { conversationId },
+        include: {
+          sender: { select: { id: true, name: true, email: true } },
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              sender: { select: { id: true, name: true } },
+            },
           },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+        orderBy: { createdAt: "asc" },
+      });
+    } else {
+      const whereClause: any = { conversationId };
+      if (beforeId && !isNaN(beforeId)) {
+        whereClause.id = { lt: beforeId };
+      }
+
+      const cursorOption = cursorId && !isNaN(cursorId)
+        ? { cursor: { id: cursorId }, skip: 1 }
+        : undefined;
+
+      const messagesDesc = await prisma.message.findMany({
+        where: whereClause,
+        take: limit,
+        ...cursorOption,
+        orderBy: { id: "desc" },
+        include: {
+          sender: { select: { id: true, name: true, email: true } },
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              sender: { select: { id: true, name: true } },
+            },
+          },
+        },
+      });
+
+      hasMore = messagesDesc.length === limit;
+      const oldestMessage = messagesDesc[messagesDesc.length - 1];
+      nextCursor = hasMore && oldestMessage ? oldestMessage.id : null;
+
+      // Reverse to chronological order (asc) for seamless chat display
+      messages = [...messagesDesc].reverse();
+    }
 
     await prisma.conversationParticipant.update({
       where: {
@@ -238,7 +283,15 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
       data: { lastReadAt: new Date() },
     });
 
-    res.json({ messages });
+    res.json({
+      messages,
+      pagination: {
+        limit: fetchAll ? messages.length : limit,
+        hasMore,
+        nextCursor,
+        count: messages.length,
+      },
+    });
   } catch (error) {
     console.error("Get messages error:", error);
     res.status(500).json({ message: "Failed to fetch messages" });
@@ -500,9 +553,14 @@ export const uploadAttachment = async (req: Request, res: Response): Promise<voi
 
     fs.writeFileSync(filePath, buffer);
 
-    const protocol = req.protocol || "http";
-    const host = req.get("host") || "localhost:5000";
-    const fileUrl = `${protocol}://${host}/uploads/${uniqueFileName}`;
+    const publicApiUrl = process.env.PUBLIC_API_URL?.trim().replace(/\/+$/, "");
+    const requestHost = req.get("host");
+    const baseUrl = publicApiUrl || (requestHost ? `${req.protocol}://${requestHost}` : null);
+    if (!baseUrl) {
+      res.status(500).json({ message: "Public API URL is not configured" });
+      return;
+    }
+    const fileUrl = `${baseUrl}/uploads/${uniqueFileName}`;
 
     res.json({
       url: fileUrl,
@@ -697,4 +755,3 @@ export const deleteConversation = async (req: Request, res: Response): Promise<v
     res.status(500).json({ message: "Failed to delete conversation" });
   }
 };
-

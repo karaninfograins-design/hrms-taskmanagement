@@ -17,6 +17,9 @@ export const getSocket = (): Socket | null => {
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      extraHeaders: {
+        "ngrok-skip-browser-warning": "1",
+      },
     });
   } else if (!socket.connected) {
     socket.auth = { token };

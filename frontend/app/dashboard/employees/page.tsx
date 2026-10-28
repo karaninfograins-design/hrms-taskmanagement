@@ -6,6 +6,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import {
+  Search,
+  X,
+  Shield,
+  Briefcase,
+  Activity,
+  RotateCcw,
+  Plus,
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+} from "lucide-react";
+import {
   getEmployees,
   deleteEmployee,
   getEmployeeFilters,
@@ -158,6 +170,21 @@ export default function EmployeesPage() {
     setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
   };
 
+  const hasActiveFilters = Boolean(
+    filters.search || filters.roleId !== "" || filters.designationId !== "" || filters.status !== ""
+  );
+
+  const handleResetFilters = () => {
+    setFilters((prev) => ({
+      ...prev,
+      search: "",
+      roleId: "",
+      designationId: "",
+      status: "",
+      page: 1,
+    }));
+  };
+
   const handlePageChange = (newPage: number) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
   };
@@ -231,87 +258,146 @@ export default function EmployeesPage() {
 
           <div className="welcome" style={{ marginBottom: "24px" }}>
             <p className="eyebrow">ADMINISTRATION</p>
-            <h3 className="text-2xl font-black text-slate-900">Employee Management</h3>
-            <span className="text-xs text-slate-500 font-medium">View, search, and manage team members and system permissions</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Employee Directory</h3>
+                <span className="text-xs text-slate-500 font-medium">View, search, and manage team members and system permissions</span>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 self-start sm:self-auto">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{pagination.total} Team Members</span>
+              </div>
+            </div>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2">
-              <span>⚠️</span> {error}
+            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           {actionMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
-              <span>✅</span> {actionMessage}
+            <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{actionMessage}</span>
             </div>
           )}
 
-          {/* Action & Filter Bar */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs mb-6 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
-            <div className="flex flex-wrap items-center gap-3 flex-1">
-              <div className="floating-label-group flex-1 min-w-[260px]">
+          {/* Modern Action & Filter Bar */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-sm mb-6 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-3.5">
+            <div className="flex flex-wrap items-center gap-2.5 flex-1">
+              {/* Modern Search Input */}
+              <div className="relative flex-1 min-w-[240px] sm:min-w-[280px]">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                 <input
                   type="text"
                   id="employee-search"
-                  placeholder="Search by name or email"
+                  placeholder="Search employees by name or email..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="floating-label-input"
+                  style={{ paddingLeft: "38px", paddingRight: "34px" }}
+                  className="w-full h-10.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all shadow-2xs"
                 />
-                {/* <label
-                  htmlFor="employee-search"
-                  className="floating-label-text"
-                >
-                  Search by name or email...
-                </label> */}
+                {filters.search && (
+                  <button
+                    type="button"
+                    onClick={() => handleFilterChange("search", "")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-200/60 transition-colors cursor-pointer z-10"
+                    title="Clear search"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <select
-                value={filters.roleId}
-                onChange={(e) => handleFilterChange("roleId", e.target.value)}
-                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[140px]"
-              >
-                <option value="">All System Roles</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
+              {/* System Role Filter */}
+              <div className="relative min-w-[155px] flex-1 sm:flex-initial">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
+                  <Shield className="w-3.5 h-3.5" />
+                </div>
+                <select
+                  value={filters.roleId}
+                  onChange={(e) => handleFilterChange("roleId", e.target.value ? Number(e.target.value) : "")}
+                  style={{ paddingLeft: "34px", paddingRight: "30px" }}
+                  className="w-full h-10.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all appearance-none cursor-pointer shadow-2xs"
+                  aria-label="Filter by system role"
+                >
+                  <option value="">All System Roles</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none z-10" />
+              </div>
 
-              <select
-                value={filters.designationId}
-                onChange={(e) => handleFilterChange("designationId", e.target.value)}
-                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[150px]"
-              >
-                <option value="">All Designations</option>
-                {designations.map((designation) => (
-                  <option key={designation.id} value={designation.id}>
-                    {designation.name}
-                  </option>
-                ))}
-              </select>
+              {/* Designation Filter */}
+              <div className="relative min-w-[165px] flex-1 sm:flex-initial">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
+                  <Briefcase className="w-3.5 h-3.5" />
+                </div>
+                <select
+                  value={filters.designationId}
+                  onChange={(e) => handleFilterChange("designationId", e.target.value ? Number(e.target.value) : "")}
+                  style={{ paddingLeft: "34px", paddingRight: "30px" }}
+                  className="w-full h-10.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all appearance-none cursor-pointer shadow-2xs"
+                  aria-label="Filter by designation"
+                >
+                  <option value="">All Designations</option>
+                  {designations.map((designation) => (
+                    <option key={designation.id} value={designation.id}>
+                      {designation.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none z-10" />
+              </div>
 
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-normal focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-white transition-all min-w-[130px]"
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {/* Status Filter */}
+              <div className="relative min-w-[135px] flex-1 sm:flex-initial">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
+                  <Activity className="w-3.5 h-3.5" />
+                </div>
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
+                  style={{ paddingLeft: "34px", paddingRight: "30px" }}
+                  className="w-full h-10.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all appearance-none cursor-pointer shadow-2xs"
+                  aria-label="Filter by status"
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none z-10" />
+              </div>
+
+              {/* Reset Filters CTA */}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="h-10.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  title="Reset all filters"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
 
             {canManageEmployees && (
               <button
                 onClick={handleAddEmployee}
-                className="h-10 px-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-normal text-xs shadow-xs transition-all flex items-center justify-center gap-2 shrink-0"
+                className="h-10.5 px-4 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] text-white font-bold text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
               >
-                <span>+</span> Add New
+                <Plus className="w-4 h-4" />
+                <span>Add Employee</span>
               </button>
             )}
           </div>

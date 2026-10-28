@@ -15,8 +15,24 @@ function parseSession(savedSession: string | null): Session | null {
   }
 }
 
+let memorySessionValue: string | null = null;
+if (typeof window !== "undefined") {
+  try {
+    memorySessionValue = window.localStorage.getItem(SESSION_KEY);
+  } catch {
+    memorySessionValue = null;
+  }
+}
+
 function readSessionValue() {
-  return window.localStorage.getItem(SESSION_KEY);
+  if (typeof window === "undefined") return null;
+  try {
+    const val = window.localStorage.getItem(SESSION_KEY);
+    memorySessionValue = val;
+    return val;
+  } catch {
+    return memorySessionValue;
+  }
 }
 
 function subscribe(onStoreChange: () => void) {
@@ -28,9 +44,9 @@ function subscribe(onStoreChange: () => void) {
   };
 }
 
-const getServerSnapshot = () => null;
+const getServerSnapshot = () => memorySessionValue;
 const getClientHydrationSnapshot = () => true;
-const getServerHydrationSnapshot = () => false;
+const getServerHydrationSnapshot = () => (typeof window !== "undefined");
 
 export function useAuth() {
   const sessionValue = useSyncExternalStore(
@@ -46,14 +62,18 @@ export function useAuth() {
   );
 
   const saveSession = useCallback((nextSession: Session) => {
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+    memorySessionValue = JSON.stringify(nextSession);
+    window.localStorage.setItem(SESSION_KEY, memorySessionValue);
     window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
   }, []);
 
   const logout = useCallback(() => {
+    memorySessionValue = null;
     window.localStorage.removeItem(SESSION_KEY);
     window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
   }, []);
 
-  return { session, isLoading: !isHydrated, saveSession, logout };
+  const isLoading = !session && !isHydrated;
+
+  return { session, isLoading, saveSession, logout };
 }

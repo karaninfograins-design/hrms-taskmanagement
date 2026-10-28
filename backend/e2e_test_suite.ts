@@ -1,10 +1,20 @@
 import http from "http";
+import https from "https";
 import fs from "fs";
+import path from "path";
 import jwt from "jsonwebtoken";
 import { prisma } from "./src/config/prisma.js";
 
-const BASE_URL = "http://localhost:5000";
-const JWT_SECRET = process.env.JWT_SECRET || "change_this_to_a_long_random_secret_key";
+const BASE_URL = process.env.E2E_BASE_URL || process.env.PUBLIC_API_URL;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!BASE_URL) {
+  throw new Error("E2E_BASE_URL must be configured in the backend environment");
+}
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET must be configured in the backend environment");
+}
 
 function makeRequest(path: string, method = "GET", data: any = null, token: string | null = null): Promise<{ status: number; body: any }> {
   return new Promise((resolve, reject) => {
@@ -23,7 +33,8 @@ function makeRequest(path: string, method = "GET", data: any = null, token: stri
       options.headers!["Authorization"] = `Bearer ${token}`;
     }
 
-    const req = http.request(options, (res) => {
+    const requestClient = url.protocol === "https:" ? https : http;
+    const req = requestClient.request(options, (res) => {
       let body = "";
       res.on("data", (chunk) => (body += chunk));
       res.on("end", () => {
@@ -246,7 +257,7 @@ async function runE2ETests() {
     logs: logMessages,
   };
 
-  fs.writeFileSync("d:/HRMS/backend/e2e_results.json", JSON.stringify(resultsJSON, null, 2), "utf8");
+  fs.writeFileSync(path.join(process.cwd(), "e2e_results.json"), JSON.stringify(resultsJSON, null, 2), "utf8");
 
   await prisma.$disconnect();
 }

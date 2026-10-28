@@ -9,6 +9,12 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
 import { getApiUrl } from "@/lib/api-config";
+import {
+  showConfirmDialog,
+  showSuccessToast,
+  showErrorToast,
+  showNotification,
+} from "@/lib/swal";
 
 type Employee = {
   id: number;
@@ -83,9 +89,15 @@ export default function GroupChatsPage() {
     fetch(`${getApiUrl()}/api/employees`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load employees");
+        return res.json();
+      })
       .then((data) => setEmployees(data.employees || []))
-      .catch((err) => console.error("Error fetching employees:", err));
+      .catch((err) => {
+        console.error("Error fetching employees:", err);
+        showErrorToast("Could not load employee directory");
+      });
   }, [session?.token]);
 
   // Fetch group conversations
@@ -94,7 +106,10 @@ export default function GroupChatsPage() {
       const res = await fetch(`${getApiUrl()}/api/messenger/conversations`, {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        showErrorToast("Failed to load group channels");
+        return;
+      }
       const data = await res.json();
       const groupConvs = (data.conversations || []).filter(
         (c: GroupConversation) => c.type === "GROUP"
@@ -105,6 +120,7 @@ export default function GroupChatsPage() {
       }
     } catch (err) {
       console.error("Error fetching group conversations:", err);
+      showErrorToast("Network error loading group channels");
     } finally {
       setLoading(false);
     }
@@ -185,14 +201,21 @@ export default function GroupChatsPage() {
 
   // Delete Group Handler
   const handleDeleteGroup = async (groupId: number) => {
-    if (!confirm("Are you sure you want to delete this group channel? All messages and attachments in this channel will be permanently deleted.")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Group Channel?",
+      text: "Are you sure you want to delete this group channel? All messages and attachments in this channel will be permanently deleted.",
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`${getApiUrl()}/api/messenger/conversations/${groupId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!res.ok) {
-        alert("Failed to delete group");
+        showErrorToast("Failed to delete group");
         return;
       }
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
@@ -200,15 +223,20 @@ export default function GroupChatsPage() {
         setActiveGroup(null);
         setMessages([]);
       }
+      showSuccessToast("Group channel deleted successfully");
     } catch (err) {
       console.error("Error deleting group:", err);
-      alert("Error deleting group");
+      showErrorToast("Error deleting group");
     }
   };
 
   const handleInitiateGroupCall = (type: "AUDIO" | "VIDEO") => {
     if (!activeGroup || !socket) {
-      alert("Unable to connect to calling. Please try again.");
+      showNotification({
+        title: "Calling Notice",
+        text: "Unable to connect to calling. Please try again.",
+        icon: "warning",
+      });
       return;
     }
 
@@ -225,7 +253,11 @@ export default function GroupChatsPage() {
       },
       (result: { callSessionId?: number; error?: string }) => {
         if (!result?.callSessionId) {
-          alert(result?.error || "Unable to start the group call");
+          showNotification({
+            title: "Call Initiation Failed",
+            text: result?.error || "Unable to start the group call",
+            icon: "error",
+          });
           return;
         }
         const params = new URLSearchParams({
@@ -286,8 +318,11 @@ export default function GroupChatsPage() {
       setGroupName("");
       setSelectedMemberIds([]);
       setEditingGroupId(null);
+      showSuccessToast(isEditing ? "Group channel updated successfully" : "Group channel created successfully");
     } catch (err) {
-      setGroupSubmitError(err instanceof Error ? err.message : "Unable to save the group. Please try again.");
+      const errMsg = err instanceof Error ? err.message : "Unable to save the group. Please try again.";
+      setGroupSubmitError(errMsg);
+      showErrorToast(errMsg);
     } finally {
       setSubmittingGroup(false);
     }
@@ -333,9 +368,12 @@ export default function GroupChatsPage() {
         const data = await res.json();
         setMessages((prev) => [...prev, data.message]);
         setMsgInput("");
+      } else {
+        showErrorToast("Failed to send message");
       }
     } catch (err) {
       console.error("Error sending message:", err);
+      showErrorToast("Network error sending message");
     }
   };
 
@@ -394,9 +432,8 @@ export default function GroupChatsPage() {
                     <div
                       key={group.id}
                       onClick={() => setActiveGroup(group)}
-                      className={`group flex cursor-pointer items-center justify-between border-l-2 p-3.5 transition-all ${
-                        isSelected ? "border-orange-500 bg-orange-50/80" : "border-transparent hover:bg-slate-50"
-                      }`}
+                      className={`group flex cursor-pointer items-center justify-between border-l-2 p-3.5 transition-all ${isSelected ? "border-orange-500 bg-orange-50/80" : "border-transparent hover:bg-slate-50"
+                        }`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-sm font-black text-orange-700 shadow-sm">
@@ -496,7 +533,9 @@ export default function GroupChatsPage() {
                 <div className="flex-1 space-y-4 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
-                      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-2xl shadow-sm">👥</span>
+                      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
+                        <Users size={24} />
+                      </span>
                       <p className="text-sm font-bold text-slate-700">Start your group conversation</p>
                       <p className="mt-1 text-xs text-slate-500">Send the first message to the team.</p>
                     </div>
@@ -511,11 +550,10 @@ export default function GroupChatsPage() {
                           </span>
                         )}
                         <div
-                          className={`max-w-md p-3.5 rounded-2xl text-xs shadow-xs ${
-                            isMe
+                          className={`max-w-md p-3.5 rounded-2xl text-xs shadow-xs ${isMe
                               ? "bg-orange-500 text-white rounded-br-xs"
                               : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
-                          }`}
+                            }`}
                         >
                           <p className="whitespace-pre-wrap">{m.content}</p>
                           <span className="mt-1 block text-right text-[10px] opacity-70">
@@ -549,8 +587,8 @@ export default function GroupChatsPage() {
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-2xl mb-3">
-                  👥
+                <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 mb-3">
+                  <Users size={28} />
                 </div>
                 <h3 className="text-base font-bold text-slate-700">Select a Group Channel</h3>
                 <p className="text-xs max-w-sm mt-1">
@@ -686,15 +724,13 @@ export default function GroupChatsPage() {
                             return (
                               <label
                                 key={emp.id}
-                                className={`!mt-0 !flex cursor-pointer items-center !gap-3 rounded-xl border p-2.5 transition ${
-                                  isSelected
+                                className={`!mt-0 !flex cursor-pointer items-center !gap-3 rounded-xl border p-2.5 transition ${isSelected
                                     ? "border-orange-200 bg-orange-50"
                                     : "border-transparent bg-white hover:border-slate-200 hover:bg-white"
-                                }`}
+                                  }`}
                               >
-                                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                                  isSelected ? "bg-orange-500 text-white" : "bg-[#172554] text-white"
-                                }`}>
+                                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isSelected ? "bg-orange-500 text-white" : "bg-[#172554] text-white"
+                                  }`}>
                                   {emp.name.charAt(0).toUpperCase()}
                                 </span>
                                 <span className="min-w-0 flex-1">
@@ -717,8 +753,8 @@ export default function GroupChatsPage() {
                           employee.id !== currentUserId &&
                           `${employee.name} ${employee.email}`.toLowerCase().includes(groupMemberSearch.trim().toLowerCase())
                         ).length === 0 && (
-                          <p className="px-3 py-8 text-center text-xs text-slate-500">No employees match your search.</p>
-                        )}
+                            <p className="px-3 py-8 text-center text-xs text-slate-500">No employees match your search.</p>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -730,29 +766,29 @@ export default function GroupChatsPage() {
                       </p>
                     )}
                     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-[11px] text-slate-500">
-                      {selectedMemberIds.length
-                        ? `${selectedMemberIds.length} employee${selectedMemberIds.length === 1 ? "" : "s"} selected`
-                        : "You can add employees now or invite them later"}
-                    </p>
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateModal(false)}
-                        className="rounded-lg px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={submittingGroup}
-                        className="rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {submittingGroup
-                          ? editingGroupId ? "Saving..." : "Creating..."
-                          : editingGroupId ? "Save changes" : "Create group"}
-                      </button>
-                    </div>
+                      <p className="text-[11px] text-slate-500">
+                        {selectedMemberIds.length
+                          ? `${selectedMemberIds.length} employee${selectedMemberIds.length === 1 ? "" : "s"} selected`
+                          : "You can add employees now or invite them later"}
+                      </p>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowCreateModal(false)}
+                          className="rounded-lg px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={submittingGroup}
+                          className="rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {submittingGroup
+                            ? editingGroupId ? "Saving..." : "Creating..."
+                            : editingGroupId ? "Save changes" : "Create group"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </form>

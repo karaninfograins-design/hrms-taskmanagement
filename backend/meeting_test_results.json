@@ -1,0 +1,114 @@
+{
+  "timestamp": "2026-10-26T11:13:28.187Z",
+  "total": 21,
+  "passed": 21,
+  "failed": 0,
+  "allPassed": true,
+  "tests": [
+    {
+      "name": "1.1 Admin token generated",
+      "passed": true,
+      "details": "Admin: System Super Admin (superadmin@hrms.com)"
+    },
+    {
+      "name": "1.2 Secondary Employee token generated",
+      "passed": true,
+      "details": "Employee: dev (dev@gmail.com)"
+    },
+    {
+      "name": "2.1 Rejects creation with missing required fields (400)",
+      "passed": true,
+      "details": "Status 400: {\"message\":\"Title, start time, and end time are required\"}"
+    },
+    {
+      "name": "2.2 Rejects creation when endTime <= startTime (400)",
+      "passed": true,
+      "details": "Status 400: {\"message\":\"End time must be after start time\"}"
+    },
+    {
+      "name": "2.3 Rejects creation without Authorization token (401)",
+      "passed": true,
+      "details": "Status 401"
+    },
+    {
+      "name": "2.4 Successfully schedules valid meeting (201)",
+      "passed": true,
+      "details": "Meeting ID: 6, Room: room-1793013207982-818, Status: SCHEDULED"
+    },
+    {
+      "name": "2.5 Organizer and deduplicated participants properly saved in database",
+      "passed": true,
+      "details": "Organizer: System Super Admin, Member count: 2"
+    },
+    {
+      "name": "3.1 Fetches list of all meetings (200)",
+      "passed": true,
+      "details": "Total meetings retrieved: 3"
+    },
+    {
+      "name": "3.2 Status filter 'SCHEDULED' works accurately",
+      "passed": true,
+      "details": "Scheduled meetings found: 3"
+    },
+    {
+      "name": "3.3 Fetches specific meeting by ID (GET /api/meetings/:id)",
+      "passed": true,
+      "details": "Title: Production E2E Sync - 1793013207980"
+    },
+    {
+      "name": "3.4 Returns 404 for non-existent meeting ID",
+      "passed": true,
+      "details": "Status 404"
+    },
+    {
+      "name": "4.1 Successfully updates meeting details (200)",
+      "passed": true,
+      "details": "New Title: Updated Title - Production E2E Sync - 1793013207980"
+    },
+    {
+      "name": "4.2 Rejects unauthorized edit from non-organizer non-admin (403)",
+      "passed": true,
+      "details": "Status 403: {\"message\":\"Only the organizer or admin can edit this meeting\"}"
+    },
+    {
+      "name": "5.1 Generates LiveKit room token (200)",
+      "passed": true,
+      "details": "Room: room-1793013207982-818, LiveKit Server: ws://192.168.1.25:7880"
+    },
+    {
+      "name": "5.2 Token has valid LiveKit JWT claims (sub, room, permissions)",
+      "passed": true,
+      "details": "JWT Sub: 17, Room: room-1793013207982-818, Exp: 2026-10-26T15:13:28.000Z"
+    },
+    {
+      "name": "5.3 Meeting status automatically transitions to 'IN_PROGRESS' upon joining",
+      "passed": true,
+      "details": "Current Status in DB: IN_PROGRESS"
+    },
+    {
+      "name": "5.4 Rejects joining a CANCELLED meeting (400)",
+      "passed": true,
+      "details": "Status 400: {\"message\":\"Cannot join a cancelled meeting\"}"
+    },
+    {
+      "name": "6.1 Rejects unauthorized delete attempt from non-organizer non-admin (403)",
+      "passed": true,
+      "details": "Status 403"
+    },
+    {
+      "name": "6.2 Successfully deletes meeting (200)",
+      "passed": true,
+      "details": "Status 200"
+    },
+    {
+      "name": "6.3 Meeting completely purged and cascaded from database",
+      "passed": true,
+      "details": "Database lookup returned: Null (Purged)"
+    },
+    {
+      "name": "7.1 Frontend meetings page responds at http://localhost:3000/dashboard/meetings (200)",
+      "passed": true,
+      "details": "Status: 200"
+    }
+  ]
+}

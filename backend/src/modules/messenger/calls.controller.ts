@@ -46,10 +46,27 @@ export const initiateCall = async (req: Request, res: Response): Promise<void> =
     }
 
     const { userId } = verifyToken(token);
-    const { targetUserId, type = "VIDEO", conversationId } = req.body;
+    const { targetUserId, targetUserIds, type = "VIDEO", conversationId } = req.body;
 
-    if (!targetUserId) {
-      res.status(400).json({ message: "Target user ID required" });
+    let recipients: number[] = [];
+    if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      recipients = Array.from(new Set(targetUserIds.map(Number))).filter(
+        (id) => !isNaN(id) && id > 0 && id !== userId
+      );
+    } else if (targetUserId) {
+      recipients = [Number(targetUserId)];
+    } else if (conversationId) {
+      const conv = await prisma.conversation.findUnique({
+        where: { id: Number(conversationId) },
+        include: { participants: true },
+      });
+      if (conv) {
+        recipients = conv.participants.map((p) => p.userId).filter((id) => id !== userId);
+      }
+    }
+
+    if (recipients.length === 0) {
+      res.status(400).json({ message: "Target user ID or valid group participants required" });
       return;
     }
 
@@ -65,7 +82,10 @@ export const initiateCall = async (req: Request, res: Response): Promise<void> =
         participants: {
           create: [
             { userId, status: "ACCEPTED", joinedAt: new Date() },
-            { userId: Number(targetUserId), status: "INVITED" },
+            ...recipients.map((recId) => ({
+              userId: recId,
+              status: "INVITED" as const,
+            })),
           ],
         },
       },
@@ -213,4 +233,77 @@ export const clearAllCallLogs = async (req: Request, res: Response): Promise<voi
     res.status(500).json({ message: "Failed to clear call logs" });
   }
 };
+
+export const inviteParticipant = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const callSessionId = Number(req.params.id);
+    const { targetUserId } = req.body;
+
+    if (!callSessionId || !targetUserId) {
+      res.status(400).json({ message: "Call session ID and target user ID are required" });
+      return;
+    }
+
+    if (Number(targetUserId) === userId) {
+      res.status(400).json({ message: "Cannot invite yourself" });
+      return;
+    }
+
+    const session = await prisma.callSession.findUnique({
+      where: { id: callSessionId },
+      include: {
+        participants: true,
+        conversation: { select: { name: true } },
+      },
+    });
+
+    if (!session || (session.status !== "ACTIVE" && session.status !== "RINGING")) {
+      res.status(404).json({ message: "Active call session not found" });
+      return;
+    }
+
+    const isParticipant = session.participants.some(
+      (p) => p.userId === userId && (p.status === "ACCEPTED" || session.hostId === userId)
+    );
+    if (!isParticipant) {
+      res.status(403).json({ message: "You are not a participant in this call" });
+      return;
+    }
+
+    const participant = await prisma.callParticipant.upsert({
+      where: {
+        callSessionId_userId: {
+          callSessionId,
+          userId: Number(targetUserId),
+        },
+      },
+      create: {
+        callSessionId,
+        userId: Number(targetUserId),
+        status: "INVITED",
+      },
+      update: {
+        status: "INVITED",
+        joinedAt: null,
+        leftAt: null,
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    res.json({ message: "Participant invited successfully", participant });
+  } catch (error) {
+    console.error("Invite participant error:", error);
+    res.status(500).json({ message: "Failed to invite participant" });
+  }
+};
+
 

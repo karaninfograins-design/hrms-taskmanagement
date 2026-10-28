@@ -1020,6 +1020,19 @@ export async function deleteRole(req: Request, res: Response) {
   const user = await authenticate(req, res);
   if (!user || !superAdminOnly(user.role.name, res)) return;
   try {
+    const role = await prisma.role.findUnique({
+      where: { id: Number(req.params.id) },
+      select: { name: true },
+    });
+    if (!role) {
+      res.status(404).json({ message: "Role not found" });
+      return;
+    }
+    if (role.name === "SUPER_ADMIN") {
+      res.status(403).json({ message: "The SUPER_ADMIN role cannot be deactivated" });
+      return;
+    }
+
     const item = await prisma.role.update({ where: { id: Number(req.params.id) }, data: { status: false } });
     res.json({ item, message: "Role  deleted" });
   } catch { res.status(404).json({ message: "Role not found" }); }

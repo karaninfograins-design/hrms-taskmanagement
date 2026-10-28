@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 
 type AttendanceRecord = {
   id: number;
@@ -48,7 +49,7 @@ export default function AttendancePage() {
     try {
       const token = getAuthToken();
 
-      const todayRes = await fetch("http://localhost:5000/api/attendance/today", {
+      const todayRes = await fetch(buildApiUrl("/api/attendance/today"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (todayRes.ok) {
@@ -56,7 +57,7 @@ export default function AttendancePage() {
         setTodayAttendance(todayData.attendance);
       }
 
-      const logsRes = await fetch("http://localhost:5000/api/attendance", {
+      const logsRes = await fetch(buildApiUrl("/api/attendance"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (logsRes.ok) {
@@ -80,7 +81,7 @@ export default function AttendancePage() {
     setActionLoading(true);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/attendance/check-in", {
+      const res = await fetch(buildApiUrl("/api/attendance/check-in"), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -100,7 +101,7 @@ export default function AttendancePage() {
     setActionLoading(true);
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5000/api/attendance/check-out", {
+      const res = await fetch(buildApiUrl("/api/attendance/check-out"), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

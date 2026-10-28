@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { updateProfile, changePassword } from "@/services/user.service";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 import type { User } from "@/types/auth";
 import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
 
@@ -67,9 +68,9 @@ export default function ProfilePage() {
     if (token) {
       try {
         const [typesRes, balRes, reqRes] = await Promise.all([
-          fetch("http://localhost:5000/api/leaves/types", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:5000/api/leaves/balances", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("http://localhost:5000/api/leaves/requests", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(buildApiUrl("/api/leaves/types"), { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(buildApiUrl("/api/leaves/balances"), { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(buildApiUrl("/api/leaves/requests"), { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         if (typesRes.ok) {

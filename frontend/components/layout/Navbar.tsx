@@ -1,9 +1,26 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CompanyLogo } from "@/components/common/company-logo";
+import {
+  Bell,
+  Search,
+  X,
+  LayoutDashboard,
+  FolderGit2,
+  Users,
+  Briefcase,
+  MessageSquare,
+  Phone,
+  Video,
+  Clock,
+  Calendar,
+  Settings,
+  ShieldCheck,
+  UserCheck,
+  ArrowRight,
+} from "lucide-react";
 import type { User } from "@/types/auth";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
@@ -20,6 +37,51 @@ type NavbarProps = {
   onSignOut?: () => void;
 };
 
+type NavigationTarget = {
+  title: string;
+  category: string;
+  href: string;
+  keywords: string;
+  icon: React.ComponentType<{ className?: string; size?: number }>;
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
+};
+
+const SIDEBAR_SEARCH_PAGES: NavigationTarget[] = [
+  // Overview
+  { title: "Dashboard", category: "Overview", href: "/dashboard", keywords: "home main kpi metrics stats overview", icon: LayoutDashboard },
+
+  // Work Management
+  { title: "Projects & Tasks", category: "Work Management", href: "/dashboard/projects", keywords: "projects jira sprint tasks work backlog board", icon: FolderGit2 },
+
+  // People
+  { title: "Employees Directory", category: "People", href: "/dashboard/employees", keywords: "employees staff team members users directory people", icon: Users },
+  { title: "Designations", category: "People", href: "/dashboard/designations", keywords: "designations roles departments titles jobs", icon: Briefcase, adminOnly: true },
+
+  // Messenger
+  { title: "Direct Chats", category: "Messenger", href: "/dashboard/messenger/chats", keywords: "chat messenger messages direct dm conversation communication", icon: MessageSquare },
+  { title: "Group Chats", category: "Messenger", href: "/dashboard/messenger/groups", keywords: "groups team channels group chat rooms messaging", icon: Users },
+  { title: "Audio & Video Calls", category: "Messenger", href: "/dashboard/messenger/calls", keywords: "calls voice audio video meeting webrtc phone calling", icon: Phone },
+
+  // HR & Attendance
+  { title: "Attendance & Logs", category: "HR & Attendance", href: "/dashboard/attendance", keywords: "attendance punch clock time tracker presence logs", icon: Clock },
+  { title: "Leave Management", category: "HR & Attendance", href: "/dashboard/leaves", keywords: "leave timeoff holiday vacation sick request balance", icon: Calendar },
+  { title: "Company Calendar", category: "HR & Attendance", href: "/dashboard/company-calendar", keywords: "calendar events company holidays schedule dates", icon: Calendar },
+  { title: "HRMS Settings", category: "HR & Attendance", href: "/dashboard/hr-settings", keywords: "hr settings policies work hours config hrms", icon: Settings, adminOnly: true },
+
+  // Collaboration
+  { title: "Meetings", category: "Collaboration", href: "/dashboard/meetings", keywords: "meetings video livekit conference calls schedule agenda", icon: Video },
+  { title: "Meeting Calendar", category: "Collaboration", href: "/dashboard/meetings/calendar", keywords: "meetings calendar schedule upcoming appointments", icon: Calendar },
+
+  // Administration
+  { title: "Roles & Permissions", category: "Administration", href: "/dashboard/roles", keywords: "roles permissions access security admin authorization", icon: ShieldCheck, adminOnly: true },
+  { title: "Admins Management", category: "Administration", href: "/dashboard/admins", keywords: "admins superadmin management accounts users", icon: UserCheck, superAdminOnly: true },
+
+  // Account
+  { title: "My Profile", category: "Account", href: "/dashboard/profile", keywords: "profile account user details password personal info", icon: UserCheck },
+  { title: "Settings", category: "Account", href: "/dashboard/settings", keywords: "settings preferences preferences configuration theme", icon: Settings, adminOnly: true },
+];
+
 export function Navbar({ user, onSignOut }: NavbarProps) {
   const router = useRouter();
   const { session } = useAuth();
@@ -29,6 +91,13 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  // Search Bar State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedSearchIdx, setSelectedSearchIdx] = useState(0);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -83,6 +152,82 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
     };
   }, [fetchNotifs, router, socket]);
 
+  const currentUser = session?.user || user;
+  const roleName = typeof currentUser?.role === "string"
+    ? currentUser.role
+    : (currentUser?.role as any)?.name || (currentUser?.role === 1 ? "SUPER_ADMIN" : currentUser?.role === 2 ? "ADMIN" : "EMPLOYEE");
+  const userRoleId = typeof currentUser?.role === "number"
+    ? currentUser?.role
+    : (currentUser?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : 3);
+  const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
+  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || userRoleId === 2;
+
+  const accessiblePages = useMemo(() => {
+    return SIDEBAR_SEARCH_PAGES.filter((p) => {
+      if (p.superAdminOnly && !isSuperAdmin) return false;
+      if (p.adminOnly && !isAdminUser) return false;
+      return true;
+    });
+  }, [isAdminUser, isSuperAdmin]);
+
+  const filteredPages = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      return accessiblePages.slice(0, 6);
+    }
+    return accessiblePages.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.keywords.toLowerCase().includes(q)
+    );
+  }, [accessiblePages, searchQuery]);
+
+  useEffect(() => {
+    setSelectedSearchIdx(0);
+  }, [searchQuery]);
+
+  const handleSelectPage = (href: string) => {
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    router.push(href);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isSearchOpen) {
+      if (e.key === "ArrowDown") {
+        setIsSearchOpen(true);
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedSearchIdx((prev) => (prev + 1) % filteredPages.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedSearchIdx((prev) => (prev - 1 + filteredPages.length) % filteredPages.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filteredPages[selectedSearchIdx]) {
+        handleSelectPage(filteredPages[selectedSearchIdx].href);
+      }
+    } else if (e.key === "Escape") {
+      setIsSearchOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -90,6 +235,9 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
       }
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
       }
     };
 
@@ -158,11 +306,111 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
   return (
     <header className="topbar">
-      <Link className="brand" href="/dashboard" aria-label="Infograins HRMS dashboard">
-        <CompanyLogo />
-      </Link>
+      {/* Brand Title on Left (Company Logo is in Sidebar) */}
+      <div className="flex items-center gap-3 shrink-0">
+        <Link className="brand flex items-center gap-2" href="/dashboard" aria-label="Infograins HRMS dashboard">
+          <span className="font-extrabold text-sm sm:text-base tracking-tight text-slate-800">
+            Infograins <span className="text-orange-600 font-black">HRMS</span>
+          </span>
+        </Link>
+      </div>
 
-      <div className="flex items-center gap-4">
+      {/* Search Bar Redirecting to Sidebar Pages */}
+      <div className="relative flex-1 max-w-xs sm:max-w-sm md:max-w-md mx-2 sm:mx-4" ref={searchRef}>
+        <div className="relative flex items-center">
+          <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setIsSearchOpen(true);
+              setSelectedSearchIdx(0);
+            }}
+            onFocus={() => setIsSearchOpen(true)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="      Search..."
+            className="w-full h-10 pl-9 pr-14 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-900 placeholder:text-slate-400 shadow-2xs"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setIsSearchOpen(false);
+              }}
+              className="absolute right-3 p-1 rounded-md text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <kbd className="absolute right-2.5 hidden sm:inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold text-slate-400 bg-white border border-slate-200 rounded-md shadow-2xs">
+              Ctrl K
+            </kbd>
+          )}
+        </div>
+
+        {/* Dropdown Results */}
+        {isSearchOpen && (
+          <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 z-[1000] overflow-hidden max-h-96 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+            <div className="p-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>{searchQuery ? `Matching Pages (${filteredPages.length})` : "Quick Navigation"}</span>
+              <span className="hidden sm:inline">Press Enter to select</span>
+            </div>
+            {filteredPages.length === 0 ? (
+              <div className="p-4 text-center text-xs text-slate-400">
+                No matching pages found for "{searchQuery}".
+              </div>
+            ) : (
+              <div className="p-1 space-y-0.5">
+                {filteredPages.map((page, idx) => {
+                  const PageIcon = page.icon;
+                  const isSelected = idx === selectedSearchIdx;
+                  return (
+                    <button
+                      key={page.href}
+                      type="button"
+                      onMouseEnter={() => setSelectedSearchIdx(idx)}
+                      onClick={() => handleSelectPage(page.href)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-all cursor-pointer ${isSelected
+                        ? "bg-orange-500 text-white font-bold"
+                        : "hover:bg-slate-50 text-slate-800"
+                        }`}
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSelected
+                            ? "bg-white/20 text-white"
+                            : "bg-slate-100 text-slate-600"
+                            }`}
+                        >
+                          <PageIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="truncate">
+                          <p className="font-semibold truncate">{page.title}</p>
+                          <p
+                            className={`text-[10px] truncate ${isSelected ? "text-orange-100" : "text-slate-400"
+                              }`}
+                          >
+                            {page.category}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight
+                        className={`w-3.5 h-3.5 shrink-0 transition-transform ${isSelected ? "text-white translate-x-0.5" : "text-slate-300"
+                          }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-4 shrink-0">
         {/* Notification Bell Dropdown */}
         <div className="relative" ref={notifRef}>
           <button
@@ -175,7 +423,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             style={{ border: "none", background: "none", cursor: "pointer" }}
             aria-label="Notifications"
           >
-            <span style={{ fontSize: "1.25rem" }}>🔔</span>
+            <Bell className="w-5 h-5 text-slate-700" />
             {unreadCount > 0 && (
               <span
                 className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-white animate-pulse"
@@ -366,7 +614,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                       cursor: "pointer",
                       transition: "background-color 0.2s ease",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fca5a5")}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e3a3a3ff")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fee2e2")}
                   >
                     Clear All Notifications
@@ -414,13 +662,13 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
               role="menu"
               className="absolute right-0 mt-2 w-50 origin-top-right rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl ring-1 ring-black/5 focus:outline-none z-[1000] p-1.5 animate-in fade-in zoom-in-95 duration-100"
             >
-            {/* User Info Header */}
+              {/* User Info Header */}
               <div className="px-3 py-2.5 mb-1 rounded-xl bg-gray-50/80 border border-gray-100">
                 <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wider">Signed in as</p>
                 <p className="text-xs font-semibold text-gray-900 truncate mt-0.5">{user.email || user.name}</p>
               </div>
 
-            {/* Menu Options */}
+              {/* Menu Options */}
               <div className="space-y-0.5 mt-2">
                 <button
                   type="button"

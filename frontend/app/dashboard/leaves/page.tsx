@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
+import { buildApiUrl } from "@/lib/api-config";
 import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
 
 type LeaveType = {
@@ -71,9 +72,9 @@ export default function LeavesPage() {
       const token = getAuthToken();
 
       const [typesRes, balancesRes, requestsRes] = await Promise.all([
-        fetch("http://localhost:5000/api/leaves/types", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:5000/api/leaves/balances", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:5000/api/leaves/requests", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(buildApiUrl("/api/leaves/types"), { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(buildApiUrl("/api/leaves/balances"), { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(buildApiUrl("/api/leaves/requests"), { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (typesRes.ok) {
@@ -106,7 +107,7 @@ export default function LeavesPage() {
   const handleAction = async (requestId: number, status: "APPROVED" | "REJECTED") => {
     try {
       const token = getAuthToken();
-      const res = await fetch(`http://localhost:5000/api/leaves/requests/${requestId}/status`, {
+      const res = await fetch(buildApiUrl(`/api/leaves/requests/${requestId}/status`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

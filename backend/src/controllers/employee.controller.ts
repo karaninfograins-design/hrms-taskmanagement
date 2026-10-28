@@ -300,6 +300,17 @@ export const createEmployee = async (
 
     // Use provided roleId or default to EMPLOYEE
     const finalRoleId = roleId || employeeRole?.id;
+    const finalRole = await prisma.role.findUnique({
+      where: { id: finalRoleId },
+      select: { name: true },
+    });
+
+    if (finalRole?.name === "SUPER_ADMIN") {
+      res.status(403).json({
+        message: "The SUPER_ADMIN account can only be provisioned through the bootstrap seed",
+      });
+      return;
+    }
 
     // Check if user with email already exists
     const existingUser = await prisma.user.findUnique({
@@ -420,6 +431,43 @@ export const updateEmployee = async (
       departmentId,
     } = req.body;
 
+    const targetEmployee = await prisma.user.findUnique({
+      where: { id: requestedEmployeeId },
+      select: { roleId: true, role: { select: { name: true } } },
+    });
+
+    if (!targetEmployee) {
+      res.status(404).json({ message: "Employee not found" });
+      return;
+    }
+
+    const isSuperAdmin = targetEmployee.role.name === "SUPER_ADMIN";
+    if (isSuperAdmin && status === "INACTIVE") {
+      res.status(403).json({ message: "The SUPER_ADMIN account cannot be deactivated" });
+      return;
+    }
+
+    if (canManage && roleId) {
+      const requestedRole = await prisma.role.findUnique({
+        where: { id: Number(roleId) },
+        select: { name: true },
+      });
+      if (!requestedRole) {
+        res.status(400).json({ message: "The selected role does not exist" });
+        return;
+      }
+      if (requestedRole?.name === "SUPER_ADMIN" && !isSuperAdmin) {
+        res.status(403).json({
+          message: "The SUPER_ADMIN role can only be assigned through the bootstrap seed",
+        });
+        return;
+      }
+      if (isSuperAdmin && Number(roleId) !== targetEmployee.roleId) {
+        res.status(403).json({ message: "The SUPER_ADMIN role cannot be changed" });
+        return;
+      }
+    }
+
     const userUpdateData: Record<string, unknown> = {};
     if (name) userUpdateData.name = name.trim();
     if (email) userUpdateData.email = email.trim().toLowerCase();
@@ -527,6 +575,21 @@ export const deleteEmployee = async (
           ? "You cannot delete your own account"
           : "You do not have permission to delete this employee"
       });
+      return;
+    }
+
+    const employeeToDelete = await prisma.user.findUnique({
+      where: { id: requestedEmployeeId },
+      select: { role: { select: { name: true } } },
+    });
+
+    if (!employeeToDelete) {
+      res.status(404).json({ message: "Employee not found" });
+      return;
+    }
+
+    if (employeeToDelete.role.name === "SUPER_ADMIN") {
+      res.status(403).json({ message: "The SUPER_ADMIN account cannot be deactivated" });
       return;
     }
 

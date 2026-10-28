@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "prisma skills sync || exit 0",
     "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts"
+    "start": "tsx src/server.ts",
+    "db:migrate": "prisma migrate deploy",
+    "seed": "prisma db seed"
   },
   "keywords": [],
   "author": "",
