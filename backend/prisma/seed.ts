@@ -159,6 +159,8 @@ async function main() {
     { name: "QA Engineer", description: "Ensures software quality, automated testing, and reliability" },
     { name: "UI/UX Designer", description: "Designs user interfaces, experiences, and design systems" },
     { name: "CTO", description: "Chief Technology Officer" },
+    { name: "Digital Marketing Executive", description: "Plans and executes digital marketing campaigns, SEO, and brand growth" },
+    { name: "Business Development", description: "Drives business partnerships, client acquisition, and market expansion" },
   ];
 
   const designations = await Promise.all(
@@ -258,23 +260,24 @@ async function main() {
     },
   ];
 
-  // Ensure only the 3 specified seed users exist
-  const keepEmails = userDefs.map((u) => u.email);
-  await prisma.user.deleteMany({
-    where: {
-      email: { notIn: keepEmails },
-    },
-  });
-
+  // Check if core users exist before creating (safe for already deployed environments)
   const currentYear = new Date().getFullYear();
 
   for (const u of userDefs) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: u.email },
+    });
+
+    if (existingUser) {
+      console.log(`Core user ${u.name} (${u.email}) already exists. Preserving existing account.`);
+      continue;
+    }
+
     const designation = designations.find((d) => d.name === u.designationName);
     const department = departments.find((dept) => dept.code === u.deptCode);
 
-    const user = await prisma.user.upsert({
-      where: { email: u.email },
-      create: {
+    const user = await prisma.user.create({
+      data: {
         name: u.name,
         email: u.email,
         passwordHash,
@@ -282,19 +285,11 @@ async function main() {
         designationId: designation?.id || null,
         status: "ACTIVE",
       },
-      update: {
-        name: u.name,
-        roleId: u.roleId,
-        designationId: designation?.id || null,
-        passwordHash,
-        status: "ACTIVE",
-      },
     });
 
-    // Create / Update EmployeeProfile
-    await prisma.employeeProfile.upsert({
-      where: { userId: user.id },
-      create: {
+    // Create EmployeeProfile
+    await prisma.employeeProfile.create({
+      data: {
         userId: user.id,
         employeeCode: u.employeeCode,
         departmentId: department?.id || null,
@@ -303,24 +298,12 @@ async function main() {
         workLocation: "OFFICE",
         dateOfJoining: new Date(),
       },
-      update: {
-        departmentId: department?.id || null,
-        employmentType: "FULL_TIME",
-        employmentStatus: "PERMANENT",
-      },
     });
 
     // Initialize Leave Balances
     for (const lt of leaveTypes) {
-      await prisma.leaveBalance.upsert({
-        where: {
-          userId_leaveTypeId_year: {
-            userId: user.id,
-            leaveTypeId: lt.id,
-            year: currentYear,
-          },
-        },
-        create: {
+      await prisma.leaveBalance.create({
+        data: {
           userId: user.id,
           leaveTypeId: lt.id,
           year: currentYear,
@@ -328,12 +311,17 @@ async function main() {
           used: 0,
           remaining: lt.daysAllowed,
         },
-        update: {},
       });
     }
+
+    console.log(`Created core user ${u.name} (${u.email}).`);
   }
 
-  console.log(`Seeded ${userDefs.length} users with profiles and leave balances.`);
+  console.log(`Seeded ${userDefs.length} core admin/HR users with profiles and leave balances.`);
+
+  // 9. Seed additional employees (defined at the bottom of this file)
+  await seedAdditionalEmployees(employeeRole.id, leaveTypes);
+
   console.log("HRMS database seed completed successfully!");
 }
 
@@ -345,3 +333,190 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+////////////////////////////////////////////////////////////////////////////////
+// =============================================================================
+//                       SECTION 2: EMPLOYEE SEED DATA
+//        (All Employee Dataset & Seeding Functions Start Below This Line)
+// =============================================================================
+////////////////////////////////////////////////////////////////////////////////
+
+export const additionalEmployees = [
+  {
+    name: "Parmanand Carpenter",
+    email: "parmanandcarpenter@infograins.com",
+    phoneNumber: "6262987989",
+    password: "Password@123",
+    designation: "Blockchain Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-010",
+  },
+  {
+    name: "Karan pushpad",
+    email: "Karanpushpad@infograins.com",
+    phoneNumber: "7415186893",
+    password: "Password@123",
+    designation: "Python Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-011",
+  },
+  {
+    name: "Rishabh Jaiswal",
+    email: "rishabhjaiswal@infograins.com",
+    phoneNumber: "9131641249",
+    password: "Password@123",
+    designation: "Blockchain Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-012",
+  },
+  {
+    name: "Rohit Choudhary",
+    email: "rohitchoudhary@infograins.com",
+    phoneNumber: null,
+    password: "Password@123",
+    designation: "SR. Software Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-013",
+  },
+  {
+    name: "Devendra Lowanshi",
+    email: "devendralowanshi@infograins.com",
+    phoneNumber: "6265475523",
+    password: "Password@123",
+    designation: "SR. Software Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-014",
+  },
+  {
+    name: "Nirmal Patidar",
+    email: "nirmalpatidar@infograins.com",
+    phoneNumber: "8225971274",
+    password: "Password@123",
+    designation: "Project Manager / Full Stack Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-015",
+  },
+  {
+    name: "Rajeev Asrani",
+    email: "rajeevasrani@infograins.com",
+    phoneNumber: "7748905335",
+    password: "Password@123",
+    designation: "Digital Marketing Executive",
+    deptCode: "HR",
+    employeeCode: "EMP-016",
+  },
+  {
+    name: "Pranay Sharma",
+    email: "pranaysharma@infograins.com",
+    phoneNumber: null,
+    password: "Password@123",
+    designation: "Digital Marketing Executive",
+    deptCode: "HR",
+    employeeCode: "EMP-017",
+  },
+  {
+    name: "Ankit patidar",
+    email: "ankitpatidar@infograins.com",
+    phoneNumber: "8878488052",
+    password: "Password@123",
+    designation: "Software Developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-018",
+  },
+  {
+    name: "Atul Mishra",
+    email: "atulmishra@infograins.com",
+    phoneNumber: "7898207125",
+    password: "Password@123",
+    designation: "Business Analyst",
+    deptCode: "PROD",
+    employeeCode: "EMP-019",
+  },
+  {
+    name: "Adiraj shiwarkar",
+    email: "Adirajshiwarkar@infograins.com",
+    phoneNumber: null,
+    password: "Password@123",
+    designation: "AI-ML developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-020",
+  },
+];
+
+export async function seedAdditionalEmployees(employeeRoleId: number, leaveTypes: any[]) {
+  console.log(`Checking and seeding ${additionalEmployees.length} additional employees...`);
+  const currentYear = new Date().getFullYear();
+
+  for (const emp of additionalEmployees) {
+    const normalizedEmail = emp.email.toLowerCase().trim();
+
+    // Check if employee account is already available in the database (safe for deployed environment)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingUser) {
+      console.log(`Employee ${emp.name} (${normalizedEmail}) already exists. Preserving existing account.`);
+      continue;
+    }
+
+    // 1. Ensure Designation exists
+    const designation = await prisma.designation.upsert({
+      where: { name: emp.designation },
+      create: { name: emp.designation, status: true },
+      update: { status: true },
+    });
+
+    // 2. Find Department
+    const department = await prisma.department.findUnique({
+      where: { code: emp.deptCode },
+    });
+
+    // 3. Hash Password
+    const passwordHash = await bcrypt.hash(emp.password, 10);
+
+    // 4. Create User
+    const user = await prisma.user.create({
+      data: {
+        name: emp.name,
+        email: normalizedEmail,
+        phoneNumber: emp.phoneNumber,
+        passwordHash,
+        roleId: employeeRoleId,
+        designationId: designation.id,
+        status: "ACTIVE",
+      },
+    });
+
+    // 5. Create EmployeeProfile
+    await prisma.employeeProfile.create({
+      data: {
+        userId: user.id,
+        employeeCode: emp.employeeCode,
+        departmentId: department?.id || null,
+        employmentType: "FULL_TIME",
+        employmentStatus: "PERMANENT",
+        workLocation: "OFFICE",
+        dateOfJoining: new Date(),
+      },
+    });
+
+    // 6. Initialize Leave Balances
+    for (const lt of leaveTypes) {
+      await prisma.leaveBalance.create({
+        data: {
+          userId: user.id,
+          leaveTypeId: lt.id,
+          year: currentYear,
+          allocated: lt.daysAllowed,
+          used: 0,
+          remaining: lt.daysAllowed,
+        },
+      });
+    }
+
+    console.log(`Created employee ${emp.name} (${normalizedEmail}).`);
+  }
+
+  console.log(`Employee seed check completed.`);
+}

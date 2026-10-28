@@ -8,8 +8,8 @@ import { useAuth } from "@/hooks/use-auth";
 export function LoginForm() {
   const router = useRouter();
   const { saveSession } = useAuth();
-  const [email, setEmail] = useState("superadmin@company.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

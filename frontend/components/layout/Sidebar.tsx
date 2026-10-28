@@ -248,16 +248,7 @@ const personalNavigation: { title: string; items: NavigationItem[] } = {
 };
 
 export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return localStorage.getItem("hrms_sidebar_collapsed") === "true";
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     const nextState = !isCollapsed;
@@ -269,6 +260,14 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
   };
 
   useEffect(() => {
+    // Read saved collapse state after initial client mount to prevent SSR hydration mismatch
+    try {
+      const saved = localStorage.getItem("hrms_sidebar_collapsed");
+      if (saved !== null) {
+        setIsCollapsed(saved === "true");
+      }
+    } catch { }
+
     const handleSync = () => {
       try {
         const saved = localStorage.getItem("hrms_sidebar_collapsed");

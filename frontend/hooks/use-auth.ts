@@ -16,13 +16,6 @@ function parseSession(savedSession: string | null): Session | null {
 }
 
 let memorySessionValue: string | null = null;
-if (typeof window !== "undefined") {
-  try {
-    memorySessionValue = window.localStorage.getItem(SESSION_KEY);
-  } catch {
-    memorySessionValue = null;
-  }
-}
 
 function readSessionValue() {
   if (typeof window === "undefined") return null;
@@ -36,6 +29,7 @@ function readSessionValue() {
 }
 
 function subscribe(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
   window.addEventListener(SESSION_CHANGE_EVENT, onStoreChange);
   window.addEventListener("storage", onStoreChange);
   return () => {
@@ -44,9 +38,9 @@ function subscribe(onStoreChange: () => void) {
   };
 }
 
-const getServerSnapshot = () => memorySessionValue;
+const getServerSnapshot = () => null;
 const getClientHydrationSnapshot = () => true;
-const getServerHydrationSnapshot = () => (typeof window !== "undefined");
+const getServerHydrationSnapshot = () => false;
 
 export function useAuth() {
   const sessionValue = useSyncExternalStore(

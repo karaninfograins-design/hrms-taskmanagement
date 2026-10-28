@@ -14,7 +14,13 @@ build/
 .DS_Store
 Thumbs.db
 
+# Uploads directory
+uploads/
+
 # Test Outputs & Generated Logs
 e2e_results.json
 test_results.log
 e2e_test_suite.cjs
+meeting_test_results.json
+group_call_and_meeting_results.json
+list_old_users.ts
