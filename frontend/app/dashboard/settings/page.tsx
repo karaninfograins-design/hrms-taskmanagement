@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ShieldAlert, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -132,19 +133,40 @@ export default function SettingsPage() {
         <div className="dashboard-frame">
           <Sidebar user={session.user} canCreateAdmins={false} onSignOut={handleSignOut} />
           <section className="dashboard-content">
-            <button onClick={() => router.push("/dashboard")} className="back-button">
-              ← Back
-            </button>
-            <div className="error-message" style={{ margin: "20px 0", padding: "20px", borderRadius: "12px", background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }}>
-              <h2 style={{ margin: "0 0 8px" }}>Access Restricted</h2>
-              <p>Workspace settings and system configuration can only be accessed by Super Administrators.</p>
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="primary-button"
-                style={{ marginTop: "16px" }}
-              >
-                Return to Dashboard
-              </button>
+            <div className="max-w-8xl mx-auto mt-6 sm:mt-10">
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 transition-all">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                      <ShieldAlert className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                        Access Denied
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/dashboard")}
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] transition-all cursor-pointer w-auto"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/dashboard")}
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-orange-500 hover:bg-orange-600 active:scale-[0.98] shadow-xs transition-all cursor-pointer w-auto"
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      <span>Dashboard</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </div>
@@ -362,7 +384,7 @@ export default function SettingsPage() {
                   </label>
                 </div>
               </div>
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => router.back()}

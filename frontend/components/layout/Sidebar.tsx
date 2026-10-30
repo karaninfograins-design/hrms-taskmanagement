@@ -7,6 +7,7 @@ import type { User } from "@/types/auth";
 import Link from "next/link";
 import {
   Menu,
+  X,
   LogOut,
   LayoutDashboard,
   FolderGit2,
@@ -66,6 +67,11 @@ function NavigationLink({ label, href, icon, isCollapsed }: NavigationItem & { i
       title={isCollapsed ? label : undefined}
       aria-current={isActive ? "page" : undefined}
       scroll={false}
+      onClick={() => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("hrms_sidebar_mobile_close"));
+        }
+      }}
     >
       <span className="sidebar-link-icon" aria-hidden="true">
         {renderIcon()}
@@ -86,7 +92,7 @@ function NavigationGroup({ title, items, isCollapsed }: { title: string; items: 
   );
 }
 
-function SidebarBrand({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
+function SidebarBrand({ isCollapsed, onToggle, onMobileClose }: { isCollapsed: boolean; onToggle: () => void; onMobileClose?: () => void }) {
   return (
     <div className={`sidebar-brand ${isCollapsed ? "flex flex-col items-center gap-2 p-0 pb-3" : "flex items-center justify-between gap-2"}`}>
       {!isCollapsed ? (
@@ -100,27 +106,53 @@ function SidebarBrand({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggl
               decoding="sync"
             />
           </div>
-          <button
-            type="button"
-            onClick={onToggle}
-            className="sidebar-toggle-btn shrink-0"
-            title="Collapse Sidebar"
-            aria-label="Collapse Sidebar"
-          >
-            <Menu className="w-4 h-4 text-slate-300 hover:text-white" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={onToggle}
+              className="sidebar-toggle-btn sidebar-desktop-toggle-btn shrink-0 hidden lg:inline-flex"
+              title="Collapse Sidebar"
+              aria-label="Collapse Sidebar"
+            >
+              <Menu className="w-4 h-4 text-slate-300 hover:text-white" />
+            </button>
+            {onMobileClose && (
+              <button
+                type="button"
+                onClick={onMobileClose}
+                className="sidebar-toggle-btn sidebar-mobile-close-btn shrink-0 lg:hidden"
+                title="Close Sidebar"
+                aria-label="Close Sidebar"
+              >
+                <X className="w-4 h-4 text-slate-300 hover:text-white" />
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <div className="flex flex-col items-center gap-2.5 w-full">
-          <button
-            type="button"
-            onClick={onToggle}
-            className="sidebar-toggle-btn"
-            title="Expand Sidebar"
-            aria-label="Expand Sidebar"
-          >
-            <Menu className="w-4 h-4 text-slate-300 hover:text-white" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onToggle}
+              className="sidebar-toggle-btn sidebar-desktop-toggle-btn hidden lg:inline-flex"
+              title="Expand Sidebar"
+              aria-label="Expand Sidebar"
+            >
+              <Menu className="w-4 h-4 text-slate-300 hover:text-white" />
+            </button>
+            {onMobileClose && (
+              <button
+                type="button"
+                onClick={onMobileClose}
+                className="sidebar-toggle-btn sidebar-mobile-close-btn lg:hidden"
+                title="Close Sidebar"
+                aria-label="Close Sidebar"
+              >
+                <X className="w-4 h-4 text-slate-300 hover:text-white" />
+              </button>
+            )}
+          </div>
           <div className="bg-white p-1 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-center w-9 h-9 overflow-hidden">
             <img
               src="/icon.png"
@@ -249,6 +281,13 @@ const personalNavigation: { title: string; items: NavigationItem[] } = {
 
 export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile drawer when path changes
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   const toggleSidebar = () => {
     const nextState = !isCollapsed;
@@ -274,14 +313,34 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
         setIsCollapsed(saved === "true");
       } catch { }
     };
+
+    const handleMobileToggle = () => {
+      setIsMobileOpen((prev) => !prev);
+    };
+
+    const handleMobileClose = () => {
+      setIsMobileOpen(false);
+    };
+
     window.addEventListener("hrms_sidebar_toggle", handleSync);
-    return () => window.removeEventListener("hrms_sidebar_toggle", handleSync);
+    window.addEventListener("hrms_sidebar_mobile_toggle", handleMobileToggle);
+    window.addEventListener("hrms_sidebar_mobile_close", handleMobileClose);
+    return () => {
+      window.removeEventListener("hrms_sidebar_toggle", handleSync);
+      window.removeEventListener("hrms_sidebar_mobile_toggle", handleMobileToggle);
+      window.removeEventListener("hrms_sidebar_mobile_close", handleMobileClose);
+    };
   }, []);
 
-  const roleName = typeof user?.role === "string" ? user.role : (user?.role as any)?.name || (user?.role === 1 ? "SUPER_ADMIN" : user?.role === 2 ? "ADMIN" : "EMPLOYEE");
-  const userRoleId = typeof user?.role === "number" ? user?.role : (user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : 3);
+  const closeMobile = () => setIsMobileOpen(false);
+
+  // When mobile drawer is open, always display full expanded navigation
+  const effectivelyCollapsed = isCollapsed && !isMobileOpen;
+
+  const roleName = typeof user?.role === "string" ? user.role : (user?.role as any)?.name || (user?.role === 1 ? "SUPER_ADMIN" : user?.role === 2 ? "ADMIN" : user?.role === 3 ? "HR" : "EMPLOYEE");
+  const userRoleId = typeof user?.role === "number" ? user?.role : (user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
   const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || userRoleId === 2;
+  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || roleName === "HR" || userRoleId === 2 || userRoleId === 3;
 
   const hrItems = hrNavigation.items.filter(
     (item) => item.href !== "/dashboard/hr-settings" || isAdminUser
@@ -295,42 +354,56 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
     (item) => item.href !== "/dashboard/settings" || isAdminUser
   );
 
+  const userPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
+  const canViewRoles = isSuperAdmin || userPermissions.includes("VIEW_PERMISSIONS") || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
+
   const administrationItems: NavigationItem[] = [
-    ...administrationNavigation.items,
+    ...(canViewRoles ? administrationNavigation.items : []),
     ...(canCreateAdmins || isSuperAdmin
       ? [{ label: "System Admins", href: "/dashboard/admins", icon: UserCheck }]
       : []),
   ];
 
   return (
-    <aside
-      className={`sidebar ${isCollapsed ? "collapsed" : ""}`}
-      aria-label="Dashboard navigation"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
-      <SidebarBrand isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-
-      <nav className="sidebar-menu" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-        <NavigationGroup title={primaryNavigation.title} items={primaryNavigation.items} isCollapsed={isCollapsed} />
-        <NavigationGroup title={messengerNavigation.title} items={messengerNavigation.items} isCollapsed={isCollapsed} />
-        <NavigationGroup title={workspaceNavigation.title} items={workspaceNavigation.items} isCollapsed={isCollapsed} />
-        <NavigationGroup title={peopleNavigation.title} items={peopleItems} isCollapsed={isCollapsed} />
-        <NavigationGroup title={hrNavigation.title} items={hrItems} isCollapsed={isCollapsed} />
-        <NavigationGroup title={collaborationNavigation.title} items={collaborationNavigation.items} isCollapsed={isCollapsed} />
-        {isAdminUser && <NavigationGroup title={administrationNavigation.title} items={administrationItems} isCollapsed={isCollapsed} />}
-        <NavigationGroup title={personalNavigation.title} items={personalItems} isCollapsed={isCollapsed} />
-      </nav>
-
-      {user && onSignOut && (
-        <SidebarLogout
-          user={user}
-          canCreateAdmins={canCreateAdmins}
-          onSignOut={onSignOut}
-          isCollapsed={isCollapsed}
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[99] lg:hidden transition-opacity"
+          onClick={closeMobile}
+          aria-hidden="true"
         />
       )}
 
-      <SidebarFooter isCollapsed={isCollapsed} />
-    </aside>
+      <aside
+        className={`sidebar ${effectivelyCollapsed ? "collapsed" : ""} ${isMobileOpen ? "mobile-open" : ""}`}
+        aria-label="Dashboard navigation"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        <SidebarBrand isCollapsed={effectivelyCollapsed} onToggle={toggleSidebar} onMobileClose={closeMobile} />
+
+        <nav className="sidebar-menu" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <NavigationGroup title={primaryNavigation.title} items={primaryNavigation.items} isCollapsed={effectivelyCollapsed} />
+          <NavigationGroup title={messengerNavigation.title} items={messengerNavigation.items} isCollapsed={effectivelyCollapsed} />
+          <NavigationGroup title={workspaceNavigation.title} items={workspaceNavigation.items} isCollapsed={effectivelyCollapsed} />
+          <NavigationGroup title={peopleNavigation.title} items={peopleItems} isCollapsed={effectivelyCollapsed} />
+          <NavigationGroup title={hrNavigation.title} items={hrItems} isCollapsed={effectivelyCollapsed} />
+          <NavigationGroup title={collaborationNavigation.title} items={collaborationNavigation.items} isCollapsed={effectivelyCollapsed} />
+          {isAdminUser && administrationItems.length > 0 && <NavigationGroup title={administrationNavigation.title} items={administrationItems} isCollapsed={effectivelyCollapsed} />}
+          <NavigationGroup title={personalNavigation.title} items={personalItems} isCollapsed={effectivelyCollapsed} />
+        </nav>
+
+        {user && onSignOut && (
+          <SidebarLogout
+            user={user}
+            canCreateAdmins={canCreateAdmins}
+            onSignOut={onSignOut}
+            isCollapsed={effectivelyCollapsed}
+          />
+        )}
+
+        <SidebarFooter isCollapsed={effectivelyCollapsed} />
+      </aside>
+    </>
   );
 }

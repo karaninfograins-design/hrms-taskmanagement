@@ -94,7 +94,7 @@ export default function SystemAdminsPage() {
             ← Back
           </button>
 
-          <div className="welcome flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="welcome flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <p className="eyebrow">ADMINISTRATION CONTROL</p>
               <h1>System Administrators</h1>
@@ -105,7 +105,7 @@ export default function SystemAdminsPage() {
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <span>+</span> Add New Administrator
               </button>
@@ -116,17 +116,17 @@ export default function SystemAdminsPage() {
           {successMessage && <div className="success-message mb-4">{successMessage}</div>}
 
           {/* Admins Table */}
-          <div className="workspace-list-card">
+          <div className="workspace-list-card rounded-xl sm:rounded-2xl">
             <div className="workspace-table-scroll">
-              <table className="workspace-table">
+              <table className="workspace-table min-w-[640px]">
                 <thead>
                   <tr>
-                    <th>Administrator</th>
-                    <th>Role Level</th>
-                    <th>Email Address</th>
-                    <th>Designation</th>
-                    <th>Account Status</th>
-                    <th>Created Date</th>
+                    <th className="whitespace-nowrap">Administrator</th>
+                    <th className="whitespace-nowrap">Role Level</th>
+                    <th className="whitespace-nowrap">Email Address</th>
+                    <th className="whitespace-nowrap">Designation</th>
+                    <th className="whitespace-nowrap">Account Status</th>
+                    <th className="whitespace-nowrap">Created Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,18 +145,18 @@ export default function SystemAdminsPage() {
                   ) : (
                     admins.map((admin) => (
                       <tr key={admin.id}>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-extrabold text-xs flex items-center justify-center">
+                            <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
                               {admin.name.slice(0, 1).toUpperCase()}
                             </span>
                             <div>
-                              <strong className="text-slate-900 text-xs block">{admin.name}</strong>
+                              <strong className="text-slate-900 text-xs block truncate max-w-[160px]">{admin.name}</strong>
                               <span className="text-[10px] text-slate-400 font-semibold">ADM-{admin.id}</span>
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <span
                             className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${admin.role.name === "SUPER_ADMIN"
                                 ? "bg-slate-900 text-white border-slate-900"
@@ -166,11 +166,11 @@ export default function SystemAdminsPage() {
                             {admin.role.name.replace("_", " ")}
                           </span>
                         </td>
-                        <td className="text-xs font-medium text-slate-600">{admin.email}</td>
-                        <td className="text-xs font-semibold text-slate-700">
+                        <td className="text-xs font-medium text-slate-600 whitespace-nowrap">{admin.email}</td>
+                        <td className="text-xs font-semibold text-slate-700 whitespace-nowrap">
                           {admin.designation?.name || "System Administrator"}
                         </td>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${admin.status === "ACTIVE"
                                 ? "bg-emerald-50 text-emerald-800 border-emerald-200"
@@ -180,7 +180,7 @@ export default function SystemAdminsPage() {
                             {admin.status}
                           </span>
                         </td>
-                        <td className="text-xs font-medium text-slate-500">
+                        <td className="text-xs font-medium text-slate-500 whitespace-nowrap">
                           {new Date(admin.createdAt).toLocaleDateString()}
                         </td>
                       </tr>
@@ -194,7 +194,7 @@ export default function SystemAdminsPage() {
           {/* Create Admin Modal */}
           {showModal && (
             <div className="fixed inset-0 z-[2000] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-6">
+              <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-6 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                   <h3 className="text-base font-extrabold text-slate-900">Add System Administrator</h3>
                   <button type="button" onClick={() => setShowModal(false)} className="text-slate-400 font-bold">

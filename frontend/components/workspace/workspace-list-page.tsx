@@ -68,14 +68,14 @@ export function WorkspaceListPage({ resource, eyebrow, title, description }: Wor
           {isPageLoading ? <p className="workspace-list-empty">Loading {title.toLowerCase()}...</p> : error ? <p className="error-message">{error}</p> : items.length === 0 ? <p className="workspace-list-empty">No {title.toLowerCase()} yet.</p> : (
             <>
               <div className="workspace-table-scroll">
-                <table className="workspace-table">
+                <table className="workspace-table min-w-[600px]">
                   <thead>
-                    <tr>{columns.map((column) => <th key={column}>{column.replace(/([A-Z])/g, " $1")}</th>)}</tr>
+                    <tr>{columns.map((column) => <th key={column} className="whitespace-nowrap">{column.replace(/([A-Z])/g, " $1")}</th>)}</tr>
                   </thead>
                   <tbody>
                     {paginatedItems.map((item) => (
                       <tr key={String(item.id)}>
-                        {columns.map((column) => <td key={column}>{displayValue(item[column])}</td>)}
+                        {columns.map((column) => <td key={column} className="whitespace-nowrap">{displayValue(item[column])}</td>)}
                       </tr>
                     ))}
                   </tbody>

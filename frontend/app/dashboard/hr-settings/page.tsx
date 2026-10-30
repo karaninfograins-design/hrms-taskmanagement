@@ -448,7 +448,7 @@ export default function HRSettingsPage() {
           {/* Header */}
           <div className="welcome mb-6">
             <p className="eyebrow">HR MANAGEMENT</p>
-            <h1 className="text-2xl font-black text-slate-900">Settings & Policy Controls</h1>
+            <h3 className="text-2xl font-black text-slate-900">Settings & Policy Controls</h3>
             <p className="text-xs text-slate-500 font-medium">
               Configure system dropdown options, Leave Types (Comp Off, Sick, Paid), and adjust individual employee leave balances.
             </p>
@@ -576,7 +576,7 @@ export default function HRSettingsPage() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full min-w-[500px] text-left text-xs whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
                           <th className="py-3 px-4">Key Code</th>
@@ -703,7 +703,7 @@ export default function HRSettingsPage() {
                   <p className="text-xs text-slate-400 font-medium">No leave types available.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full min-w-[500px] text-left text-xs whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
                           <th className="py-3 px-4">Leave Type</th>
@@ -771,7 +771,7 @@ export default function HRSettingsPage() {
                   <p className="text-xs text-slate-500 font-medium">Select an employee to adjust their allocated, used, or remaining leave balances.</p>
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
                   <input
                     type="text"
                     placeholder="Search employee name or email..."
@@ -815,7 +815,7 @@ export default function HRSettingsPage() {
 
                   {/* Balances Grid Table */}
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full min-w-[500px] text-left text-xs whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
                           <th className="py-3 px-4">Leave Type</th>
@@ -931,7 +931,7 @@ export default function HRSettingsPage() {
       {/* Edit HR Setting Option Modal */}
       {editingSetting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <h3 className="text-sm font-black text-slate-900">Edit Configured Option</h3>
             <form onSubmit={handleUpdateSetting} className="space-y-4">
               <div>
@@ -983,7 +983,7 @@ export default function HRSettingsPage() {
       {/* Edit Leave Type Modal */}
       {editingLT && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <h3 className="text-sm font-black text-slate-900">Edit System Leave Type</h3>
             <form onSubmit={handleUpdateLeaveType} className="space-y-4">
               <div>

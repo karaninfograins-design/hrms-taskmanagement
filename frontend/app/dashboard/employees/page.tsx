@@ -77,13 +77,13 @@ export default function EmployeesPage() {
   const userRole = session?.user?.role;
   const roleName = typeof userRole === "string"
     ? userRole
-    : (userRole as any)?.name || (userRole === 1 ? "SUPER_ADMIN" : userRole === 2 ? "ADMIN" : "EMPLOYEE");
+    : (userRole as any)?.name || (userRole === 1 ? "SUPER_ADMIN" : userRole === 2 ? "ADMIN" : userRole === 3 ? "HR" : "EMPLOYEE");
   const userRoleId = typeof userRole === "number"
     ? userRole
-    : (userRole as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : 3);
+    : (userRole as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
 
   const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || userRoleId === 2;
+  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || roleName === "HR" || userRoleId === 2 || userRoleId === 3;
 
   const canManageEmployees = isSuperAdmin || (isAdminUser && session?.user?.permissions?.includes("MANAGE_EMPLOYEES"));
   const canCreateAdmins = isSuperAdmin;
@@ -405,28 +405,28 @@ export default function EmployeesPage() {
           {/* Table Container Card */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-100">
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
                       EMPLOYEE
                     </th>
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
                       ROLE
                     </th>
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
                       DESIGNATION
                     </th>
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
                       EMAIL
                     </th>
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
                       PHONE NUMBER
                     </th>
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
                       STATUS
                     </th>
-                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 text-right">
+                    <th className="px-4 py-3.5 text-[11px] font-black uppercase tracking-wider text-slate-500 text-right whitespace-nowrap">
                       ACTIONS
                     </th>
                   </tr>
@@ -434,13 +434,13 @@ export default function EmployeesPage() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-slate-400 font-semibold text-xs">
+                      <td colSpan={7} className="text-center py-12 text-slate-400 font-semibold text-xs whitespace-nowrap">
                         Loading employee list...
                       </td>
                     </tr>
                   ) : employees.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-slate-400 font-semibold text-xs">
+                      <td colSpan={7} className="text-center py-12 text-slate-400 font-semibold text-xs whitespace-nowrap">
                         No employees found matching the filters.
                       </td>
                     </tr>
@@ -454,26 +454,26 @@ export default function EmployeesPage() {
                           key={employee.id}
                           className="hover:bg-slate-50/80 transition-colors"
                         >
-                          <td className="px-4 py-3.5 align-middle">
+                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 font-black text-xs flex items-center justify-center shrink-0">
                                 {avatarLetter}
                               </div>
-                              <div>
-                                <p className="font-bold text-slate-900 text-xs leading-snug">{employee.name}</p>
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 text-xs leading-snug truncate max-w-[160px]">{employee.name}</p>
                                 <p className="text-[11px] font-medium text-slate-400">ID: #{employee.id}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 align-middle">
+                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                             <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
                               {employee.role?.name || "N/A"}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle text-xs font-semibold text-slate-700">
+                          <td className="px-4 py-3.5 align-middle text-xs font-semibold text-slate-700 whitespace-nowrap">
                             {employee.designation?.name || "N/A"}
                           </td>
-                          <td className="px-4 py-3.5 align-middle text-xs font-semibold">
+                          <td className="px-4 py-3.5 align-middle text-xs font-semibold whitespace-nowrap">
                             <a
                               href={`mailto:${employee.email}`}
                               className="text-orange-600 hover:text-orange-700 hover:underline transition-colors"
@@ -481,10 +481,10 @@ export default function EmployeesPage() {
                               {employee.email}
                             </a>
                           </td>
-                          <td className="px-4 py-3.5 align-middle text-xs font-medium text-slate-600">
+                          <td className="px-4 py-3.5 align-middle text-xs font-medium text-slate-600 whitespace-nowrap">
                             {employee.phoneNumber || "—"}
                           </td>
-                          <td className="px-4 py-3.5 align-middle">
+                          <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                             <span
                               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${isRowActive
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -495,7 +495,7 @@ export default function EmployeesPage() {
                               {employee.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 align-middle text-right">
+                          <td className="px-4 py-3.5 align-middle text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-2">
                               {/* View Employee */}
                               <div>

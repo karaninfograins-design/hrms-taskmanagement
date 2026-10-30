@@ -88,11 +88,11 @@ export default function CompanyCalendarPage() {
 
   const roleName = typeof session?.user?.role === "string"
     ? session.user.role
-    : (session?.user?.role as any)?.name || (session?.user?.role === 1 ? "SUPER_ADMIN" : session?.user?.role === 2 ? "ADMIN" : session?.user?.role === 4 ? "HR" : "EMPLOYEE");
+    : (session?.user?.role as any)?.name || (session?.user?.role === 1 ? "SUPER_ADMIN" : session?.user?.role === 2 ? "ADMIN" : session?.user?.role === 3 ? "HR" : "EMPLOYEE");
   const userRoleId = typeof session?.user?.role === "number"
     ? session.user.role
-    : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 4 : 3);
-  const isHrOrAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR" || userRoleId === 1 || userRoleId === 2 || userRoleId === 4;
+    : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
+  const isHrOrAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR" || userRoleId === 1 || userRoleId === 2 || userRoleId === 3;
 
   const handleCreateHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,7 +199,7 @@ export default function CompanyCalendarPage() {
                 {isHrOrAdmin && (
                   <button
                     onClick={() => setShowModal(true)}
-                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-md transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300/30"
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-md transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300/30 w-full sm:w-auto"
                   >
                     <Plus size={16} />
                     Add calendar event
@@ -417,7 +417,7 @@ export default function CompanyCalendarPage() {
           {/* Add Holiday Modal */}
           {showModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-              <div className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-7">
+              <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-7">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-orange-600">Company calendar</p>

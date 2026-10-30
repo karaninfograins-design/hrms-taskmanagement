@@ -396,7 +396,7 @@ export default function GroupChatsPage() {
         <Sidebar user={session.user} onSignOut={handleSignOut} />
         <section className="dashboard-content" style={{ padding: "0", display: "flex", height: "calc(100vh - 64px)" }}>
           {/* Groups Sidebar */}
-          <div className="flex h-full w-full flex-col border-r border-slate-200 bg-white md:w-80">
+          <div className={`h-full w-full flex-col border-r border-slate-200 bg-white md:w-80 ${activeGroup ? "hidden md:flex" : "flex"}`}>
             <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/80 via-white to-white p-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">Team communication</span>

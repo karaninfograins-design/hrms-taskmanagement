@@ -19,7 +19,7 @@ export const getAdmins = async (req: Request, res: Response): Promise<void> => {
       include: { role: true },
     });
 
-    if (!requestingUser || (requestingUser.role.name !== "SUPER_ADMIN" && requestingUser.role.name !== "ADMIN")) {
+    if (!requestingUser || (requestingUser.role.name !== "SUPER_ADMIN" && requestingUser.role.name !== "ADMIN" && requestingUser.role.name !== "HR")) {
       res.status(403).json({ message: "Access denied. Only administrators can view admin list" });
       return;
     }

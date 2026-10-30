@@ -159,7 +159,7 @@ export default function LeavesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 welcome mb-6">
             <div>
               <p className="eyebrow">LEAVE MANAGEMENT</p>
-              <h1 className="text-2xl font-black text-slate-900">Leave Requests & Balances</h1>
+              <h3 className="text-2xl font-black text-slate-900">Leave Requests & Balances</h3>
               <p className="text-xs text-slate-500 font-medium">
                 Track leave balances, apply for leave, and manage leave approval workflows.
               </p>
@@ -167,7 +167,7 @@ export default function LeavesPage() {
             {!isSuperAdmin && (
               <button
                 onClick={() => setShowApplyModal(true)}
-                className="px-4 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl transition-all shadow-xs text-xs"
+                className="w-full sm:w-auto text-center justify-center px-4 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl transition-all shadow-xs text-xs"
               >
                 + Apply For Leave
               </button>
@@ -269,7 +269,7 @@ export default function LeavesPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[640px] text-left text-xs whitespace-nowrap">
                   <thead>
                     <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
                       <th className="py-3 px-4">Employee</th>
@@ -284,8 +284,8 @@ export default function LeavesPage() {
                   <tbody className="divide-y divide-slate-100">
                     {(() => {
                       const roleName = typeof session?.user?.role === "string" ? session.user.role : (session?.user?.role as any)?.name || "";
-                      const userRoleId = typeof session?.user?.role === "number" ? session?.user?.role : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : 3);
-                      const isAdmin = roleName === "SUPER_ADMIN" || roleName === "ADMIN" || userRoleId === 1 || userRoleId === 2;
+                      const userRoleId = typeof session?.user?.role === "number" ? session?.user?.role : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
+                      const isAdmin = roleName === "SUPER_ADMIN" || roleName === "ADMIN" || roleName === "HR" || userRoleId === 1 || userRoleId === 2 || userRoleId === 3;
 
                       const displayRequests = !isAdmin
                         ? requests.filter((req: any) => req.user?.email === session?.user?.email || req.userId === session?.user?.id)

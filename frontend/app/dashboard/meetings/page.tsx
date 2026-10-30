@@ -269,14 +269,14 @@ export default function MeetingsPage() {
                 <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => router.push("/dashboard/meetings/calendar")}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/20"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/20 w-full sm:w-auto"
               >
                 <CalendarDays size={15} />
                 Calendar
               </button>
               <button
                 onClick={() => openScheduleModal()}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 w-full sm:w-auto"
               >
                 <Plus size={15} />
                 Schedule meeting
@@ -428,7 +428,7 @@ export default function MeetingsPage() {
           {/* Schedule / Edit Modal */}
           {showScheduleModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-              <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 space-y-4">
                 <h2 className="text-base font-black text-slate-900">
                   {editingMeeting ? "Edit Meeting" : "Schedule New Meeting"}
                 </h2>

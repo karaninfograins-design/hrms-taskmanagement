@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  Menu,
   Bell,
   Search,
   X,
@@ -155,20 +156,24 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   const currentUser = session?.user || user;
   const roleName = typeof currentUser?.role === "string"
     ? currentUser.role
-    : (currentUser?.role as any)?.name || (currentUser?.role === 1 ? "SUPER_ADMIN" : currentUser?.role === 2 ? "ADMIN" : "EMPLOYEE");
+    : (currentUser?.role as any)?.name || (currentUser?.role === 1 ? "SUPER_ADMIN" : currentUser?.role === 2 ? "ADMIN" : currentUser?.role === 3 ? "HR" : "EMPLOYEE");
   const userRoleId = typeof currentUser?.role === "number"
     ? currentUser?.role
-    : (currentUser?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : 3);
+    : (currentUser?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
   const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || userRoleId === 2;
+  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || roleName === "HR" || userRoleId === 2 || userRoleId === 3;
+
+  const userPermissions = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
+  const canViewRoles = isSuperAdmin || userPermissions.includes("VIEW_PERMISSIONS") || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
 
   const accessiblePages = useMemo(() => {
     return SIDEBAR_SEARCH_PAGES.filter((p) => {
       if (p.superAdminOnly && !isSuperAdmin) return false;
       if (p.adminOnly && !isAdminUser) return false;
+      if (p.href === "/dashboard/roles" && !canViewRoles) return false;
       return true;
     });
-  }, [isAdminUser, isSuperAdmin]);
+  }, [isAdminUser, isSuperAdmin, canViewRoles]);
 
   const filteredPages = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -306,12 +311,48 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
   return (
     <header className="topbar">
-      {/* Brand Title on Left (Company Logo is in Sidebar) */}
-      <div className="flex items-center gap-3 shrink-0">
-        <Link className="brand flex items-center gap-2" href="/dashboard" aria-label="Infograins HRMS dashboard">
-          <span className="font-extrabold text-sm sm:text-base tracking-tight text-slate-800">
-            Infograins <span className="text-orange-600 font-black">HRMS</span>
-          </span>
+      {/* Brand Title & Logo on Left */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("hrms_sidebar_mobile_toggle"))}
+          className="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+          title="Toggle Navigation Menu"
+          aria-label="Toggle navigation menu"
+        >
+          <Menu className="w-5 h-5 text-slate-700" />
+        </button>
+
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2.5 group transition-all active:scale-[0.98] select-none"
+          aria-label="Infograins HRMS dashboard"
+        >
+          {/* <div className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-orange-50/80 border border-orange-200/90 shadow-2xs group-hover:border-orange-300 group-hover:shadow-xs transition-all overflow-hidden p-1 shrink-0">
+            <img
+              src="/icon.png"
+              alt="Infograins Logo"
+              className="h-full w-full object-contain"
+              loading="eager"
+            />
+          </div> */}
+
+          <div className="group flex min-w-0 items-center gap-2 whitespace-nowrap">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-md outline-none">
+              <span className="text-[15px] font-extrabold tracking-[-0.045em] text-slate-800 transition-colors duration-200 group-hover:text-orange-600 sm:text-base">
+                Infograins
+              </span>
+            </span>
+
+            {/* Product identifier */}
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-200/80 bg-orange-50 px-2 py-1 text-[9px] font-extrabold uppercase leading-none tracking-[0.045em] text-orange-700 transition-all duration-200 hover:border-orange-300 hover:bg-orange-100 sm:text-[10px]">
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-40" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
+              </span>
+              <span>HRMS &amp; Task Management</span>
+            </span>
+          </div>
         </Link>
       </div>
 
@@ -353,7 +394,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
         {/* Dropdown Results */}
         {isSearchOpen && (
-          <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 z-[1000] overflow-hidden max-h-96 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute left-0 sm:right-0 w-[calc(100vw-28px)] sm:w-auto sm:min-w-full max-w-sm mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 z-[1000] overflow-hidden max-h-96 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
             <div className="p-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <span>{searchQuery ? `Matching Pages (${filteredPages.length})` : "Quick Navigation"}</span>
               <span className="hidden sm:inline">Press Enter to select</span>
@@ -453,7 +494,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                 position: "absolute",
                 right: 0,
                 marginTop: "8px",
-                width: "360px",
+                width: "min(360px, calc(100vw - 24px))",
                 maxHeight: "480px",
                 backgroundColor: "#ffffff",
                 borderRadius: "16px",

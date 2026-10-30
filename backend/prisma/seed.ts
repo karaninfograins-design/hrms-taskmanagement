@@ -110,6 +110,7 @@ async function main() {
     "MANAGE_USERS", "MANAGE_EMPLOYEES", "CREATE_PROJECTS", "MANAGE_PROJECTS",
     "CREATE_SPRINTS", "MANAGE_SPRINTS", "CREATE_WORK_ITEMS", "MANAGE_WORK_ITEMS",
     "VIEW_WORK_ITEMS", "ASSIGN_WORK", "VIEW_REPORTS",
+    "VIEW_PERMISSIONS", "MANAGE_PERMISSIONS",
   ];
   const adminPermObjs = permissions.filter((p) => adminPermissionNames.includes(p.name));
   await prisma.rolePermission.createMany({
@@ -120,10 +121,11 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // HR permissions
+  // HR permissions (HR has same permissions as Admin + MANAGE_SETTINGS and employee:delete)
   const hrPermissionNames = [
-    "employee:view", "employee:create", "employee:edit", "employee:delete",
-    "MANAGE_EMPLOYEES", "VIEW_WORK_ITEMS", "VIEW_REPORTS", "MANAGE_SETTINGS",
+    ...adminPermissionNames,
+    "employee:delete",
+    "MANAGE_SETTINGS",
   ];
   const hrPermObjs = permissions.filter((p) => hrPermissionNames.includes(p.name));
   await prisma.rolePermission.createMany({
@@ -230,13 +232,13 @@ async function main() {
   console.log("HR Settings seeded.");
 
   // 8. Seed Default Users (Super Admin, Admin, HR, Employee)
-  const defaultPassword = process.env.DEFAULT_SEED_PASSWORD || "password";
+  const defaultPassword = process.env.DEFAULT_SEED_PASSWORD || "Securepassword";
   const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
   const userDefs = [
     {
       name: "Super Admin",
-      email: "superadmin@company.com",
+      email: "superadmin@infograins.com",
       roleId: superAdminRole.id,
       designationName: "CTO",
       deptCode: "ENG",
@@ -244,19 +246,19 @@ async function main() {
     },
     {
       name: "Admin",
-      email: "admin@hrms.com",
+      email: "admin@infograins.com",
       roleId: adminRole.id,
       designationName: "DevOps Engineer",
       deptCode: "OPS",
-      employeeCode: "EMP-003",
+      employeeCode: "EMP-002",
     },
     {
       name: "HR Manager",
-      email: "hr@hrms.com",
+      email: "hr@infograins.com",
       roleId: hrRole.id,
       designationName: "HR Manager",
       deptCode: "HR",
-      employeeCode: "EMP-005",
+      employeeCode: "EMP-003",
     },
   ];
 
@@ -349,7 +351,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Blockchain Developer",
     deptCode: "ENG",
-    employeeCode: "EMP-010",
+    employeeCode: "EMP-004",
   },
   {
     name: "Karan pushpad",
@@ -358,7 +360,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Python Developer",
     deptCode: "ENG",
-    employeeCode: "EMP-011",
+    employeeCode: "EMP-005",
   },
   {
     name: "Rishabh Jaiswal",
@@ -367,7 +369,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Blockchain Developer",
     deptCode: "ENG",
-    employeeCode: "EMP-012",
+    employeeCode: "EMP-006",
   },
   {
     name: "Rohit Choudhary",
@@ -376,7 +378,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "SR. Software Developer",
     deptCode: "ENG",
-    employeeCode: "EMP-013",
+    employeeCode: "EMP-007",
   },
   {
     name: "Devendra Lowanshi",
@@ -385,16 +387,16 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "SR. Software Developer",
     deptCode: "ENG",
-    employeeCode: "EMP-014",
+    employeeCode: "EMP-008",
   },
   {
     name: "Nirmal Patidar",
     email: "nirmalpatidar@infograins.com",
     phoneNumber: "8225971274",
     password: "Password@123",
-    designation: "Project Manager / Full Stack Developer",
+    designation: "Project lead",
     deptCode: "ENG",
-    employeeCode: "EMP-015",
+    employeeCode: "EMP-009",
   },
   {
     name: "Rajeev Asrani",
@@ -403,7 +405,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Digital Marketing Executive",
     deptCode: "HR",
-    employeeCode: "EMP-016",
+    employeeCode: "EMP-010",
   },
   {
     name: "Pranay Sharma",
@@ -412,7 +414,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Digital Marketing Executive",
     deptCode: "HR",
-    employeeCode: "EMP-017",
+    employeeCode: "EMP-011",
   },
   {
     name: "Ankit patidar",
@@ -421,7 +423,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Software Developer",
     deptCode: "ENG",
-    employeeCode: "EMP-018",
+    employeeCode: "EMP-012",
   },
   {
     name: "Atul Mishra",
@@ -430,7 +432,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "Business Analyst",
     deptCode: "PROD",
-    employeeCode: "EMP-019",
+    employeeCode: "EMP-013",
   },
   {
     name: "Adiraj shiwarkar",
@@ -439,7 +441,7 @@ export const additionalEmployees = [
     password: "Password@123",
     designation: "AI-ML developer",
     deptCode: "ENG",
-    employeeCode: "EMP-020",
+    employeeCode: "EMP-014",
   },
 ];
 

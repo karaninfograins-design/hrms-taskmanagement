@@ -7,3 +7,9 @@ export function login(credentials: LoginCredentials) {
     body: JSON.stringify(credentials),
   });
 }
+
+export function getMe(token: string) {
+  return apiRequest<{ user: Session["user"] }>("/api/auth/me", {
+    token,
+  });
+}

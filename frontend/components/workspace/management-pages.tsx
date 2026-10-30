@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -51,7 +51,7 @@ export function DesignationManager() {
     <DashboardShell>
       <div className="welcome">
         <p className="eyebrow">ADMINISTRATION</p>
-        <h1>Designations</h1>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Designations</h2>
         <p>Create, update, or deactivate job titles.</p>
       </div>
 
@@ -160,9 +160,16 @@ export function RolesPermissionManager() {
   const [roleId, setRoleId] = useState<number>();
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
+  const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [permissionName, setPermissionName] = useState("");
   const [permissionDescription, setPermissionDescription] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const userPermissions = useMemo(() => Array.isArray(session?.user?.permissions) ? session.user.permissions : [], [session?.user?.permissions]);
+  const roleName = typeof session?.user?.role === "string" ? session.user.role : (session?.user?.role as any)?.name;
+  const isSuperAdmin = roleName === "SUPER_ADMIN" || (session?.user?.role as any) === 1;
+  const canViewRoles = isSuperAdmin || userPermissions.includes("VIEW_PERMISSIONS") || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
+  const canManageRoles = isSuperAdmin || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
 
   const pageSize = 8;
   const totalPages = Math.ceil(permissions.length / pageSize);
@@ -171,16 +178,32 @@ export function RolesPermissionManager() {
     currentPage * pageSize
   );
 
-  const load = () =>
-    session?.token &&
-    getRoles(session.token).then(({ roles, permissions }) => {
-      setRoles(roles);
-      setPermissions(permissions);
-      if (!roleId && roles[0]) {
-        setRoleId(roles[0].id);
-        setSelected(roles[0].permissionIds);
-      }
-    });
+  const load = () => {
+    if (!session?.token) return;
+    getRoles(session.token)
+      .then(({ roles, permissions }) => {
+        setAccessDenied(null);
+        setRoles(roles);
+        setPermissions(permissions);
+        if (!roleId && roles[0]) {
+          setRoleId(roles[0].id);
+          setSelected(roles[0].permissionIds);
+        }
+      })
+      .catch((err) => {
+        const errorText = err instanceof Error ? err.message : "Failed to load roles and permissions";
+        if (
+          errorText.toLowerCase().includes("permission") ||
+          errorText.toLowerCase().includes("access") ||
+          errorText.toLowerCase().includes("denied") ||
+          errorText.toLowerCase().includes("403")
+        ) {
+          setAccessDenied(errorText);
+        } else {
+          setMessage(errorText);
+        }
+      });
+  };
 
   useEffect(() => {
     load();
@@ -195,38 +218,48 @@ export function RolesPermissionManager() {
     setMessage("");
   };
 
-  const toggle = (name: string) =>
+  const toggle = (name: string) => {
+    if (!canManageRoles) return;
     setSelected((current) =>
       current.includes(name)
         ? current.filter((item) => item !== name)
         : [...current, name]
     );
+  };
 
   const save = async () => {
-    if (!session?.token || !roleId) return;
-    await saveRolePermissions(
-      roleId,
-      permissions
-        .filter((p) => selected.includes(p.name))
-        .map((p) => p.id),
-      session.token
-    );
-    setMessage("Permissions saved.");
-    load();
+    if (!session?.token || !roleId || !canManageRoles) return;
+    try {
+      await saveRolePermissions(
+        roleId,
+        permissions
+          .filter((p) => selected.includes(p.name))
+          .map((p) => p.id),
+        session.token
+      );
+      setMessage("Permissions saved.");
+      load();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to update permissions");
+    }
   };
 
   const addPermission = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!session?.token) return;
-    await createPermission(
-      permissionName,
-      permissionDescription,
-      session.token
-    );
-    setPermissionName("");
-    setPermissionDescription("");
-    setMessage("Permission added.");
-    load();
+    if (!session?.token || !canManageRoles) return;
+    try {
+      await createPermission(
+        permissionName,
+        permissionDescription,
+        session.token
+      );
+      setPermissionName("");
+      setPermissionDescription("");
+      setMessage("Permission added.");
+      load();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to add permission");
+    }
   };
 
   const removeRole = async () => {
@@ -234,6 +267,7 @@ export function RolesPermissionManager() {
       !session?.token ||
       !roleId ||
       !role ||
+      !isSuperAdmin ||
       !confirm(`Delete role "${role.name}"?`)
     )
       return;
@@ -243,12 +277,45 @@ export function RolesPermissionManager() {
     load();
   };
 
+  if (accessDenied || (!canViewRoles && !isSuperAdmin)) {
+    return (
+      <DashboardShell>
+        <div className="welcome">
+          <p className="eyebrow" style={{ color: "#ef4444" }}>ACCESS RESTRICTED</p>
+          <h1 style={{ color: "#0f172a" }}>Roles & permissions</h1>
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "24px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: "12px",
+              color: "#991b1b",
+            }}
+          >
+            <h3 style={{ margin: "0 0 8px 0", fontSize: "1.1rem", fontWeight: 700 }}>
+              Access Denied
+            </h3>
+            <p style={{ margin: 0, fontSize: "0.95rem" }}>
+              {accessDenied || "Your account does not have the \"VIEW_PERMISSIONS\" permission required to view or manage role configurations. Please contact a Super Administrator to grant access."}
+            </p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell>
       <div className="welcome">
         <p className="eyebrow">ADMINISTRATION</p>
-        <h1>Roles & permissions</h1>
+        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Roles & permissions</h3>
         <p>Select a role, then use the switches to grant or remove each permission.</p>
+        {!canManageRoles && (
+          <div style={{ marginTop: "10px", padding: "8px 12px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "0.85rem", color: "#475569", fontWeight: 500 }}>
+            ℹ️ Read-Only Mode: You have permission to view roles and permissions. Editing permissions requires "MANAGE_PERMISSIONS".
+          </div>
+        )}
       </div>
 
       <div className="role-manager">
@@ -266,20 +333,22 @@ export function RolesPermissionManager() {
         </aside>
 
         <div className="permission-list">
-          <form className="permission-create" onSubmit={addPermission}>
-            <input
-              placeholder="New permission"
-              value={permissionName}
-              onChange={(e) => setPermissionName(e.target.value)}
-              required
-            />
-            <input
-              placeholder="Description"
-              value={permissionDescription}
-              onChange={(e) => setPermissionDescription(e.target.value)}
-            />
-            <button className="text-button">Add permission</button>
-          </form>
+          {canManageRoles && (
+            <form className="permission-create" onSubmit={addPermission}>
+              <input
+                placeholder="New permission"
+                value={permissionName}
+                onChange={(e) => setPermissionName(e.target.value)}
+                required
+              />
+              <input
+                placeholder="Description"
+                value={permissionDescription}
+                onChange={(e) => setPermissionDescription(e.target.value)}
+              />
+              <button className="text-button">Add permission</button>
+            </form>
+          )}
 
           <div
             style={{
@@ -289,7 +358,7 @@ export function RolesPermissionManager() {
             }}
           >
             <h2>{role?.name || "Select a role"}</h2>
-            {role &&
+            {isSuperAdmin && role &&
               !["SUPER_ADMIN", "ADMIN", "EMPLOYEE"].includes(role.name) && (
                 <button
                   type="button"
@@ -303,7 +372,7 @@ export function RolesPermissionManager() {
           </div>
 
           {paginatedPermissions.map((permission) => (
-            <label className="permission-row" key={permission.id}>
+            <label className={`permission-row ${!canManageRoles ? "opacity-75 cursor-not-allowed" : ""}`} key={permission.id}>
               <span>
                 <strong>{permission.name.replaceAll("_", " ")}</strong>
                 <small>{permission.description}</small>
@@ -311,6 +380,7 @@ export function RolesPermissionManager() {
               <input
                 type="checkbox"
                 checked={selected.includes(permission.name)}
+                disabled={!canManageRoles}
                 onChange={() => toggle(permission.name)}
               />
               <i />
@@ -355,9 +425,11 @@ export function RolesPermissionManager() {
             </div>
           )}
 
-          <button className="primary-button" onClick={save}>
-            Apply permissions
-          </button>
+          {canManageRoles && (
+            <button className="primary-button" onClick={save}>
+              Apply permissions
+            </button>
+          )}
           {message && <p className="success-message">{message}</p>}
         </div>
       </div>

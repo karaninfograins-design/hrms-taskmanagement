@@ -12,7 +12,20 @@ async function authenticate(req: Request, res: Response) {
 
   try {
     const { userId } = verifyToken(token);
-    const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
+    });
     if (!user || user.status !== "ACTIVE") {
       res.status(403).json({ message: "Your account is not allowed to access this workspace" });
       return false;
@@ -25,8 +38,47 @@ async function authenticate(req: Request, res: Response) {
 }
 
 function adminOnly(role: string, res: Response) {
-  if (role === "SUPER_ADMIN" || role === "ADMIN") return true;
+  if (role === "SUPER_ADMIN" || role === "ADMIN" || role === "HR") return true;
   res.status(403).json({ message: "Administrator access is required" });
+  return false;
+}
+
+function hasUserPermission(user: any, permissionNames: string[]): boolean {
+  if (user?.role?.name === "SUPER_ADMIN") return true;
+  const userPerms: string[] = (user?.role?.permissions || []).map(
+    (rp: any) => rp?.permission?.name || rp?.name
+  );
+  return permissionNames.some((p) => userPerms.includes(p));
+}
+
+function canViewRolesAndPermissions(user: any, res: Response) {
+  if (
+    user?.role?.name === "SUPER_ADMIN" ||
+    hasUserPermission(user, [
+      "VIEW_PERMISSIONS",
+      "MANAGE_PERMISSIONS",
+      "MANAGE_ROLES",
+      "admin:role_manage",
+    ])
+  ) {
+    return true;
+  }
+  res.status(403).json({ message: "You do not have permission to view roles and permissions" });
+  return false;
+}
+
+function canManageRolesAndPermissions(user: any, res: Response) {
+  if (
+    user?.role?.name === "SUPER_ADMIN" ||
+    hasUserPermission(user, [
+      "MANAGE_PERMISSIONS",
+      "MANAGE_ROLES",
+      "admin:role_manage",
+    ])
+  ) {
+    return true;
+  }
+  res.status(403).json({ message: "Only an authorized administrator can manage roles and permissions" });
   return false;
 }
 
@@ -371,7 +423,7 @@ export async function createWorkItem(req: Request, res: Response) {
       const adminUsers = await prisma.user.findMany({
         where: {
           status: "ACTIVE",
-          role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+          role: { name: { in: ["ADMIN", "SUPER_ADMIN", "HR"] } },
         },
         select: { id: true },
       });
@@ -529,7 +581,7 @@ export async function updateWorkItem(req: Request, res: Response) {
       const adminUsers = await prisma.user.findMany({
         where: {
           status: "ACTIVE",
-          role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+          role: { name: { in: ["ADMIN", "SUPER_ADMIN", "HR"] } },
         },
         select: { id: true },
       });
@@ -618,7 +670,7 @@ export async function deleteWorkItemComment(req: Request, res: Response) {
   });
 
   const isAuthor = comment.userId === user.id;
-  const isAdmin = user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN";
+  const isAdmin = user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN" || user.role.name === "HR";
 
   if (!isAuthor && !isAdmin && !member) {
     res.status(403).json({ message: "You do not have permission to delete this comment" });
@@ -733,7 +785,7 @@ export async function createProject(req: Request, res: Response) {
 
   // Non-blocking asynchronous notification dispatch
   prisma.user.findMany({
-    where: { status: "ACTIVE", role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } } },
+    where: { status: "ACTIVE", role: { name: { in: ["ADMIN", "SUPER_ADMIN", "HR"] } } },
     select: { id: true }
   }).then((admins) => {
     if (admins.length > 0) {
@@ -1007,7 +1059,7 @@ export async function deleteDesignation(req: Request, res: Response) {
 
 export async function listRoles(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !superAdminOnly(user.role.name, res)) return;
+  if (!user || !canViewRolesAndPermissions(user, res)) return;
   const [roles, permissions] = await Promise.all([prisma.role.findMany({
     where: { status: true },
     select: { id: true, name: true, description: true, status: true, permissions: { select: { permission: { select: { name: true } } } } },
@@ -1040,7 +1092,7 @@ export async function deleteRole(req: Request, res: Response) {
 
 export async function updateRolePermissions(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !superAdminOnly(user.role.name, res)) return;
+  if (!user || !canManageRolesAndPermissions(user, res)) return;
   const permissionIds = req.body?.permissionIds;
   if (!Array.isArray(permissionIds) || permissionIds.some((id) => typeof id !== "number")) { res.status(400).json({ message: "permissionIds must be an array of permission IDs" }); return; }
   const roleId = Number(req.params.id);
@@ -1052,7 +1104,7 @@ export async function updateRolePermissions(req: Request, res: Response) {
 
 export async function createPermission(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !superAdminOnly(user.role.name, res)) return;
+  if (!user || !canManageRolesAndPermissions(user, res)) return;
   const { name, description } = req.body as { name?: unknown; description?: unknown };
   if (typeof name !== "string" || !name.trim()) { res.status(400).json({ message: "Permission name is required" }); return; }
   try {

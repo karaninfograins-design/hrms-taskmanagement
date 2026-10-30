@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/workspace/management-pages";
 import { useAuth } from "@/hooks/use-auth";
-
+import { Search } from "lucide-react";
 import {
   addWorkItemComment,
   createWorkItem,
@@ -2146,7 +2146,7 @@ export function ProjectDetailsPage() {
                   </div>
 
                   {/* WORK ITEMS TABLE WITH ASSIGNEE & COMMENTS INTEGRATION */}
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "12px"}}>Sprint Work Items</h3>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "12px" }}>Sprint Work Items</h3>
                   {selectedSprintItems.length > 0 ? (
                     <div className="workspace-table-scroll">
                       <table className="workspace-table">
@@ -2714,22 +2714,21 @@ export function ProjectDetailsPage() {
                 }}
               >
                 <div style={{ position: "relative", width: "240px" }}>
-                  <span
+                  <Search
+                    size={16}
+                    strokeWidth={1.8}
+                    color="var(--muted, #64748b)"
                     style={{
                       position: "absolute",
                       left: "10px",
                       top: "50%",
                       transform: "translateY(-50%)",
-                      fontSize: "0.85rem",
-                      color: "var(--muted, #64748b)",
                       pointerEvents: "none",
                     }}
-                  >
-                    🔍
-                  </span>
+                  />
                   <input
                     type="text"
-                    placeholder="Search work items..."
+                    placeholder="Search work items."
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
                     style={{
@@ -3794,15 +3793,19 @@ export function SprintDetailsPage() {
     >
       <div
         onClick={() => { setFilters({ ...filters, type: "" }); setFilterDropdown(null); }}
-        style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.type ? 700 : 400,
+        style={{
+          padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.type ? 700 : 400,
           background: !filters.type ? "#fff7ed" : "transparent", color: !filters.type ? "#ea580c" : "#0f172a",
-          cursor: "pointer", fontSize: "0.85rem" }}
+          cursor: "pointer", fontSize: "0.85rem"
+        }}
       >All Types</div>
       {(["EPIC", "STORY", "TASK", "FEATURE", "BUG", "SUBTASK"]).map((t) => (
         <div key={t} onClick={() => { setFilters({ ...filters, type: t }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.type === t ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.type === t ? 700 : 400,
             background: filters.type === t ? "#fff7ed" : "transparent",
-            color: filters.type === t ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.type === t ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           {t}
         </div>
       ))}
@@ -3828,14 +3831,18 @@ export function SprintDetailsPage() {
       }}
     >
       <div onClick={() => { setFilters({ ...filters, status: "" }); setFilterDropdown(null); }}
-        style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.status ? 700 : 400,
+        style={{
+          padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.status ? 700 : 400,
           background: !filters.status ? "#fff7ed" : "transparent", color: !filters.status ? "#ea580c" : "#0f172a",
-          cursor: "pointer", fontSize: "0.85rem" }}>All Statuses</div>
+          cursor: "pointer", fontSize: "0.85rem"
+        }}>All Statuses</div>
       {(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "BLOCKED"]).map((s) => (
         <div key={s} onClick={() => { setFilters({ ...filters, status: s }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.status === s ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.status === s ? 700 : 400,
             background: filters.status === s ? "#fff7ed" : "transparent",
-            color: filters.status === s ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.status === s ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           {s.replace("_", " ")}
         </div>
       ))}
@@ -3861,14 +3868,18 @@ export function SprintDetailsPage() {
       }}
     >
       <div onClick={() => { setFilters({ ...filters, priority: "" }); setFilterDropdown(null); }}
-        style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.priority ? 700 : 400,
+        style={{
+          padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.priority ? 700 : 400,
           background: !filters.priority ? "#fff7ed" : "transparent", color: !filters.priority ? "#ea580c" : "#0f172a",
-          cursor: "pointer", fontSize: "0.85rem" }}>All Priorities</div>
+          cursor: "pointer", fontSize: "0.85rem"
+        }}>All Priorities</div>
       {(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).map((p) => (
         <div key={p} onClick={() => { setFilters({ ...filters, priority: p }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.priority === p ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.priority === p ? 700 : 400,
             background: filters.priority === p ? "#fff7ed" : "transparent",
-            color: filters.priority === p ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.priority === p ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           {p}
         </div>
       ))}
@@ -3894,22 +3905,28 @@ export function SprintDetailsPage() {
       }}
     >
       <div onClick={() => { setFilters({ ...filters, assignee: "" }); setFilterDropdown(null); }}
-        style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.assignee ? 700 : 400,
+        style={{
+          padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.assignee ? 700 : 400,
           background: !filters.assignee ? "#fff7ed" : "transparent", color: !filters.assignee ? "#ea580c" : "#0f172a",
-          cursor: "pointer", fontSize: "0.85rem" }}>All Assignees</div>
+          cursor: "pointer", fontSize: "0.85rem"
+        }}>All Assignees</div>
       {sprint?.workItems.some((wi) => !wi.assignee) && (
         <div key="NO_ASSIGNEE" onClick={() => { setFilters({ ...filters, assignee: "NO_ASSIGNEE" }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.assignee === "NO_ASSIGNEE" ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.assignee === "NO_ASSIGNEE" ? 700 : 400,
             background: filters.assignee === "NO_ASSIGNEE" ? "#fff7ed" : "transparent",
-            color: filters.assignee === "NO_ASSIGNEE" ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.assignee === "NO_ASSIGNEE" ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           Not Assigned
         </div>
       )}
       {sprint?.members.map((m) => (
         <div key={m.id} onClick={() => { setFilters({ ...filters, assignee: String(m.id) }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.assignee === String(m.id) ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.assignee === String(m.id) ? 700 : 400,
             background: filters.assignee === String(m.id) ? "#fff7ed" : "transparent",
-            color: filters.assignee === String(m.id) ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.assignee === String(m.id) ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           {m.name}
         </div>
       ))}
@@ -3935,22 +3952,28 @@ export function SprintDetailsPage() {
       }}
     >
       <div onClick={() => { setFilters({ ...filters, reporter: "" }); setFilterDropdown(null); }}
-        style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.reporter ? 700 : 400,
+        style={{
+          padding: "8px 12px", borderRadius: "8px", fontWeight: !filters.reporter ? 700 : 400,
           background: !filters.reporter ? "#fff7ed" : "transparent", color: !filters.reporter ? "#ea580c" : "#0f172a",
-          cursor: "pointer", fontSize: "0.85rem" }}>All Reporters</div>
+          cursor: "pointer", fontSize: "0.85rem"
+        }}>All Reporters</div>
       {sprint?.workItems.some((wi) => !wi.reporter) && (
         <div key="NO_REPORTER" onClick={() => { setFilters({ ...filters, reporter: "NO_REPORTER" }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.reporter === "NO_REPORTER" ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.reporter === "NO_REPORTER" ? 700 : 400,
             background: filters.reporter === "NO_REPORTER" ? "#fff7ed" : "transparent",
-            color: filters.reporter === "NO_REPORTER" ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.reporter === "NO_REPORTER" ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           Not Assigned
         </div>
       )}
       {Array.from(new Map(sprint?.workItems.filter((wi) => wi.reporter).map((wi) => [wi.reporter!.id, wi.reporter!]))).values().map((r) => (
         <div key={r[0]} onClick={() => { setFilters({ ...filters, reporter: String(r[0]) }); setFilterDropdown(null); }}
-          style={{ padding: "8px 12px", borderRadius: "8px", fontWeight: filters.reporter === String(r[0]) ? 700 : 400,
+          style={{
+            padding: "8px 12px", borderRadius: "8px", fontWeight: filters.reporter === String(r[0]) ? 700 : 400,
             background: filters.reporter === String(r[0]) ? "#fff7ed" : "transparent",
-            color: filters.reporter === String(r[0]) ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem" }}>
+            color: filters.reporter === String(r[0]) ? "#ea580c" : "#0f172a", cursor: "pointer", fontSize: "0.85rem"
+          }}>
           {r[1].name}
         </div>
       ))}
@@ -4314,78 +4337,78 @@ export function SprintDetailsPage() {
             <div className="workspace-list-card" ref={filterBarRef}>
               <div className="workspace-table-scroll">
                 <table className="workspace-table">
-                    <thead>
-                      <tr>
-                        <th>Title</th>
-                        <th style={{ position: "relative" }}>
-                          <button type="button" onClick={(event) => toggleFilterDropdown("type", event)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
-                              borderRadius: "6px", border: filters.type ? "1px solid #f97316" : "1px solid transparent",
-                              background: "transparent",
-                              color: filters.type ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
-                              cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
-                            }}
-                          >
-                            Type ▼
-                          </button>
-                        </th>
-                        <th style={{ position: "relative" }}>
-                          <button type="button" onClick={(event) => toggleFilterDropdown("status", event)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
-                              borderRadius: "6px", border: filters.status ? "1px solid #f97316" : "1px solid transparent",
-                              background: "transparent",
-                              color: filters.status ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
-                              cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
-                            }}
-                          >
-                            Status ▼
-                          </button>
-                        </th>
-                        <th style={{ position: "relative" }}>
-                          <button type="button" onClick={(event) => toggleFilterDropdown("priority", event)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
-                              borderRadius: "6px", border: filters.priority ? "1px solid #f97316" : "1px solid transparent",
-                              background: "transparent",
-                              color: filters.priority ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
-                              cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
-                            }}
-                          >
-                            Priority ▼
-                          </button>
-                        </th>
-                        <th style={{ position: "relative" }}>
-                          <button type="button" onClick={(event) => toggleFilterDropdown("assignee", event)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
-                              borderRadius: "6px", border: filters.assignee ? "1px solid #f97316" : "1px solid transparent",
-                              background: "transparent",
-                              color: filters.assignee ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
-                              cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
-                            }}
-                          >
-                            Assignee ▼
-                          </button>
-                        </th>
-                        <th style={{ position: "relative" }}>
-                          <button type="button" onClick={(event) => toggleFilterDropdown("reporter", event)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
-                              borderRadius: "6px", border: filters.reporter ? "1px solid #f97316" : "1px solid transparent",
-                              background: "transparent",
-                              color: filters.reporter ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
-                              cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
-                            }}
-                          >
-                            Reporter ▼
-                          </button>
-                        </th>
-                        <th>Subtasks</th>
-                        <th>Comments</th>
-                      </tr>
-                    </thead>
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th style={{ position: "relative" }}>
+                        <button type="button" onClick={(event) => toggleFilterDropdown("type", event)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
+                            borderRadius: "6px", border: filters.type ? "1px solid #f97316" : "1px solid transparent",
+                            background: "transparent",
+                            color: filters.type ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
+                            cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
+                          }}
+                        >
+                          Type ▼
+                        </button>
+                      </th>
+                      <th style={{ position: "relative" }}>
+                        <button type="button" onClick={(event) => toggleFilterDropdown("status", event)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
+                            borderRadius: "6px", border: filters.status ? "1px solid #f97316" : "1px solid transparent",
+                            background: "transparent",
+                            color: filters.status ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
+                            cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
+                          }}
+                        >
+                          Status ▼
+                        </button>
+                      </th>
+                      <th style={{ position: "relative" }}>
+                        <button type="button" onClick={(event) => toggleFilterDropdown("priority", event)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
+                            borderRadius: "6px", border: filters.priority ? "1px solid #f97316" : "1px solid transparent",
+                            background: "transparent",
+                            color: filters.priority ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
+                            cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
+                          }}
+                        >
+                          Priority ▼
+                        </button>
+                      </th>
+                      <th style={{ position: "relative" }}>
+                        <button type="button" onClick={(event) => toggleFilterDropdown("assignee", event)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
+                            borderRadius: "6px", border: filters.assignee ? "1px solid #f97316" : "1px solid transparent",
+                            background: "transparent",
+                            color: filters.assignee ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
+                            cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
+                          }}
+                        >
+                          Assignee ▼
+                        </button>
+                      </th>
+                      <th style={{ position: "relative" }}>
+                        <button type="button" onClick={(event) => toggleFilterDropdown("reporter", event)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 10px",
+                            borderRadius: "6px", border: filters.reporter ? "1px solid #f97316" : "1px solid transparent",
+                            background: "transparent",
+                            color: filters.reporter ? "#ea580c" : "#0f172a", fontSize: "0.8rem", fontWeight: 600,
+                            cursor: "pointer", whiteSpace: "nowrap", width: "100%", justifyContent: "center"
+                          }}
+                        >
+                          Reporter ▼
+                        </button>
+                      </th>
+                      <th>Subtasks</th>
+                      <th>Comments</th>
+                    </tr>
+                  </thead>
 
                   <tbody>
                     {filteredWorkItems.length ? (
@@ -5685,8 +5708,8 @@ export function JiraProjectWorkspace() {
       {/* ------------------------------------------------------------------ */}
 
       {activeTab === "sprints" && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-x-auto">
+          <table className="w-full min-w-[600px] whitespace-nowrap text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase text-slate-600 tracking-wider">
                 <th className="px-4 py-3">
@@ -5800,7 +5823,7 @@ export function JiraProjectWorkspace() {
 
       {showCreateSprintModal && (
         <div className="fixed inset-0 z-[2000] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-6">
+          <div className="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-base font-extrabold text-slate-900">
                 Create New Sprint
@@ -5950,7 +5973,7 @@ export function JiraProjectWorkspace() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-[2000] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 p-6">
+          <div className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-base font-extrabold text-slate-900">
                 Create Work Item Issue

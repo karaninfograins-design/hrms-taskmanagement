@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock, LogOut, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
+import { showSuccessToast, showErrorToast } from "@/lib/swal";
 
 type AttendanceRecord = {
   id: number;
@@ -31,6 +33,7 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"CLOCK_IN" | "CLOCK_OUT" | null>(null);
 
   const handleSignOut = () => {
     logout();
@@ -89,9 +92,10 @@ export default function AttendancePage() {
         const errData = await res.json();
         throw new Error(errData.message || "Check in failed");
       }
+      showSuccessToast("Clocked in successfully!");
       fetchAttendanceData();
     } catch (err: any) {
-      alert(err.message);
+      showErrorToast(err.message || "Failed to clock in");
     } finally {
       setActionLoading(false);
     }
@@ -109,9 +113,10 @@ export default function AttendancePage() {
         const errData = await res.json();
         throw new Error(errData.message || "Check out failed");
       }
+      showSuccessToast("Clocked out successfully!");
       fetchAttendanceData();
     } catch (err: any) {
-      alert(err.message);
+      showErrorToast(err.message || "Failed to clock out");
     } finally {
       setActionLoading(false);
     }
@@ -146,7 +151,7 @@ export default function AttendancePage() {
           {/* Header */}
           <div className="welcome mb-6">
             <p className="eyebrow">HR & TIME MANAGEMENT</p>
-            <h1 className="text-2xl font-black text-slate-900">Attendance Tracking</h1>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Attendance Tracking</h3>
             <p className="text-xs text-slate-500 font-medium">
               Log daily work attendance, clock in/out, and review working hour records.
             </p>
@@ -228,25 +233,29 @@ export default function AttendancePage() {
               </p>
             </div>
 
-            <div className="relative z-10 flex gap-3">
+            <div className="relative z-10 flex w-full sm:w-auto gap-3">
               {!todayAttendance?.checkIn ? (
                 <button
-                  onClick={handleCheckIn}
+                  type="button"
+                  onClick={() => setConfirmAction("CLOCK_IN")}
                   disabled={actionLoading}
-                  className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {actionLoading ? "Processing..." : "Clock In"}
+                  <Clock className="w-4 h-4" />
+                  <span>{actionLoading ? "Processing..." : "Clock In"}</span>
                 </button>
               ) : !todayAttendance?.checkOut ? (
                 <button
-                  onClick={handleCheckOut}
+                  type="button"
+                  onClick={() => setConfirmAction("CLOCK_OUT")}
                   disabled={actionLoading}
-                  className="px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {actionLoading ? "Processing..." : "Clock Out"}
+                  <LogOut className="w-4 h-4" />
+                  <span>{actionLoading ? "Processing..." : "Clock Out"}</span>
                 </button>
               ) : (
-                <span className="px-5 py-2.5 bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold rounded-xl text-xs">
+                <span className="w-full sm:w-auto text-center px-5 py-2.5 bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold rounded-xl text-xs">
                   ✓ Shift Completed
                 </span>
               )}
@@ -254,7 +263,7 @@ export default function AttendancePage() {
           </div>
 
           {/* Attendance History */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <h2 className="text-sm font-extrabold text-slate-900">Attendance Logs</h2>
 
             {loading ? (
@@ -267,15 +276,15 @@ export default function AttendancePage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[560px]">
                   <thead>
                     <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
-                      <th className="py-3 px-4">Employee</th>
-                      <th className="py-3 px-4">Date</th>
-                      <th className="py-3 px-4">Check In</th>
-                      <th className="py-3 px-4">Check Out</th>
-                      <th className="py-3 px-4">Hours</th>
-                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Employee</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Date</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Check In</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Check Out</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Hours</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -288,7 +297,7 @@ export default function AttendancePage() {
                       if (displayLogs.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={6} className="py-6 text-center text-slate-400 font-medium">
+                            <td colSpan={6} className="py-6 text-center text-slate-400 font-medium whitespace-nowrap">
                               No attendance records found.
                             </td>
                           </tr>
@@ -297,22 +306,22 @@ export default function AttendancePage() {
 
                       return displayLogs.map((row) => (
                         <tr key={row.id} className="hover:bg-slate-50/80">
-                          <td className="py-3 px-4 font-bold text-slate-900">
+                          <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
                             {row.user?.name || "Self"}
                           </td>
-                          <td className="py-3 px-4 text-slate-600 font-medium">
+                          <td className="py-3 px-4 text-slate-600 font-medium whitespace-nowrap">
                             {new Date(row.date).toLocaleDateString()}
                           </td>
-                          <td className="py-3 px-4 font-semibold text-xs text-slate-700">
+                          <td className="py-3 px-4 font-semibold text-xs text-slate-700 whitespace-nowrap">
                             {formatTime(row.checkIn)}
                           </td>
-                          <td className="py-3 px-4 font-semibold text-xs text-slate-700">
+                          <td className="py-3 px-4 font-semibold text-xs text-slate-700 whitespace-nowrap">
                             {formatTime(row.checkOut)}
                           </td>
-                          <td className="py-3 px-4 font-bold text-slate-800">
+                          <td className="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">
                             {row.workingHours.toFixed(2)} hrs
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 whitespace-nowrap">
                             <span
                               className={`px-2.5 py-0.5 text-[11px] font-extrabold rounded-full ${row.status === "PRESENT"
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -336,6 +345,91 @@ export default function AttendancePage() {
           </div>
         </section>
       </div>
+
+      {/* Accidental Click Prevention Confirmation Modal */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => !actionLoading && setConfirmAction(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transition-all animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close 'X' Button */}
+            <button
+              type="button"
+              onClick={() => !actionLoading && setConfirmAction(null)}
+              disabled={actionLoading}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-start gap-4">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${confirmAction === "CLOCK_IN"
+                  ? "bg-orange-50 text-orange-600 border border-orange-100"
+                  : "bg-rose-50 text-rose-600 border border-rose-100"
+                  }`}
+              >
+                {confirmAction === "CLOCK_IN" ? (
+                  <Clock className="w-6 h-6" />
+                ) : (
+                  <LogOut className="w-6 h-6" />
+                )}
+              </div>
+              <div className="flex-1 pt-0.5">
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {confirmAction === "CLOCK_IN" ? "Confirm Clock In" : "Confirm Clock Out"}
+                </h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-500 font-medium">
+                  {confirmAction === "CLOCK_IN"
+                    ? "Are you sure you want to clock in now?"
+                    : "Are you sure you want to clock out now?"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                disabled={actionLoading}
+                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const action = confirmAction;
+                  setConfirmAction(null);
+                  if (action === "CLOCK_IN") {
+                    await handleCheckIn();
+                  } else if (action === "CLOCK_OUT") {
+                    await handleCheckOut();
+                  }
+                }}
+                disabled={actionLoading}
+                className={`px-5 py-2.5 text-xs font-extrabold text-white rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 ${confirmAction === "CLOCK_IN"
+                  ? "bg-orange-500 hover:bg-orange-600 active:bg-orange-700"
+                  : "bg-rose-600 hover:bg-rose-700 active:bg-rose-800"
+                  }`}
+              >
+                {actionLoading
+                  ? "Processing..."
+                  : confirmAction === "CLOCK_IN"
+                    ? "Yes, Clock In"
+                    : "Yes, Clock Out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

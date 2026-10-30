@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { Session } from "@/types/auth";
+import { getMe } from "@/services/auth.service";
 
 const SESSION_KEY = "hrms-session";
 const SESSION_CHANGE_EVENT = "hrms-session-change";
@@ -29,7 +30,7 @@ function readSessionValue() {
 }
 
 function subscribe(onStoreChange: () => void) {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === "undefined") return () => { };
   window.addEventListener(SESSION_CHANGE_EVENT, onStoreChange);
   window.addEventListener("storage", onStoreChange);
   return () => {
@@ -66,6 +67,30 @@ export function useAuth() {
     window.localStorage.removeItem(SESSION_KEY);
     window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
   }, []);
+
+  // Synchronize live permissions and role from backend
+  useEffect(() => {
+    if (!session?.token) return;
+    let cancelled = false;
+    getMe(session.token)
+      .then((res) => {
+        if (!cancelled && res?.user) {
+          const prevPerms = session.user.permissions?.join(",") || "";
+          const newPerms = res.user.permissions?.join(",") || "";
+          if (prevPerms !== newPerms || session.user.role !== res.user.role) {
+            saveSession({
+              ...session,
+              user: res.user,
+            });
+          }
+        }
+      })
+      .catch(() => { });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.token, session?.user?.role, saveSession]);
 
   const isLoading = !session && !isHydrated;
 

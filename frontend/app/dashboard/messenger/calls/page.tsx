@@ -1457,7 +1457,7 @@ function CallsContent() {
                 Calling history
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {calls.length > 0 && (
                 <button
                   onClick={handleClearAllCalls}
@@ -1485,7 +1485,7 @@ function CallsContent() {
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full min-w-[620px] text-left text-xs whitespace-nowrap border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                       <th className="p-4">Type</th>
@@ -1581,7 +1581,7 @@ function CallsContent() {
                         <span>Previous</span>
                       </button>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                           .filter((pageNum) => {
                             if (totalPages <= 5) return true;

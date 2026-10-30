@@ -277,43 +277,127 @@
   width: 100%;
 }
 
-/* Keep application navigation independent from long dashboard pages. */
-.app-shell {
-  height: 100dvh;
-  overflow: hidden;
-}
+/* Keep application navigation independent from long dashboard pages on desktop. */
+@media (min-width: 1024px) {
+  .app-shell {
+    height: 100dvh;
+    overflow: hidden;
+  }
 
-html:has(.app-shell),
-body:has(.app-shell) {
-  height: 100%;
-  overflow: hidden;
+  html:has(.app-shell),
+  body:has(.app-shell) {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell .dashboard-frame {
+    height: calc(100dvh - 64px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell .sidebar {
+    position: sticky;
+    top: 0;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .app-shell .sidebar,
+  .app-shell .dashboard-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .app-shell .topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
-  flex: 0 0 72px;
+  z-index: 40;
+  flex: 0 0 64px;
+  height: 64px;
 }
 
-.app-shell .dashboard-frame {
-  height: calc(100dvh - 72px);
-  min-height: 0;
-  overflow: hidden;
+@media (max-width: 1023px) {
+
+  html,
+  body,
+  html:has(.app-shell),
+  body:has(.app-shell) {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100dvh !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+  }
+
+  .app-shell .dashboard-frame,
+  .dashboard-frame {
+    display: block !important;
+    flex: 1 1 auto !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-shell .dashboard-content,
+  .dashboard-content {
+    display: block !important;
+    min-height: calc(100dvh - 64px) !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .app-shell .sidebar,
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 85vw !important;
+    height: 100dvh !important;
+    z-index: 100 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+    margin: 0 !important;
+  }
+
+  .app-shell .sidebar.mobile-open,
+  .sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-desktop-toggle-btn {
+    display: none !important;
+  }
 }
 
-.app-shell .sidebar,
-.app-shell .dashboard-content {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+@media (min-width: 1024px) {
+  .sidebar-mobile-close-btn {
+    display: none !important;
+  }
 }
 
-.app-shell .sidebar {
-  position: sticky;
-  top: 0;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+@media (min-width: 1024px) {
+  .app-shell .dashboard-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .app-shell .sidebar::-webkit-scrollbar {
@@ -374,7 +458,8 @@ body:has(.app-shell) {
 }
 
 .workspace-list-card {
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
@@ -388,6 +473,15 @@ body:has(.app-shell) {
 
 .workspace-table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+
+  .workspace-table th,
+  .workspace-table td {
+    padding: 10px 12px;
+  }
 }
 
 .workspace-table {
@@ -584,7 +678,7 @@ body:has(.app-shell) {
   margin: 0 0 18px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 960px) {
 
   .management-form,
   .role-manager {
@@ -599,19 +693,24 @@ body:has(.app-shell) {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
+}
 
-  .dashboard-frame {
+@media (max-width: 640px) {
+  .permission-create {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
-    display: none;
+  .management-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
   }
 }
 
 .jira-create-form {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   padding: 18px;
   margin: 0 0 22px;

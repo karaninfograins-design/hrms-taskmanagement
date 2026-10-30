@@ -246,7 +246,7 @@ export default function GoogleStyleMeetingCalendarPage() {
                   </div>
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600"
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 w-full sm:w-auto"
                   >
                     <Plus size={15} />
                     Schedule meeting
@@ -699,7 +699,7 @@ export default function GoogleStyleMeetingCalendarPage() {
           {/* Schedule Meeting Modal */}
           {showCreateModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-              <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 space-y-4">
                 <h2 className="text-base font-black text-slate-900">Schedule New Meeting</h2>
                 <form onSubmit={handleCreateMeetingSubmit} className="space-y-4">
                   <div>

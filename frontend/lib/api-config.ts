@@ -1,10 +1,31 @@
 export const getApiUrl = (): string => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (!apiUrl) {
-    throw new Error("NEXT_PUBLIC_API_URL must be configured in the frontend environment");
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const host = window.location.hostname;
+    const isLocalAccess =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      host.startsWith("172.");
+
+    // If accessing locally/LAN, but env points to an external tunnel URL that might be dead/offline,
+    // route directly to the local backend on the same host to prevent failed fetches
+    if (isLocalAccess && envUrl && (envUrl.includes("ngrok") || envUrl.includes("loca.lt"))) {
+      return `http://${host}:5000`;
+    }
+
+    if (!envUrl) {
+      return `http://${host}:5000`;
+    }
   }
 
-  return apiUrl.replace(/\/+$/, "");
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
+  return "http://localhost:5000";
 };
 
 export const buildApiUrl = (path: string): string => {

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 import { comparePassword } from "../utils/password.js";
-import { generateToken } from "../utils/jwt.js";
+import { generateToken, verifyToken } from "../utils/jwt.js";
 
 export const login = async (
   req: Request,
@@ -65,9 +65,7 @@ export const login = async (
 
     res.status(200).json({
       message: "Login successful",
-
       token,
-
       user: {
         id: user.id,
         name: user.name,
@@ -84,5 +82,57 @@ export const login = async (
     res.status(500).json({
       message: "Internal server error",
     });
+  }
+};
+
+export const getMe = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : undefined;
+
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+        designation: true,
+      },
+    });
+
+    if (!user || user.status !== "ACTIVE") {
+      res.status(403).json({ message: "Account is inactive or not found" });
+      return;
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber ?? null,
+        role: user.role.name,
+        designation: user.designation?.name ?? null,
+        permissions: user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name),
+      },
+    });
+  } catch {
+    res.status(401).json({ message: "Invalid or expired token" });
   }
 };

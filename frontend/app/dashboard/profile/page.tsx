@@ -291,7 +291,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Action Tabs in Banner */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveTab("profile")}
@@ -421,7 +421,7 @@ export default function ProfilePage() {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
                 {/* Tabs Header */}
-                <div className="flex gap-4 border-b border-slate-100 pb-4 mb-6">
+                <div className="flex flex-wrap gap-2 sm:gap-4 border-b border-slate-100 pb-4 mb-6">
                   <button
                     type="button"
                     onClick={() => { setActiveTab("profile"); setError(null); setSuccess(null); }}

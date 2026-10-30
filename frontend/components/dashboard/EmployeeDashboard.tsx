@@ -130,28 +130,28 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
   const totalUsedLeaves = leaveBalances.reduce((acc, b) => acc + (b.used || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Employee overview banner */}
-      <div className="relative flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 p-5 text-white shadow-md md:flex-row md:items-center">
+      <div className="relative flex flex-col items-start justify-between gap-4 overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 p-4 sm:p-5 md:p-6 text-white shadow-md md:flex-row md:items-center">
         <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
         <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
 
-        <div className="relative z-10 space-y-1">
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-100">
+        <div className="relative z-10 space-y-1 min-w-0 flex-1">
+          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-blue-100">
             Employee Overview
           </span>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white break-words">
             Welcome back, {userName}
           </h1>
-          <p className="text-xs font-medium text-blue-100/80">
+          <p className="text-xs sm:text-sm font-medium text-blue-100/80 max-w-2xl">
             Overview of your current workspace projects and leave balances.
           </p>
         </div>
 
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="relative z-10 w-full sm:w-auto flex items-center gap-3 shrink-0">
           <Link
             href="/dashboard/leaves"
-            className="rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-orange-600"
+            className="w-full sm:w-auto text-center justify-center rounded-xl bg-orange-500 px-4 sm:px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-orange-600 active:scale-[0.98]"
           >
             + Apply for Leave
           </Link>
@@ -160,33 +160,33 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
 
       {/* Leave Balances Metric Cards */}
       <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+        <h2 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 sm:mb-3">
           Leave Balances & Summary
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs">
+            <span className="text-[10px] sm:text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">
               Total Allocated
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">
               {totalAllocatedLeaves} <span className="text-xs font-semibold text-slate-400">Days</span>
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-xs">
-            <span className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider">
+          <div className="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-emerald-100 shadow-xs">
+            <span className="text-[10px] sm:text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider block">
               Remaining Leaves
             </span>
-            <p className="text-2xl font-extrabold text-emerald-700 mt-1">
+            <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-emerald-700 mt-1">
               {totalRemainingLeaves} <span className="text-xs font-semibold text-emerald-500">Days</span>
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-amber-100 shadow-xs">
-            <span className="text-[11px] font-extrabold text-amber-600 uppercase tracking-wider">
+          <div className="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-amber-100 shadow-xs sm:col-span-2 md:col-span-1">
+            <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-600 uppercase tracking-wider block">
               Used Leaves
             </span>
-            <p className="text-2xl font-extrabold text-amber-800 mt-1">
+            <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-amber-800 mt-1">
               {totalUsedLeaves} <span className="text-xs font-semibold text-amber-500">Days</span>
             </p>
           </div>
@@ -194,14 +194,14 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
       </div>
 
       {/* Main Grid: My Assigned Projects & Recent Leave Requests */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {/* My Assigned Projects */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-slate-900">
+        <div className="bg-white p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-4 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-xs sm:text-sm font-extrabold text-slate-900">
               My Assigned Projects ({myProjects.length})
             </h2>
-            <Link href="/dashboard/projects" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+            <Link href="/dashboard/projects" className="text-xs font-bold text-orange-600 hover:text-orange-700 shrink-0">
               View All Projects →
             </Link>
           </div>
@@ -209,26 +209,25 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
           {myProjects.length === 0 ? (
             <p className="text-xs font-medium text-slate-500 py-4">No active projects assigned.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {myProjects.map((prj) => (
                 <div
                   key={prj.id}
-                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  className="p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors min-w-0"
                 >
-                  <div>
-                    <strong className="text-xs font-bold text-slate-800 block">
+                  <div className="min-w-0 flex-1">
+                    <strong className="text-xs sm:text-sm font-bold text-slate-800 block truncate">
                       {prj.name}
                     </strong>
-                    <span className="text-[11px] font-medium text-slate-500">
+                    <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 block truncate">
                       Key: {prj.key || `#${prj.id}`}
                     </span>
                   </div>
-                  {/* <Link
-                    href={`/dashboard/workspace?projectId=${prj.id}`}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition-colors"
-                  >
-                    Open Workspace
-                  </Link> */}
+                  {prj.status && (
+                    <span className="shrink-0 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 uppercase tracking-wider">
+                      {prj.status}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -236,12 +235,12 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
         </div>
 
         {/* Recent Leave Requests */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-slate-900">
+        <div className="bg-white p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-4 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="text-xs sm:text-sm font-extrabold text-slate-900">
               Recent Leave Applications
             </h2>
-            <Link href="/dashboard/leaves" className="text-xs font-bold text-orange-600 hover:text-orange-700">
+            <Link href="/dashboard/leaves" className="text-xs font-bold text-orange-600 hover:text-orange-700 shrink-0">
               Leave →
             </Link>
           </div>
@@ -249,34 +248,34 @@ export function EmployeeDashboard({ token, userName, userId }: EmployeeDashboard
           {leaveRequests.length === 0 ? (
             <p className="text-xs font-medium text-slate-500 py-4">No leave applications submitted yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto -mx-1 sm:mx-0">
+              <table className="w-full text-xs min-w-[380px]">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-slate-400 font-bold uppercase text-[10px]">
-                    <th className="pb-2">Type</th>
-                    <th className="pb-2">Dates</th>
-                    <th className="pb-2">Days</th>
-                    <th className="pb-2 text-right">Status</th>
+                    <th className="pb-2 whitespace-nowrap">Type</th>
+                    <th className="pb-2 whitespace-nowrap">Dates</th>
+                    <th className="pb-2 whitespace-nowrap">Days</th>
+                    <th className="pb-2 text-right whitespace-nowrap">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {leaveRequests.slice(0, 5).map((req) => (
                     <tr key={req.id}>
-                      <td className="py-2.5 font-bold text-slate-800">
+                      <td className="py-2.5 font-bold text-slate-800 whitespace-nowrap">
                         {req.leaveType?.name || "Leave"}
                       </td>
-                      <td className="py-2.5 text-slate-500">
+                      <td className="py-2.5 text-slate-500 whitespace-nowrap">
                         {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
                       </td>
-                      <td className="py-2.5 font-semibold text-slate-800">
+                      <td className="py-2.5 font-semibold text-slate-800 whitespace-nowrap">
                         {Number(req.totalDays).toLocaleString(undefined, { maximumFractionDigits: 1 })}d
                         {req.halfDayPeriod && (
                           <span className="ml-1 text-[10px] font-bold text-orange-600">
-                            {req.halfDayPeriod === "FIRST_HALF" ? "First half" : "Second half"}
+                            {req.halfDayPeriod === "FIRST_HALF" ? "1st half" : "2nd half"}
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 text-right">{getStatusBadge(req.status)}</td>
+                      <td className="py-2.5 text-right whitespace-nowrap">{getStatusBadge(req.status)}</td>
                     </tr>
                   ))}
                 </tbody>
