@@ -1,4 +1,5 @@
 import "dotenv/config";
+import process from "node:process";
 import { prisma } from "../src/config/prisma.js";
 import bcrypt from "bcryptjs";
 
@@ -239,6 +240,7 @@ async function main() {
     {
       name: "Super Admin",
       email: "superadmin@infograins.com",
+      legacyEmails: ["superadmin@company.com", "superadmin@hrms.com"],
       roleId: superAdminRole.id,
       designationName: "CTO",
       deptCode: "ENG",
@@ -247,6 +249,7 @@ async function main() {
     {
       name: "Admin",
       email: "admin@infograins.com",
+      legacyEmails: ["admin@hrms.com", "admin@company.com"],
       roleId: adminRole.id,
       designationName: "DevOps Engineer",
       deptCode: "OPS",
@@ -255,6 +258,7 @@ async function main() {
     {
       name: "HR Manager",
       email: "hr@infograins.com",
+      legacyEmails: ["hr@hrms.com", "hr@company.com"],
       roleId: hrRole.id,
       designationName: "HR Manager",
       deptCode: "HR",
@@ -266,12 +270,52 @@ async function main() {
   const currentYear = new Date().getFullYear();
 
   for (const u of userDefs) {
-    const existingUser = await prisma.user.findUnique({
-      where: { email: u.email },
+    // Look up by current email, legacy emails, or employeeCode
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: u.email },
+          { email: { in: u.legacyEmails } },
+          { employeeProfile: { employeeCode: u.employeeCode } },
+        ],
+      },
+      include: { employeeProfile: true },
     });
 
     if (existingUser) {
-      console.log(`Core user ${u.name} (${u.email}) already exists. Preserving existing account.`);
+      console.log(`Core user ${u.name} already exists (ID: ${existingUser.id}, current email: ${existingUser.email}). Syncing email to "${u.email}", password, and role.`);
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: u.name,
+          email: u.email,
+          passwordHash,
+          status: "ACTIVE",
+          roleId: u.roleId,
+        },
+      });
+
+      if (existingUser.employeeProfile) {
+        if (existingUser.employeeProfile.employeeCode !== u.employeeCode) {
+          await prisma.employeeProfile.update({
+            where: { id: existingUser.employeeProfile.id },
+            data: { employeeCode: u.employeeCode },
+          });
+        }
+      } else {
+        const department = departments.find((dept) => dept.code === u.deptCode);
+        await prisma.employeeProfile.create({
+          data: {
+            userId: existingUser.id,
+            employeeCode: u.employeeCode,
+            departmentId: department?.id || null,
+            employmentType: "FULL_TIME",
+            employmentStatus: "PERMANENT",
+            workLocation: "OFFICE",
+            dateOfJoining: new Date(),
+          },
+        });
+      }
       continue;
     }
 
@@ -443,6 +487,34 @@ export const additionalEmployees = [
     deptCode: "ENG",
     employeeCode: "EMP-014",
   },
+  {
+    name: "Mohit sharma",
+    email: "mohitsharma@infograins.com",
+    phoneNumber: "7067053280",
+    password: "Password@123",
+    designation: "BA",
+    deptCode: "ENG",
+    employeeCode: "EMP-015",
+  },
+  {
+    name: "shantaram dangi",
+    email: "shantaramdangi@infograins.com",
+    phoneNumber: "7877593063",
+    password: "Password@123",
+    designation: "UI UX",
+    deptCode: "ENG",
+    employeeCode: "EMP-016",
+  },
+  {
+    name: "lavkush patel",
+    email: "lavkushpatel@infograins.com",
+    phoneNumber: "6265335014",
+    password: "Password@123",
+    designation: "Software developer",
+    deptCode: "ENG",
+    employeeCode: "EMP-017",
+  },
+
 ];
 
 export async function seedAdditionalEmployees(employeeRoleId: number, leaveTypes: any[]) {
@@ -452,13 +524,52 @@ export async function seedAdditionalEmployees(employeeRoleId: number, leaveTypes
   for (const emp of additionalEmployees) {
     const normalizedEmail = emp.email.toLowerCase().trim();
 
-    // Check if employee account is already available in the database (safe for deployed environment)
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+    // Check if employee account is already available in the database (by email or employeeCode)
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          { employeeProfile: { employeeCode: emp.employeeCode } },
+        ],
+      },
+      include: { employeeProfile: true },
     });
 
     if (existingUser) {
-      console.log(`Employee ${emp.name} (${normalizedEmail}) already exists. Preserving existing account.`);
+      console.log(`Employee ${emp.name} already exists (ID: ${existingUser.id}, current email: ${existingUser.email}). Syncing details.`);
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: emp.name,
+          email: normalizedEmail,
+          phoneNumber: emp.phoneNumber ? String(emp.phoneNumber) : (existingUser.phoneNumber || null),
+          status: "ACTIVE",
+        },
+      });
+
+      if (existingUser.employeeProfile) {
+        if (existingUser.employeeProfile.employeeCode !== emp.employeeCode) {
+          await prisma.employeeProfile.update({
+            where: { id: existingUser.employeeProfile.id },
+            data: { employeeCode: emp.employeeCode },
+          });
+        }
+      } else {
+        const department = await prisma.department.findUnique({
+          where: { code: emp.deptCode },
+        });
+        await prisma.employeeProfile.create({
+          data: {
+            userId: existingUser.id,
+            employeeCode: emp.employeeCode,
+            departmentId: department?.id || null,
+            employmentType: "FULL_TIME",
+            employmentStatus: "PERMANENT",
+            workLocation: "OFFICE",
+            dateOfJoining: new Date(),
+          },
+        });
+      }
       continue;
     }
 
@@ -482,7 +593,7 @@ export async function seedAdditionalEmployees(employeeRoleId: number, leaveTypes
       data: {
         name: emp.name,
         email: normalizedEmail,
-        phoneNumber: emp.phoneNumber,
+        phoneNumber: emp.phoneNumber ? String(emp.phoneNumber) : null,
         passwordHash,
         roleId: employeeRoleId,
         designationId: designation.id,
