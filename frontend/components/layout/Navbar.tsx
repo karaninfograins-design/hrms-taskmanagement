@@ -34,7 +34,7 @@ import {
 } from "@/services/notification.service";
 
 type NavbarProps = {
-  user: User;
+  user?: User | null;
   onSignOut?: () => void;
 };
 
@@ -681,10 +681,10 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             style={{ background: "none", border: "none", cursor: "pointer" }}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-medium text-xs flex items-center justify-center shadow-inner">
-              {user.name.slice(0, 1).toUpperCase()}
+              {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
             </div>
             <span className="text-sm font-medium text-gray-700 hidden sm:inline-block">
-              {user.name}
+              {user?.name ?? ""}
             </span>
             <svg
               className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}
@@ -706,7 +706,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
               {/* User Info Header */}
               <div className="px-3 py-2.5 mb-1 rounded-xl bg-gray-50/80 border border-gray-100">
                 <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wider">Signed in as</p>
-                <p className="text-xs font-semibold text-gray-900 truncate mt-0.5">{user.email || user.name}</p>
+                <p className="text-xs font-semibold text-gray-900 truncate mt-0.5">{user?.email || user?.name || "User"}</p>
               </div>
 
               {/* Menu Options */}

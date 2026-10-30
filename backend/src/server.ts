@@ -32,6 +32,7 @@ const app = express();
 const httpServer = http.createServer(app);
 
 const PORT = Number(process.env.PORT) || 5000;
+const HOST = process.env.HOST || "127.0.0.1";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -79,6 +80,6 @@ setInterval(() => {
   void notifyUpcomingSprintDeadlines();
 }, 30 * 60 * 1000);
 
-httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`HRMS Backend listening on port ${PORT} [DB: ${process.env.DB_NAME}]`);
+httpServer.listen(Number(PORT), HOST, () => {
+  console.log(`HRMS Backend listening on ${HOST}:${PORT} [DB: ${process.env.DB_NAME}]`);
 });

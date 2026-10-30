@@ -173,14 +173,14 @@ function SidebarFooter({ isCollapsed }: { isCollapsed: boolean }) {
   return <p className="sidebar-footer">Infograins HRMS</p>;
 }
 
-function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user: User; canCreateAdmins: boolean; onSignOut: () => void; isCollapsed: boolean }) {
+function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user?: User | null; canCreateAdmins?: boolean; onSignOut: () => void; isCollapsed: boolean }) {
   const roleName = typeof user?.role === "string" ? user.role : (user?.role as any)?.name || "";
 
   if (isCollapsed) {
     return (
       <div className="mt-auto pt-4 border-t border-[#1e3a8a]/70 flex flex-col items-center gap-2">
-        <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} title={`${user.name} (${roleName || "Employee"})`}>
-          {user.name.slice(0, 1).toUpperCase()}
+        <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} title={`${user?.name ?? "User"} (${roleName || "Employee"})`}>
+          {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
         </span>
         <button
           onClick={onSignOut}
@@ -197,10 +197,10 @@ function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user
     <div style={{ padding: '16px 8px 10px', borderTop: '1px solid rgba(30, 58, 138, 0.7)', marginTop: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '16px' }}>
         <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} aria-hidden="true">
-          {user.name.slice(0, 1).toUpperCase()}
+          {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
         </span>
         <div style={{ overflow: 'hidden' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user.name}</p>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name ?? "User"}</p>
           <small style={{ color: '#94a3b8', fontSize: '0.70rem', textTransform: 'uppercase' }}>{roleName ? roleName.replace(/_/g, " ") : "EMPLOYEE"}</small>
         </div>
       </div>
