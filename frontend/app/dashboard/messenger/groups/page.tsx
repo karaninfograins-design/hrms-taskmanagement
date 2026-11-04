@@ -2,7 +2,18 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, Video, Users, Search, UserPlus, X, ArrowLeft, Settings2 } from "lucide-react";
+import { Phone, Video, Users, Search, UserPlus, X, ArrowLeft, Settings2, Send, Smile } from "lucide-react";
+import dynamic from "next/dynamic";
+import type { EmojiClickData } from "emoji-picker-react";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-[320px] h-[390px] bg-white rounded-2xl flex items-center justify-center border border-slate-200 shadow-xl">
+      <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  ),
+});
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
 import { Navbar } from "@/components/layout/Navbar";
@@ -35,6 +46,7 @@ type Message = {
     name: string;
     email: string;
   };
+  reactions?: Record<string, Array<{ userId: number; userName: string }>>;
 };
 
 type GroupConversation = {
@@ -71,6 +83,33 @@ export default function GroupChatsPage() {
   const [groupSubmitError, setGroupSubmitError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Emoji Picker State & Ref
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Auto-adjust composer height and reset cleanly when message is sent or empty
+  useEffect(() => {
+    if (textareaRef.current) {
+      if (msgInput) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      } else {
+        textareaRef.current.style.height = "44px";
+      }
+    }
+  }, [msgInput]);
 
   const handleSignOut = () => {
     logout();
@@ -191,13 +230,104 @@ export default function GroupChatsPage() {
         setMessages([]);
       }
     };
+    const onNewMessage = (newMsg: Message) => {
+      if (activeGroup && newMsg.conversationId === activeGroup.id) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      }
+    };
+    const onReaction = (data: { messageId: number; conversationId: number; reactions: Record<string, Array<{ userId: number; userName: string }>> }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.messageId ? { ...m, reactions: data.reactions } : m
+        )
+      );
+    };
+
     socket.on("conversation:members-updated", onMembersUpdated);
     socket.on("conversation:deleted", onConvDeleted);
+    socket.on("message:new", onNewMessage);
+    socket.on("message:reaction", onReaction);
     return () => {
       socket.off("conversation:members-updated", onMembersUpdated);
       socket.off("conversation:deleted", onConvDeleted);
+      socket.off("message:new", onNewMessage);
+      socket.off("message:reaction", onReaction);
     };
   }, [socket, activeGroup?.id]);
+
+  // Insert emoji into group composer
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const emoji = emojiData.emoji;
+    if (textareaRef.current) {
+      const start = textareaRef.current.selectionStart || msgInput.length;
+      const end = textareaRef.current.selectionEnd || msgInput.length;
+      const updated = msgInput.substring(0, start) + emoji + msgInput.substring(end);
+      setMsgInput(updated);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + emoji.length;
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+        }
+      }, 10);
+    } else {
+      setMsgInput((prev) => prev + emoji);
+    }
+  };
+
+  // Toggle reaction on group message
+  const handleReact = async (messageId: number, emoji: string) => {
+    if (!activeGroup || !session?.user?.id) return;
+    const currentUserId = Number(session.user.id);
+    const currentUserName = session.user.name || "You";
+
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const currentReactions = { ...(m.reactions || {}) };
+        const userList = [...(currentReactions[emoji] || [])];
+        const existingIdx = userList.findIndex((u) => u.userId === currentUserId);
+        if (existingIdx >= 0) {
+          userList.splice(existingIdx, 1);
+          if (userList.length === 0) {
+            delete currentReactions[emoji];
+          } else {
+            currentReactions[emoji] = userList;
+          }
+        } else {
+          userList.push({ userId: currentUserId, userName: currentUserName });
+          currentReactions[emoji] = userList;
+        }
+        return { ...m, reactions: currentReactions };
+      })
+    );
+
+    if (socket) {
+      socket.emit("message:react", {
+        messageId,
+        conversationId: activeGroup.id,
+        emoji,
+      });
+    }
+
+    try {
+      const token = getAuthToken();
+      await fetch(`${getApiUrl()}/api/messenger/messages/${messageId}/react`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ emoji }),
+      });
+    } catch (err) {
+      console.error("Failed to persist reaction:", err);
+    }
+  };
 
   // Delete Group Handler
   const handleDeleteGroup = async (groupId: number) => {
@@ -368,6 +498,9 @@ export default function GroupChatsPage() {
         const data = await res.json();
         setMessages((prev) => [...prev, data.message]);
         setMsgInput("");
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
       } else {
         showErrorToast("Failed to send message");
       }
@@ -396,7 +529,7 @@ export default function GroupChatsPage() {
         <Sidebar user={session.user} onSignOut={handleSignOut} />
         <section className="dashboard-content" style={{ padding: "0", display: "flex", height: "calc(100vh - 64px)" }}>
           {/* Groups Sidebar */}
-          <div className={`h-full w-full flex-col border-r border-slate-200 bg-white md:w-80 ${activeGroup ? "hidden md:flex" : "flex"}`}>
+          <div className={`h-full w-full flex-col border-r border-slate-200 bg-white lg:w-80 xl:w-96 ${activeGroup ? "hidden lg:flex" : "flex"}`}>
             <div className="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50/80 via-white to-white p-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">Team communication</span>
@@ -466,31 +599,31 @@ export default function GroupChatsPage() {
           </div>
 
           {/* Group Chat Panel */}
-          <div className={`h-full min-w-0 flex-1 flex-col bg-slate-50 ${activeGroup ? "flex" : "hidden md:flex"}`}>
+          <div className={`h-full min-w-0 flex-1 flex-col bg-slate-50 ${activeGroup ? "flex" : "hidden lg:flex"}`}>
             {activeGroup ? (
               <>
                 {/* Header */}
-                <div className="flex min-h-16 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200 bg-white px-4 py-2 shadow-sm sm:px-6">
-                  <div className="flex items-center gap-3">
+                <div className="flex min-h-16 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200 bg-white px-3 py-2 shadow-sm sm:px-6">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => setActiveGroup(null)}
                       aria-label="Back to groups"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 md:hidden"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 lg:hidden"
                     >
                       <ArrowLeft size={16} />
                     </button>
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-base font-black text-orange-700">
                       {activeGroup.name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">{activeGroup.name}</h3>
-                      <p className="max-w-[40vw] truncate text-[11px] font-medium text-slate-500 sm:max-w-[28rem]">
+                    <div className="min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-xs md:max-w-md">
+                      <h3 className="text-sm font-black text-slate-900 truncate">{activeGroup.name}</h3>
+                      <p className="truncate text-[11px] font-medium text-slate-500">
                         {activeGroup.participants.length} {activeGroup.participants.length === 1 ? "member" : "members"} · {activeGroup.participants.map((p) => p.user.name).join(", ")}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-1 sm:gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleOpenManageGroup(activeGroup)}
@@ -516,21 +649,22 @@ export default function GroupChatsPage() {
                     >
                       <Video size={15} />
                     </button>
-                    <span className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
+                    <span className="hidden md:inline-flex px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
                       {activeGroup.participants.length} Participants
                     </span>
                     <button
                       onClick={() => handleDeleteGroup(activeGroup.id)}
-                      className="px-3 py-1 bg-white-50 hover:bg-orange-600 text-white-600 hover:text-white border border-rose-200 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
+                      className="px-2.5 sm:px-3 py-1 bg-white-50 hover:bg-orange-600 text-rose-600 hover:text-white border border-rose-200 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
                       title="Delete this group channel"
                     >
-                      Delete Group
+                      <span className="hidden sm:inline">Delete Group</span>
+                      <span className="sm:hidden">Delete</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 space-y-4 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
+                <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -550,16 +684,66 @@ export default function GroupChatsPage() {
                           </span>
                         )}
                         <div
-                          className={`max-w-md p-3.5 rounded-2xl text-xs shadow-xs ${isMe
-                              ? "bg-orange-500 text-white rounded-br-xs"
-                              : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
+                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-xs relative group break-words [overflow-wrap:anywhere] overflow-hidden ${isMe
+                            ? "bg-orange-500 text-white rounded-br-xs"
+                            : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
                             }`}
                         >
-                          <p className="whitespace-pre-wrap">{m.content}</p>
+                          <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text">
+                            {m.content}
+                          </div>
                           <span className="mt-1 block text-right text-[10px] opacity-70">
                             {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
+
+                          {/* Quick Reaction Bar on Hover */}
+                          <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-0.5 bg-white p-1 rounded-xl shadow-md border border-slate-200 z-10 animate-in fade-in duration-100">
+                            {["👍", "❤️", "😂", "🎉", "🙏"].map((emoji) => {
+                              const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
+                              return (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => handleReact(m.id, emoji)}
+                                  className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
+                                    userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
+                                  }`}
+                                  title={`React with ${emoji}`}
+                                >
+                                  {emoji}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
+
+                        {/* Reaction Badges Below Message Bubble */}
+                        {m.reactions && Object.keys(m.reactions).length > 0 && (
+                          <div className={`flex flex-wrap gap-1 mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                            {Object.entries(m.reactions).map(([emoji, users]) => {
+                              if (!users || users.length === 0) return null;
+                              const userReacted = users.some((u) => u.userId === currentUserId);
+                              const tooltipText = users.map((u) => (u.userId === currentUserId ? "You" : u.userName)).join(", ");
+
+                              return (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => handleReact(m.id, emoji)}
+                                  title={tooltipText}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                                    userReacted
+                                      ? "bg-orange-50 border-orange-300 text-orange-700"
+                                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <span>{emoji}</span>
+                                  <span className="text-[10px] text-slate-500">{users.length}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -567,20 +751,62 @@ export default function GroupChatsPage() {
                 </div>
 
                 {/* Composer */}
-                <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
-                  <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    <input
-                      type="text"
+                <div className="border-t border-slate-200/80 bg-white p-3 sm:p-4">
+                  <form onSubmit={handleSendMessage} className="flex items-center gap-2 sm:gap-3 relative">
+                    {/* Emoji Picker Popover */}
+                    {showEmojiPicker && (
+                      <div ref={emojiPickerRef} className="absolute bottom-16 right-4 sm:right-14 z-50 shadow-2xl rounded-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+                        <EmojiPicker
+                          onEmojiClick={handleEmojiClick}
+                          autoFocusSearch={false}
+                          width={320}
+                          height={390}
+                          lazyLoadEmojis={true}
+                          searchPlaceHolder="Search emojis..."
+                        />
+                      </div>
+                    )}
+
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
                       placeholder={`Message #${activeGroup.name}...`}
                       value={msgInput}
-                      onChange={(e) => setMsgInput(e.target.value)}
-                      className="h-11 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                      onChange={(e) => {
+                        setMsgInput(e.target.value);
+                        e.target.style.height = "auto";
+                        e.target.style.height = e.target.value
+                          ? `${Math.min(e.target.scrollHeight, 120)}px`
+                          : "44px";
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e as any);
+                        }
+                      }}
+                      className="chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 text-slate-900 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all placeholder:text-slate-400 shadow-2xs"
                     />
+
+                    {/* Smiley / Emoji Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`w-10 h-10 flex items-center justify-center text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-colors cursor-pointer shrink-0 ${
+                        showEmojiPicker ? "bg-orange-50 text-orange-600 ring-2 ring-orange-500/30" : ""
+                      }`}
+                      title="Insert Emoji"
+                    >
+                      <Smile size={23} strokeWidth={2.2} />
+                    </button>
+
+                    {/* Send Button (Solid Orange Circle with Paper Plane) */}
                     <button
                       type="submit"
-                      className="h-11 rounded-xl bg-orange-500 px-5 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-orange-600"
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/25 shrink-0 cursor-pointer"
+                      title="Send Message"
                     >
-                      Send ➔
+                      <Send size={17} strokeWidth={2.4} className="text-white translate-x-px" />
                     </button>
                   </form>
                 </div>
@@ -704,15 +930,16 @@ export default function GroupChatsPage() {
                           {employees.filter((employee) => employee.id !== currentUserId).length} available
                         </span>
                       </div>
-                      <div className="relative mb-2">
-                        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <div className="relative mb-2 flex items-center">
+                        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
                         <input
                           type="search"
                           value={groupMemberSearch}
                           onChange={(e) => setGroupMemberSearch(e.target.value)}
                           placeholder="Search by employee name or email"
                           aria-label="Search employees"
-                          className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10"
+                          style={{ paddingLeft: "40px" }}
+                          className="h-10 w-full rounded-xl border border-slate-200 bg-white !pl-10 pr-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10"
                         />
                       </div>
                       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/60 p-2">
@@ -725,8 +952,8 @@ export default function GroupChatsPage() {
                               <label
                                 key={emp.id}
                                 className={`!mt-0 !flex cursor-pointer items-center !gap-3 rounded-xl border p-2.5 transition ${isSelected
-                                    ? "border-orange-200 bg-orange-50"
-                                    : "border-transparent bg-white hover:border-slate-200 hover:bg-white"
+                                  ? "border-orange-200 bg-orange-50"
+                                  : "border-transparent bg-white hover:border-slate-200 hover:bg-white"
                                   }`}
                               >
                                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isSelected ? "bg-orange-500 text-white" : "bg-[#172554] text-white"

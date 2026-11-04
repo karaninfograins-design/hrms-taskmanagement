@@ -2,6 +2,7 @@ import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
 import { verifyToken } from "./utils/jwt.js";
 import { prisma } from "./config/prisma.js";
+import { toggleMessageReaction } from "./modules/messenger/reactions.js";
 
 interface AuthenticatedSocket extends Socket {
   userId?: number;
@@ -116,6 +117,31 @@ export function setupSocketServer(httpServer: HttpServer) {
       });
     });
 
+    // Handle Real-time Message Reactions
+    socket.on("message:react", async (data: { messageId: number; conversationId: number; emoji: string }) => {
+      try {
+        const allowedEmojis = ["👍", "❤️", "😂", "🎉", "🙏"];
+        if (!data?.emoji || !allowedEmojis.includes(data.emoji)) return;
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, name: true },
+        });
+        const updatedReactions = toggleMessageReaction(
+          data.messageId,
+          userId,
+          user?.name || `User ${userId}`,
+          data.emoji
+        );
+        io.to(`conversation_${data.conversationId}`).emit("message:reaction", {
+          messageId: data.messageId,
+          conversationId: data.conversationId,
+          reactions: updatedReactions,
+        });
+      } catch (err) {
+        console.error("Socket reaction error:", err);
+      }
+    });
+
     // WebRTC Signaling Events
     socket.on(
       "call:initiate",
@@ -136,46 +162,84 @@ export function setupSocketServer(httpServer: HttpServer) {
             return;
           }
 
-          let targetUserIds: number[];
+          let targetUserIds: number[] = [];
           let conversationName: string | null = null;
-          const isGroupCall = Boolean(data.targetUserIds);
+          // Group call if explicitly targeted to multiple users, or if conversationId is provided without a single targetUserId
+          const isGroupCall = Boolean(data.targetUserIds && data.targetUserIds.length > 0) || (!data.targetUserId && Boolean(data.conversationId));
 
           if (isGroupCall) {
-            const conversation = data.conversationId
-              ? await prisma.conversation.findUnique({
-                  where: { id: data.conversationId },
-                  select: {
-                    type: true,
-                    name: true,
-                    participants: { select: { userId: true } },
-                  },
-                })
-              : null;
-            if (
-              !conversation ||
-              conversation.type !== "GROUP" ||
-              !conversation.participants.some((participant) => participant.userId === userId)
-            ) {
-              acknowledge?.({ error: "You are not a member of this group" });
-              return;
-            }
+            if (data.conversationId) {
+              const conversation = await prisma.conversation.findUnique({
+                where: { id: data.conversationId },
+                select: {
+                  type: true,
+                  name: true,
+                  participants: { select: { userId: true } },
+                },
+              });
+              if (
+                !conversation ||
+                conversation.type !== "GROUP" ||
+                !conversation.participants.some((participant) => participant.userId === userId)
+              ) {
+                acknowledge?.({ error: "You are not a member of this group" });
+                return;
+              }
 
-            conversationName = conversation.name;
-            targetUserIds = conversation.participants
-              .map((participant) => participant.userId)
-              .filter((participantId) => participantId !== userId);
-            if (targetUserIds.length === 0) {
-              acknowledge?.({ error: "Add another member before starting a group call" });
-              return;
+              conversationName = conversation.name;
+              targetUserIds = conversation.participants
+                .map((participant) => participant.userId)
+                .filter((participantId) => participantId !== userId);
+              if (targetUserIds.length === 0) {
+                acknowledge?.({ error: "Add another member before starting a group call" });
+                return;
+              }
+            } else if (data.targetUserIds && data.targetUserIds.length > 0) {
+              targetUserIds = data.targetUserIds.filter((pId) => pId !== userId);
+              conversationName = data.channelName;
             }
           } else if (data.targetUserId && data.targetUserId !== userId) {
             targetUserIds = [data.targetUserId];
+          } else if (data.channelName && (data.channelName.startsWith("room-") || data.channelName.startsWith("meeting-"))) {
+            // Meeting room started by host waiting for participants to join
+            targetUserIds = [];
           } else {
             acknowledge?.({ error: "Call recipient is required" });
             return;
           }
 
-          const session = await prisma.callSession.create({
+          // Check if an active call session already exists on this channel (e.g. ongoing meeting or group call)
+          let session = await prisma.callSession.findFirst({
+            where: {
+              channelName: data.channelName,
+              status: { in: ["RINGING", "ACTIVE"] },
+            },
+            include: { participants: true },
+          });
+
+          if (session) {
+            // Re-use existing session and add joining user as ACCEPTED
+            const existingPart = session.participants.find((p) => p.userId === userId);
+            if (!existingPart) {
+              await prisma.callParticipant.create({
+                data: {
+                  callSessionId: session.id,
+                  userId,
+                  status: "ACCEPTED",
+                  joinedAt: new Date(),
+                },
+              }).catch(() => null);
+            } else if (existingPart.status !== "ACCEPTED") {
+              await prisma.callParticipant.update({
+                where: { callSessionId_userId: { callSessionId: session.id, userId } },
+                data: { status: "ACCEPTED", joinedAt: new Date() },
+              }).catch(() => null);
+            }
+            acknowledge?.({ callSessionId: session.id });
+            return;
+          }
+
+          session = await prisma.callSession.create({
             data: {
               channelName: data.channelName,
               conversationId: data.conversationId || null,
@@ -192,6 +256,7 @@ export function setupSocketServer(httpServer: HttpServer) {
                 ],
               },
             },
+            include: { participants: true },
           });
 
           for (const targetUserId of targetUserIds) {
@@ -418,7 +483,13 @@ export function setupSocketServer(httpServer: HttpServer) {
         });
         if (!session) return;
 
-        if (session.participants.length <= 2) {
+        const isGroup = Boolean(
+          session.conversationId ||
+          session.channelName.startsWith("room-") ||
+          session.channelName.startsWith("meeting-") ||
+          session.participants.length > 2
+        );
+        if (!isGroup) {
           await prisma.callSession.update({
             where: { id: callSessionId },
             data: { status: "REJECTED", endedAt: new Date() },

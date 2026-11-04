@@ -1,13 +1,43 @@
 import type { Request, Response } from "express";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
+import { createNotificationsForUsers } from "../../controllers/notification.controller.js";
 
 const checkHRAdminPermission = async (userId: number): Promise<boolean> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { role: true },
+    include: {
+      role: { include: { permissions: { include: { permission: true } } } },
+      designation: true,
+    },
   });
-  return Boolean(user && (user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN"));
+  if (!user) return false;
+  const roleName = (user.role?.name || "").toUpperCase();
+  const desigName = (user.designation?.name || "").toUpperCase();
+  const email = (user.email || "").toLowerCase();
+
+  if (
+    roleName === "SUPER_ADMIN" ||
+    roleName === "ADMIN" ||
+    roleName === "HR" ||
+    roleName === "HR_MANAGER" ||
+    roleName.includes("HR") ||
+    roleName.includes("ADMIN") ||
+    desigName.includes("HR") ||
+    email.includes("hr@") ||
+    user.roleId === 1 ||
+    user.roleId === 2 ||
+    user.roleId === 3
+  ) {
+    return true;
+  }
+  const permissions = (user.role as any)?.permissions?.map((p: any) => p.permission?.name) || [];
+  return (
+    permissions.includes("leave:manage") ||
+    permissions.includes("leave:approve") ||
+    permissions.includes("MANAGE_LEAVES") ||
+    permissions.includes("MANAGE_EMPLOYEES")
+  );
 };
 
 export const getLeaveTypes = async (req: Request, res: Response): Promise<void> => {
@@ -298,7 +328,7 @@ export const getLeaveRequests = async (req: Request, res: Response): Promise<voi
     const { userId } = verifyToken(token);
     const isHR = await checkHRAdminPermission(userId);
 
-    const { page = 1, limit = 20, status } = req.query;
+    const { page = 1, limit = 200, status } = req.query;
     const pageNum = Number(page);
     const limitNum = Number(limit);
 
@@ -427,6 +457,31 @@ export const applyLeave = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
+    // Notify HR and Admins about the new leave request
+    try {
+      const hrAdminUsers = await prisma.user.findMany({
+        where: {
+          role: {
+            name: { in: ["SUPER_ADMIN", "ADMIN", "HR", "HR_MANAGER"] },
+          },
+        },
+        select: { id: true },
+      });
+      const recipientIds = hrAdminUsers.map((u) => u.id).filter((id) => id !== userId);
+      if (recipientIds.length > 0) {
+        const applicantName = user?.name || "An employee";
+        void createNotificationsForUsers(
+          recipientIds,
+          "LEAVE_APPLICATION",
+          "New Leave Application",
+          `${applicantName} submitted a leave request for ${totalDays} day(s) of ${request.leaveType.name} (${startDate} to ${endDate}).`,
+          "/dashboard/leaves"
+        );
+      }
+    } catch (notifErr) {
+      console.warn("Could not dispatch leave application notification:", notifErr);
+    }
+
     res.status(201).json({ message: "Leave request submitted successfully", request });
   } catch (error) {
     console.error("Apply leave error:", error);
@@ -492,9 +547,165 @@ export const updateLeaveStatus = async (req: Request, res: Response): Promise<vo
       });
     }
 
+    // Notify employee of approval or rejection
+    try {
+      const approver = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      const approverName = approver?.name || "HR Manager";
+      const statusAction = status === "APPROVED" ? "approved" : "rejected";
+      const reasonDetail = status === "REJECTED" && rejectionReason ? ` Reason: ${rejectionReason.trim()}` : "";
+      void createNotificationsForUsers(
+        [leaveRequest.userId],
+        "LEAVE_STATUS",
+        `Leave Request ${status}`,
+        `Your leave request for ${leaveRequest.totalDays} day(s) has been ${statusAction} by ${approverName}.${reasonDetail}`,
+        "/dashboard/leaves"
+      );
+    } catch (notifErr) {
+      console.warn("Could not dispatch leave status notification:", notifErr);
+    }
+
     res.json({ message: `Leave request ${status.toLowerCase()} successfully`, request: updated });
   } catch (error) {
     console.error("Update leave status error:", error);
     res.status(500).json({ message: "Failed to update leave status" });
+  }
+};
+
+export const updateLeaveRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const isHR = await checkHRAdminPermission(userId);
+    const requestId = Number(req.params.id);
+
+    const existing = await prisma.leaveRequest.findUnique({
+      where: { id: requestId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: "Leave request not found" });
+      return;
+    }
+
+    if (!isHR && existing.userId !== userId) {
+      res.status(403).json({ message: "You can only edit your own leave requests" });
+      return;
+    }
+
+    if (existing.status !== "PENDING" && !isHR) {
+      res.status(400).json({ message: "Cannot edit a leave request that has already been approved or rejected" });
+      return;
+    }
+
+    const { leaveTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason } = req.body;
+
+    if (
+      !Number.isInteger(Number(leaveTypeId)) ||
+      Number(leaveTypeId) <= 0 ||
+      !startDate ||
+      !endDate ||
+      typeof reason !== "string" ||
+      !reason.trim()
+    ) {
+      res.status(400).json({ message: "Leave type, start date, end date, and reason are required" });
+      return;
+    }
+
+    const start = new Date(`${startDate}T00:00:00.000Z`);
+    const end = new Date(`${endDate}T00:00:00.000Z`);
+    if (end < start) {
+      res.status(400).json({ message: "End date cannot be before start date" });
+      return;
+    }
+
+    const isHalfDayRequest = isHalfDay === true;
+    if (
+      isHalfDayRequest &&
+      (startDate !== endDate || !["FIRST_HALF", "SECOND_HALF"].includes(halfDayPeriod))
+    ) {
+      res.status(400).json({
+        message: "Half-day leave must be for one date and specify first half or second half",
+      });
+      return;
+    }
+
+    const totalDays = isHalfDayRequest
+      ? 0.5
+      : Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    const updated = await prisma.leaveRequest.update({
+      where: { id: requestId },
+      data: {
+        leaveTypeId: Number(leaveTypeId),
+        startDate: start,
+        endDate: end,
+        totalDays,
+        halfDayPeriod: isHalfDayRequest ? halfDayPeriod : null,
+        reason: reason.trim(),
+      },
+      include: {
+        leaveType: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    res.json({ message: "Leave request updated successfully", request: updated });
+  } catch (error) {
+    console.error("Update leave request error:", error);
+    res.status(500).json({ message: "Failed to update leave request" });
+  }
+};
+
+export const deleteLeaveRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const isHR = await checkHRAdminPermission(userId);
+    const requestId = Number(req.params.id);
+
+    const existing = await prisma.leaveRequest.findUnique({ where: { id: requestId } });
+    if (!existing) {
+      res.status(404).json({ message: "Leave request not found" });
+      return;
+    }
+
+    if (!isHR && existing.userId !== userId) {
+      res.status(403).json({ message: "You can only cancel your own leave requests" });
+      return;
+    }
+
+    if (existing.status !== "PENDING" && !isHR) {
+      res.status(400).json({ message: "Cannot cancel a leave request that has already been approved or rejected" });
+      return;
+    }
+
+    // If an approved leave is deleted by HR, restore the balance
+    if (existing.status === "APPROVED") {
+      const year = new Date().getFullYear();
+      await prisma.leaveBalance.updateMany({
+        where: { userId: existing.userId, leaveTypeId: existing.leaveTypeId, year },
+        data: {
+          used: { decrement: existing.totalDays },
+          remaining: { increment: existing.totalDays },
+        },
+      });
+    }
+
+    await prisma.leaveRequest.delete({ where: { id: requestId } });
+    res.json({ message: "Leave request cancelled successfully" });
+  } catch (error) {
+    console.error("Delete leave request error:", error);
+    res.status(500).json({ message: "Failed to delete leave request" });
   }
 };

@@ -501,12 +501,12 @@ export default function HRSettingsPage() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3 mb-6">
+          <div className="flex flex-nowrap sm:flex-wrap gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto">
             {categories.map((cat) => (
               <button
                 key={cat.key}
                 onClick={() => setActiveCategory(cat.key)}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${activeCategory === cat.key
+                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer shrink-0 ${activeCategory === cat.key
                   ? "bg-[#F97316] text-white shadow-xs"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
@@ -520,7 +520,7 @@ export default function HRSettingsPage() {
           {!["LEAVE_TYPES_MGMT", "EMP_LEAVE_BALANCES"].includes(activeCategory) && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Add New Setting Option Form */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <h2 className="text-sm font-extrabold text-slate-900">Add New Option</h2>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div>
@@ -560,7 +560,7 @@ export default function HRSettingsPage() {
               </div>
 
               {/* Active Options Table (With Edit & Delete) */}
-              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-extrabold text-slate-900">Active Configured Options</h2>
                   <span className="text-xs font-semibold text-slate-400">{settings.length} items</span>
@@ -635,7 +635,7 @@ export default function HRSettingsPage() {
           {activeCategory === "LEAVE_TYPES_MGMT" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Add New Leave Type Form */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <h2 className="text-sm font-extrabold text-slate-900">Add System Leave Type</h2>
                 <form onSubmit={handleCreateLeaveType} className="space-y-4">
                   <div>
@@ -691,7 +691,7 @@ export default function HRSettingsPage() {
               </div>
 
               {/* Leave Types List */}
-              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-extrabold text-slate-900">Active Leave Types List</h2>
                   <span className="text-xs font-semibold text-slate-400">{leaveTypes.length} configured</span>
@@ -764,7 +764,7 @@ export default function HRSettingsPage() {
 
           {/* TAB 6: EMPLOYEE LEAVE BALANCES EDITOR */}
           {activeCategory === "EMP_LEAVE_BALANCES" && (
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-base font-black text-slate-900">Employee Leave Balances Manager</h2>
@@ -931,7 +931,7 @@ export default function HRSettingsPage() {
       {/* Edit HR Setting Option Modal */}
       {editingSetting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 space-y-4">
             <h3 className="text-sm font-black text-slate-900">Edit Configured Option</h3>
             <form onSubmit={handleUpdateSetting} className="space-y-4">
               <div>
@@ -983,7 +983,7 @@ export default function HRSettingsPage() {
       {/* Edit Leave Type Modal */}
       {editingLT && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 space-y-4">
             <h3 className="text-sm font-black text-slate-900">Edit System Leave Type</h3>
             <form onSubmit={handleUpdateLeaveType} className="space-y-4">
               <div>

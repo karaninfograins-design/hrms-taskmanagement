@@ -97,8 +97,10 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedSearchIdx, setSelectedSearchIdx] = useState(0);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -345,7 +347,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             </span>
 
             {/* Product identifier */}
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-200/80 bg-orange-50 px-2 py-1 text-[9px] font-extrabold uppercase leading-none tracking-[0.045em] text-orange-700 transition-all duration-200 hover:border-orange-300 hover:bg-orange-100 sm:text-[10px]">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-orange-200/80 bg-orange-50 px-2 py-1 text-[9px] font-extrabold uppercase leading-none tracking-[0.045em] text-orange-700 transition-all duration-200 hover:border-orange-300 hover:bg-orange-100 sm:text-[10px]">
               <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-40" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
@@ -356,10 +358,54 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         </Link>
       </div>
 
-      {/* Search Bar Redirecting to Sidebar Pages */}
-      <div className="relative flex-1 max-w-xs sm:max-w-sm md:max-w-md mx-2 sm:mx-4" ref={searchRef}>
+      {/* Mobile Full-Width Search Overlay Bar */}
+      {isMobileSearchOpen && (
+        <div className="absolute inset-0 z-50 bg-white flex items-center px-3 sm:px-6 gap-2 animate-in fade-in duration-150">
+          <div className="relative flex-1 flex items-center">
+            <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+            <input
+              ref={mobileSearchInputRef}
+              type="text"
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchOpen(true);
+                setSelectedSearchIdx(0);
+              }}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search pages, projects, employees..."
+              className="w-full h-10 !pl-11 pr-10 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900 placeholder:text-slate-400 shadow-2xs"
+              style={{ paddingLeft: "42px" }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 p-1 rounded-md text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileSearchOpen(false);
+              setIsSearchOpen(false);
+              setSearchQuery("");
+            }}
+            className="p-2 text-xs font-bold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors shrink-0"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Desktop Search Bar (hidden on small mobile screens to keep navbar responsive) */}
+      <div className="relative flex-1 min-w-0 max-w-none sm:max-w-sm md:max-w-md mx-1 sm:mx-4 hidden sm:block" ref={searchRef}>
         <div className="relative flex items-center">
-          <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
           <input
             ref={searchInputRef}
             type="text"
@@ -371,8 +417,9 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             }}
             onFocus={() => setIsSearchOpen(true)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="      Search..."
-            className="w-full h-10 pl-9 pr-14 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-900 placeholder:text-slate-400 shadow-2xs"
+            placeholder="Search..."
+            className="w-full h-10 !pl-11 pr-12 sm:pr-14 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-900 placeholder:text-slate-400 shadow-2xs"
+            style={{ paddingLeft: "42px" }}
           />
           {searchQuery ? (
             <button
@@ -451,7 +498,23 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+        {/* Mobile Search Trigger Icon Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsMobileSearchOpen(true);
+            setIsSearchOpen(true);
+            setTimeout(() => mobileSearchInputRef.current?.focus(), 50);
+          }}
+          className="sm:hidden p-2 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors shrink-0"
+          style={{ border: "none", background: "none", cursor: "pointer" }}
+          aria-label="Search"
+          title="Search navigation"
+        >
+          <Search className="w-5 h-5 text-slate-700" />
+        </button>
+
         {/* Notification Bell Dropdown */}
         <div className="relative" ref={notifRef}>
           <button
@@ -667,7 +730,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         </div>
 
         {/* Profile Dropdown */}
-        <div className="relative" ref={profileRef}>
+        <div className="relative shrink-0" ref={profileRef}>
           {/* Trigger Button */}
           <button
             type="button"
@@ -677,17 +740,18 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             }}
             aria-expanded={isProfileOpen}
             aria-haspopup="true"
-            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            className="flex items-center gap-1 sm:gap-2.5 p-1 sm:p-1.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10 shrink-0"
             style={{ background: "none", border: "none", cursor: "pointer" }}
+            aria-label="User profile menu"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-medium text-xs flex items-center justify-center shadow-inner">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xs flex items-center justify-center shadow-inner shrink-0 ring-2 ring-orange-500/20">
               {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
             </div>
-            <span className="text-sm font-medium text-gray-700 hidden sm:inline-block">
+            <span className="text-xs sm:text-sm font-semibold text-gray-700 hidden md:inline-block max-w-[120px] truncate">
               {user?.name ?? ""}
             </span>
             <svg
-              className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 transition-transform duration-200 shrink-0 ${isProfileOpen ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -701,7 +765,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
           {isProfileOpen && (
             <div
               role="menu"
-              className="absolute right-0 mt-2 w-50 origin-top-right rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl ring-1 ring-black/5 focus:outline-none z-[1000] p-1.5 animate-in fade-in zoom-in-95 duration-100"
+              className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-24px)] origin-top-right rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl ring-1 ring-black/5 focus:outline-none z-[1000] p-1.5 animate-in fade-in zoom-in-95 duration-100"
             >
               {/* User Info Header */}
               <div className="px-3 py-2.5 mb-1 rounded-xl bg-gray-50/80 border border-gray-100">

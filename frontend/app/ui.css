@@ -583,13 +583,22 @@
 
 .role-list {
   display: flex;
+  flex-direction: row;
   gap: 8px;
   padding: 12px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.role-list::-webkit-scrollbar {
+  display: none;
 }
 
 .role-choice {
   flex: 1;
+  min-width: 140px;
   padding: 13px;
   border: 0;
   border-radius: 8px;
@@ -597,6 +606,12 @@
   text-align: left;
   font-weight: 700;
   color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.role-choice:hover:not(.active) {
+  background: #f8fafc;
 }
 
 .role-choice.active {
@@ -620,6 +635,13 @@
   padding: 14px 0;
   margin: 0;
   border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  gap: 16px;
+}
+
+.permission-row span {
+  flex: 1;
+  min-width: 0;
 }
 
 .permission-row input {
@@ -628,6 +650,7 @@
 }
 
 .permission-row i {
+  flex-shrink: 0;
   width: 42px;
   height: 24px;
   border-radius: 999px;
@@ -656,9 +679,17 @@
   transform: translateX(18px);
 }
 
+.permission-list .pagination-container {
+  padding: 12px 0 0 0;
+  margin: 8px 0 0 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+}
+
 .permission-list .primary-button {
   width: auto;
   padding: 0 22px;
+  margin-top: 10px;
 }
 
 .permission-create {
@@ -696,8 +727,45 @@
 }
 
 @media (max-width: 640px) {
+  .permission-list {
+    padding: 16px 14px;
+  }
+
   .permission-create {
     grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .permission-create .text-button {
+    height: 40px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .permission-row {
+    padding: 12px 0;
+    gap: 12px;
+  }
+
+  .permission-list .pagination-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .permission-list .pagination-controls {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .permission-list .primary-button {
+    width: 100%;
+    margin-top: 10px;
   }
 
   .management-row {

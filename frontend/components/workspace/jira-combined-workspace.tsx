@@ -395,7 +395,7 @@ export function ProjectSprintPage({ mode }: Props) {
       </div>
 
       <button
-        className="primary-button workspace-add-button mb-4"
+        className="primary-button workspace-add-button mb-4 w-full sm:w-auto"
         onClick={() => setShowForm(!showForm)}
       >
         + Create {isProjects ? "project" : "sprint"}
@@ -571,7 +571,7 @@ export function ProjectSprintPage({ mode }: Props) {
 
       {isProjects ? (
         <div className="workspace-list-card">
-          <div className="workspace-table-scroll">
+          <div className="workspace-table-scroll hidden md:block">
             <table className="workspace-table project-table">
               <thead>
                 <tr>
@@ -695,55 +695,126 @@ export function ProjectSprintPage({ mode }: Props) {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Project Cards */}
+          <div className="md:hidden divide-y divide-slate-100 p-2 sm:p-4">
+            {(() => {
+              const isEmployeeRole = session?.user?.role === "EMPLOYEE";
+              const displayItems = isEmployeeRole
+                ? items.filter((item: any) => {
+                  const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
+                  const isAssigned = Array.isArray(item.assignedUserIds) && item.assignedUserIds.includes(session?.user?.id);
+                  const isOwner = (item.createdBy?.id || item.createdById) === session?.user?.id;
+                  return isMember || isAssigned || isOwner;
+                })
+                : items;
+
+              if (displayItems.length === 0) {
+                return (
+                  <div className="text-center py-6 text-sm text-slate-500">
+                    {isEmployeeRole ? "You are not assigned to any projects yet." : "No projects found."}
+                  </div>
+                );
+              }
+
+              return displayItems.map((item) => (
+                <div key={String(item.id)} className="py-3 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                        {String(item.key || "PRJ")}
+                      </span>
+                      <h4 className="font-bold text-slate-900 text-sm mt-1 truncate">
+                        {String(item.name)}
+                      </h4>
+                    </div>
+                    <span className="jira-status shrink-0 text-xs">
+                      {String(item.status)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Created By</span>
+                      <span className="font-medium text-slate-700 truncate block">
+                        {(item as any).createdBy?.name || item.owner || "Admin"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Owner</span>
+                      <span className="font-medium text-slate-700 truncate block">
+                        {String(item.owner || "Not assigned")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Start Date</span>
+                      <span className="font-medium text-slate-700">
+                        {item.startDate ? new Date(String(item.startDate)).toLocaleDateString() : "Not set"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">End Date</span>
+                      <span className="font-medium text-slate-700">
+                        {item.endDate ? new Date(String(item.endDate)).toLocaleDateString() : "Not set"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs"
+                      onClick={() => router.push(`/dashboard/projects/${item.id}`)}
+                      title="View Project Details"
+                    >
+                      <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span>View</span>
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-white hover:bg-rose-50 text-rose-600 font-bold text-xs shadow-2xs"
+                      onClick={() => removeProject(Number(item.id), String(item.name))}
+                      title="Delete Project"
+                    >
+                      <svg className="w-3.5 h-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+
           {pagination.totalPages > 1 && (
-            <div style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              gap: "8px",
-              marginTop: "16px",
-              padding: "12px",
-              background: "var(--card-bg, #ffffff)",
-              borderRadius: "8px",
-              border: "1px solid var(--line, #e2e8f0)",
-            }}>
-              <button
-                type="button"
-                onClick={() => pagination.page > 1 && refresh(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--line, #cbd5e1)",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "var(--fg, #1e293b)",
-                  backgroundColor: pagination.page <= 1 ? "var(--muted-bg, #f1f5f9)" : "var(--card-bg, #ffffff)",
-                  cursor: pagination.page <= 1 ? "not-allowed" : "pointer",
-                }}
-              >
-                Previous
-              </button>
-              <span style={{ fontSize: "0.85rem", color: "var(--muted, #64748b)" }}>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 p-3 bg-white rounded-lg border border-slate-200">
+              <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left order-2 sm:order-1">
                 Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} items)
               </span>
-              <button
-                type="button"
-                onClick={() => pagination.page < pagination.totalPages && refresh(pagination.page + 1)}
-                disabled={pagination.page >= pagination.totalPages}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--line, #cbd5e1)",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: "var(--fg, #1e293b)",
-                  backgroundColor: pagination.page >= pagination.totalPages ? "var(--muted-bg, #f1f5f9)" : "var(--card-bg, #ffffff)",
-                  cursor: pagination.page >= pagination.totalPages ? "not-allowed" : "pointer",
-                }}
-              >
-                Next
-              </button>
+              <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto justify-between sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => pagination.page > 1 && refresh(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                  className={`px-3 py-1.5 rounded-md border text-xs sm:text-sm font-semibold transition-colors ${
+                    pagination.page <= 1 ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
+                  }`}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => pagination.page < pagination.totalPages && refresh(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages}
+                  className={`px-3 py-1.5 rounded-md border text-xs sm:text-sm font-semibold transition-colors ${
+                    pagination.page >= pagination.totalPages ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

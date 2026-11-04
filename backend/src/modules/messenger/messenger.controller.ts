@@ -4,6 +4,7 @@ import fs from "fs";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
 import { getIO } from "../../socket.js";
+import { loadReactionsStore, toggleMessageReaction } from "./reactions.js";
 
 export const getConversations = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -283,8 +284,14 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
       data: { lastReadAt: new Date() },
     });
 
+    const reactionsStore = loadReactionsStore();
+    const messagesWithReactions = messages.map((m: any) => ({
+      ...m,
+      reactions: reactionsStore[String(m.id)] || {},
+    }));
+
     res.json({
-      messages,
+      messages: messagesWithReactions,
       pagination: {
         limit: fetchAll ? messages.length : limit,
         hasMore,
@@ -527,6 +534,65 @@ export const searchMessages = async (req: Request, res: Response): Promise<void>
   } catch (error) {
     console.error("Search messages error:", error);
     res.status(500).json({ message: "Failed to search messages" });
+  }
+};
+
+export const reactToMessage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const messageId = Number(req.params.id);
+    const { emoji } = req.body;
+
+    const allowedEmojis = ["👍", "❤️", "😂", "🎉", "🙏"];
+    if (!emoji || !allowedEmojis.includes(emoji)) {
+      res.status(400).json({ message: "Invalid or unsupported reaction emoji" });
+      return;
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, conversationId: true },
+    });
+
+    if (!message) {
+      res.status(404).json({ message: "Message not found" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true },
+    });
+
+    const updatedReactions = toggleMessageReaction(
+      messageId,
+      userId,
+      user?.name || `User ${userId}`,
+      emoji
+    );
+
+    // Real-Time Socket.IO Broadcast to conversation room
+    try {
+      const io = getIO();
+      io.to(`conversation_${message.conversationId}`).emit("message:reaction", {
+        messageId,
+        conversationId: message.conversationId,
+        reactions: updatedReactions,
+      });
+    } catch (err) {
+      console.error("Socket emit error for reaction:", err);
+    }
+
+    res.json({ messageId, reactions: updatedReactions });
+  } catch (error) {
+    console.error("React to message error:", error);
+    res.status(500).json({ message: "Failed to update reaction" });
   }
 };
 

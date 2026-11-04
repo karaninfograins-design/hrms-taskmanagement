@@ -10,25 +10,57 @@ export type LeaveApplicationType = {
   daysAllowed: number;
 };
 
+export type EditingLeaveRequest = {
+  id: number;
+  leaveTypeId?: number;
+  leaveType?: { id: number; name: string };
+  startDate: string;
+  endDate: string;
+  totalDays?: number;
+  halfDayPeriod?: "FIRST_HALF" | "SECOND_HALF" | null;
+  reason: string;
+};
+
 type ApplyLeaveModalProps = {
   leaveTypes: LeaveApplicationType[];
   onClose: () => void;
   onSubmitted: () => Promise<void>;
+  editingRequest?: EditingLeaveRequest | null;
+};
+
+const formatDateForInput = (dateStr?: string) => {
+  if (!dateStr) return "";
+  try {
+    return dateStr.split("T")[0];
+  } catch {
+    return "";
+  }
 };
 
 export function ApplyLeaveModal({
   leaveTypes,
   onClose,
   onSubmitted,
+  editingRequest,
 }: ApplyLeaveModalProps) {
   const [selectedTypeId, setSelectedTypeId] = useState(
-    leaveTypes.length ? String(leaveTypes[0].id) : ""
+    editingRequest
+      ? String(editingRequest.leaveTypeId || editingRequest.leaveType?.id || (leaveTypes[0]?.id ?? ""))
+      : leaveTypes.length ? String(leaveTypes[0].id) : ""
   );
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [isHalfDay, setIsHalfDay] = useState(false);
-  const [halfDayPeriod, setHalfDayPeriod] = useState<"FIRST_HALF" | "SECOND_HALF">("FIRST_HALF");
-  const [reason, setReason] = useState("");
+  const [startDate, setStartDate] = useState(
+    editingRequest ? formatDateForInput(editingRequest.startDate) : ""
+  );
+  const [endDate, setEndDate] = useState(
+    editingRequest ? formatDateForInput(editingRequest.endDate) : ""
+  );
+  const [isHalfDay, setIsHalfDay] = useState(
+    editingRequest ? Boolean(editingRequest.halfDayPeriod || editingRequest.totalDays === 0.5) : false
+  );
+  const [halfDayPeriod, setHalfDayPeriod] = useState<"FIRST_HALF" | "SECOND_HALF">(
+    editingRequest?.halfDayPeriod || "FIRST_HALF"
+  );
+  const [reason, setReason] = useState(editingRequest?.reason || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,8 +83,14 @@ export function ApplyLeaveModal({
       const token = getAuthToken();
       if (!token) throw new Error("Your session has expired. Please sign in again.");
 
-      const response = await fetch(`${getApiUrl()}/api/leaves/requests`, {
-        method: "POST",
+      const isEdit = Boolean(editingRequest?.id);
+      const url = isEdit
+        ? `${getApiUrl()}/api/leaves/requests/${editingRequest!.id}`
+        : `${getApiUrl()}/api/leaves/requests`;
+      const method = isEdit ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -69,7 +107,7 @@ export function ApplyLeaveModal({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Failed to submit leave request.");
+        throw new Error(data.message || `Failed to ${isEdit ? "update" : "submit"} leave request.`);
       }
 
       await onSubmitted();
@@ -78,7 +116,7 @@ export function ApplyLeaveModal({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Unable to submit the leave request."
+          : `Unable to ${editingRequest ? "update" : "submit"} the leave request.`
       );
     } finally {
       setSubmitting(false);
@@ -88,12 +126,14 @@ export function ApplyLeaveModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-4 sm:px-6 py-3.5 sm:py-4">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-sm font-bold text-orange-600">
               📅
             </span>
-            <h2 className="text-lg font-black text-slate-900">Apply for Leave</h2>
+            <h2 className="text-lg font-black text-slate-900">
+              {editingRequest ? "Edit Leave Request" : "Apply for Leave"}
+            </h2>
           </div>
           <button
             type="button"
@@ -105,7 +145,7 @@ export function ApplyLeaveModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:p-6 overflow-y-auto">
           {error && (
             <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">
               ⚠️ {error}
@@ -131,7 +171,7 @@ export function ApplyLeaveModal({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="leaveStartDate" className="mb-1 block text-xs font-bold text-slate-700">
                 Start Date
@@ -169,7 +209,7 @@ export function ApplyLeaveModal({
           </div>
 
           <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700 select-none">
               <input
                 type="checkbox"
                 checked={isHalfDay}
@@ -177,20 +217,32 @@ export function ApplyLeaveModal({
                   setIsHalfDay(event.target.checked);
                   setError(null);
                 }}
-                className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                className="sr-only"
               />
-              Half-day leave
+              <span
+                className={`flex h-4 w-4 shrink-0 aspect-square items-center justify-center rounded-md border transition-all ${
+                  isHalfDay
+                    ? "border-[#F97316] bg-[#F97316] text-white shadow-xs"
+                    : "border-slate-300 bg-white hover:border-slate-400"
+                }`}
+              >
+                {isHalfDay && (
+                  <svg className="h-2.5 w-2.5 fill-none stroke-current stroke-[3]" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </span>
+              <span>Half-day leave</span>
             </label>
             {isHalfDay && (
               <fieldset className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 pb-2.5 pt-1">
                 <legend className="px-1 text-xs font-bold text-slate-700">Which half of the day?</legend>
                 <div className="grid grid-cols-2 gap-2">
                   <label
-                    className={`!mt-0 !flex !gap-2 cursor-pointer items-center rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors ${
-                      halfDayPeriod === "FIRST_HALF"
-                        ? "border-orange-300 bg-white text-orange-800"
-                        : "border-transparent text-slate-700 hover:border-orange-200 hover:bg-white/70"
-                    }`}
+                    className={`!mt-0 !flex !gap-2.5 cursor-pointer items-center rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors ${halfDayPeriod === "FIRST_HALF"
+                      ? "border-orange-300 bg-white text-orange-800"
+                      : "border-transparent text-slate-700 hover:border-orange-200 hover:bg-white/70"
+                      }`}
                   >
                     <input
                       type="radio"
@@ -198,16 +250,25 @@ export function ApplyLeaveModal({
                       value="FIRST_HALF"
                       checked={halfDayPeriod === "FIRST_HALF"}
                       onChange={() => setHalfDayPeriod("FIRST_HALF")}
-                      className="h-5 w-5 shrink-0 text-orange-500 focus:ring-orange-500"
+                      className="sr-only"
                     />
+                    <span
+                      className={`flex h-4 w-4 shrink-0 aspect-square items-center justify-center rounded-full border-2 transition-all ${halfDayPeriod === "FIRST_HALF"
+                        ? "border-[#F97316] bg-white"
+                        : "border-slate-300 bg-white"
+                        }`}
+                    >
+                      {halfDayPeriod === "FIRST_HALF" && (
+                        <span className="h-2 w-2 rounded-full bg-[#F97316]" />
+                      )}
+                    </span>
                     First half
                   </label>
                   <label
-                    className={`!mt-0 !flex !gap-2 cursor-pointer items-center rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors ${
-                      halfDayPeriod === "SECOND_HALF"
-                        ? "border-orange-300 bg-white text-orange-800"
-                        : "border-transparent text-slate-700 hover:border-orange-200 hover:bg-white/70"
-                    }`}
+                    className={`!mt-0 !flex !gap-2.5 cursor-pointer items-center rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors ${halfDayPeriod === "SECOND_HALF"
+                      ? "border-orange-300 bg-white text-orange-800"
+                      : "border-transparent text-slate-700 hover:border-orange-200 hover:bg-white/70"
+                      }`}
                   >
                     <input
                       type="radio"
@@ -215,8 +276,18 @@ export function ApplyLeaveModal({
                       value="SECOND_HALF"
                       checked={halfDayPeriod === "SECOND_HALF"}
                       onChange={() => setHalfDayPeriod("SECOND_HALF")}
-                      className="h-5 w-5 shrink-0 text-orange-500 focus:ring-orange-500"
+                      className="sr-only"
                     />
+                    <span
+                      className={`flex h-4 w-4 shrink-0 aspect-square items-center justify-center rounded-full border-2 transition-all ${halfDayPeriod === "SECOND_HALF"
+                        ? "border-[#F97316] bg-white"
+                        : "border-slate-300 bg-white"
+                        }`}
+                    >
+                      {halfDayPeriod === "SECOND_HALF" && (
+                        <span className="h-2 w-2 rounded-full bg-[#F97316]" />
+                      )}
+                    </span>
                     Second half
                   </label>
                 </div>
@@ -253,7 +324,13 @@ export function ApplyLeaveModal({
               disabled={submitting || leaveTypes.length === 0}
               className="cursor-pointer rounded-xl bg-[#F97316] px-5 py-2 text-xs font-extrabold text-white shadow-xs transition-all hover:bg-[#EA580C] disabled:opacity-50"
             >
-              {submitting ? "Submitting..." : "Submit Application"}
+              {submitting
+                ? editingRequest
+                  ? "Updating..."
+                  : "Submitting..."
+                : editingRequest
+                  ? "Update Leave Request"
+                  : "Submit Application"}
             </button>
           </div>
         </form>

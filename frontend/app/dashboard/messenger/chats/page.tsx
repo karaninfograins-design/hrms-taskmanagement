@@ -2,7 +2,41 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Settings2, Phone, Video, Trash2, X, Users, Search, UserPlus, Copy, Forward, CornerUpLeft, Pencil, MessageSquare, ArrowLeft } from "lucide-react";
+import {
+  Settings2,
+  Phone,
+  Video,
+  Trash2,
+  X,
+  Users,
+  Search,
+  UserPlus,
+  Copy,
+  Forward,
+  CornerUpLeft,
+  Pencil,
+  MessageSquare,
+  ArrowLeft,
+  Paperclip,
+  Link2,
+  FileText,
+  Image as ImageIcon,
+  Download,
+  ExternalLink,
+  Send,
+  Smile,
+} from "lucide-react";
+import dynamic from "next/dynamic";
+import type { EmojiClickData } from "emoji-picker-react";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-[320px] h-[390px] bg-white rounded-2xl flex items-center justify-center border border-slate-200 shadow-xl">
+      <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  ),
+});
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
 import { Navbar } from "@/components/layout/Navbar";
@@ -45,6 +79,7 @@ type Message = {
     content: string;
     sender: { name: string };
   } | null;
+  reactions?: Record<string, Array<{ userId: number; userName: string }>>;
 };
 
 type Conversation = {
@@ -120,6 +155,7 @@ function ChatsContent() {
   const [attachmentFileName, setAttachmentFileName] = useState<string>("");
   const [attachmentType, setAttachmentType] = useState<"IMAGE" | "DOCUMENT" | "LINK">("IMAGE");
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Group Modal State
@@ -133,6 +169,25 @@ function ChatsContent() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Emoji Picker & Popover Refs
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const attachmentMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(e.target as Node)) {
+        setShowAttachmentMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSignOut = () => {
     logout();
@@ -221,6 +276,18 @@ function ChatsContent() {
   useEffect(() => {
     activeConvRef.current = activeConv;
   }, [activeConv]);
+
+  // Auto-adjust textarea height and reset cleanly when empty or message sent
+  useEffect(() => {
+    if (textareaRef.current) {
+      if (msgInput) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      } else {
+        textareaRef.current.style.height = "44px";
+      }
+    }
+  }, [msgInput]);
 
   // Socket event listeners for real-time messages & typing
   useEffect(() => {
@@ -315,12 +382,21 @@ function ChatsContent() {
       }
     };
 
+    const onMessageReaction = (data: { messageId: number; conversationId: number; reactions: Record<string, Array<{ userId: number; userName: string }>> }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.messageId ? { ...m, reactions: data.reactions } : m
+        )
+      );
+    };
+
     socket.on("message:new", onNewMessage);
     socket.on("conversation:updated", onConversationUpdated);
     socket.on("conversation:members-updated", onGroupMembersUpdated);
     socket.on("conversation:deleted", onConversationDeleted);
     socket.on("user:typing", onUserTyping);
     socket.on("user:stop_typing", onUserStopTyping);
+    socket.on("message:reaction", onMessageReaction);
 
     return () => {
       socket.off("message:new", onNewMessage);
@@ -329,6 +405,7 @@ function ChatsContent() {
       socket.off("conversation:deleted", onConversationDeleted);
       socket.off("user:typing", onUserTyping);
       socket.off("user:stop_typing", onUserStopTyping);
+      socket.off("message:reaction", onMessageReaction);
     };
   }, [socket]);
 
@@ -494,11 +571,9 @@ function ChatsContent() {
     }
   };
 
-  // Handle Attachment Upload to backend storage
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Reusable File Upload helper (supports file picker, drag & drop, and direct clipboard image paste)
+  const uploadFile = async (file: File) => {
+    setIsUploadingAttachment(true);
     const reader = new FileReader();
     reader.onload = async () => {
       if (typeof reader.result === "string") {
@@ -521,15 +596,50 @@ function ChatsContent() {
           setAttachmentUrl(data.url);
           setAttachmentFileName(data.fileName);
           setAttachmentType(data.type);
-          showSuccessToast("Attachment uploaded successfully");
+          showSuccessToast(file.type.startsWith("image/") ? "Image pasted and attached!" : "Attachment uploaded successfully");
         } catch (err: any) {
           console.error("Upload error:", err);
-          showErrorToast("Failed to upload file to server storage");
+          showErrorToast("Failed to upload attachment to server storage");
+        } finally {
+          setIsUploadingAttachment(false);
         }
       }
     };
+    reader.onerror = () => {
+      setIsUploadingAttachment(false);
+      showErrorToast("Failed to read file");
+    };
     reader.readAsDataURL(file);
+  };
+
+  // Handle Attachment Upload from File Picker
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadFile(file);
     setShowAttachmentMenu(false);
+    if (e.target) e.target.value = "";
+  };
+
+  // Handle Direct Clipboard Image Pasting (Ctrl+V)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items || items.length === 0) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const ext = file.type.split("/")[1]?.replace(/[^a-zA-Z0-9]/g, "") || "png";
+          const uniqueName = `pasted_image_${Date.now()}.${ext}`;
+          const renamedFile = new File([file], uniqueName, { type: file.type });
+          uploadFile(renamedFile);
+        }
+        return;
+      }
+    }
   };
 
   const handleAddLinkPrompt = async () => {
@@ -569,6 +679,9 @@ function ChatsContent() {
           );
           setEditingMsg(null);
           setMsgInput("");
+          if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+          }
           showSuccessToast("Message updated");
         } else {
           showErrorToast("Failed to edit message");
@@ -601,6 +714,9 @@ function ChatsContent() {
         const data = await res.json();
         setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
         setMsgInput("");
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
         setAttachmentUrl("");
         setReplyingTo(null);
         fetchConversations();
@@ -696,6 +812,80 @@ function ChatsContent() {
     } catch (err) {
       console.error("Error deleting message:", err);
       showErrorToast("Error deleting message");
+    }
+  };
+
+  // Insert emoji from emoji-picker into message input
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const emoji = emojiData.emoji;
+    if (textareaRef.current) {
+      const start = textareaRef.current.selectionStart || msgInput.length;
+      const end = textareaRef.current.selectionEnd || msgInput.length;
+      const updated = msgInput.substring(0, start) + emoji + msgInput.substring(end);
+      setMsgInput(updated);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + emoji.length;
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+        }
+      }, 10);
+    } else {
+      setMsgInput((prev) => prev + emoji);
+    }
+  };
+
+  // Toggle reaction on message
+  const handleReact = async (messageId: number, emoji: string) => {
+    if (!activeConv || !session?.user?.id) return;
+    const currentUserId = Number(session.user.id);
+    const currentUserName = session.user.name || "You";
+
+    // Optimistic UI update
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const currentReactions = { ...(m.reactions || {}) };
+        const userList = [...(currentReactions[emoji] || [])];
+        const existingIdx = userList.findIndex((u) => u.userId === currentUserId);
+        if (existingIdx >= 0) {
+          userList.splice(existingIdx, 1);
+          if (userList.length === 0) {
+            delete currentReactions[emoji];
+          } else {
+            currentReactions[emoji] = userList;
+          }
+        } else {
+          userList.push({ userId: currentUserId, userName: currentUserName });
+          currentReactions[emoji] = userList;
+        }
+        return { ...m, reactions: currentReactions };
+      })
+    );
+
+    // Real-time socket broadcast
+    if (socket) {
+      socket.emit("message:react", {
+        messageId,
+        conversationId: activeConv.id,
+        emoji,
+      });
+    }
+
+    // Persist via REST API
+    try {
+      const token = getAuthToken();
+      await fetch(`${getApiUrl()}/api/messenger/messages/${messageId}/react`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ emoji }),
+      });
+    } catch (err) {
+      console.error("Failed to persist reaction:", err);
     }
   };
 
@@ -815,7 +1005,7 @@ function ChatsContent() {
         >
           {/* Left Messenger Sidebar (Contacts & Chats) */}
           <div
-            className={`w-full md:w-80 lg:w-96 border-r border-slate-200/80 bg-white flex flex-col h-full shadow-xs transition-all ${activeConv ? "hidden md:flex" : "flex"
+            className={`w-full lg:w-80 xl:w-96 border-r border-slate-200/80 bg-white flex flex-col h-full shadow-xs transition-all ${activeConv ? "hidden lg:flex" : "flex"
               }`}
           >
             {/* Sidebar Top Controls: Header + "+ New Group" Button */}
@@ -836,13 +1026,15 @@ function ChatsContent() {
               </div>
 
               {/* Working Contact & Chat Search Bar */}
-              <div className="relative">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                 <input
                   type="text"
                   placeholder="Search contacts or groups..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-10 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900 font-medium placeholder-slate-400"
+                  style={{ paddingLeft: "40px" }}
+                  className="w-full h-10 !pl-10 pr-8 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900 font-medium placeholder-slate-400"
                 />
                 {searchQuery && (
                   <button
@@ -995,19 +1187,19 @@ function ChatsContent() {
 
           {/* Active Chat Window */}
           <div
-            className={`flex-1 bg-slate-50/50 flex-col h-full transition-all ${activeConv ? "flex" : "hidden md:flex"
+            className={`flex-1 min-w-0 bg-slate-50/50 flex-col h-full transition-all ${activeConv ? "flex" : "hidden lg:flex"
               }`}
           >
             {activeConv ? (
               <>
                 {/* Chat Header with PROMINENT BACK BUTTON */}
-                <div className="flex h-16 flex-shrink-0 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200/80 bg-white px-4 shadow-sm sm:px-6">
-                  <div className="flex items-center gap-3">
+                <div className="flex h-16 flex-shrink-0 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200/80 bg-white px-3 sm:px-6 shadow-sm">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => setActiveConv(null)}
                       aria-label="Back to conversations"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 md:hidden"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 lg:hidden"
                     >
                       <ArrowLeft size={16} />
                     </button>
@@ -1030,11 +1222,11 @@ function ChatsContent() {
                           />
                         )}
                       </div>
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900">
+                      <div className="min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-xs md:max-w-md">
+                        <h3 className="text-sm font-black text-slate-900 truncate">
                           {!isDirect ? activeConv.name : partnerUser?.name}
                         </h3>
-                        <p className="text-[11px] text-slate-500 font-medium">
+                        <p className="text-[11px] text-slate-500 font-medium truncate">
                           {!isDirect ? (
                             <span>
                               Created by {activeConv.createdBy?.name || "Admin"}
@@ -1054,7 +1246,7 @@ function ChatsContent() {
                   </div>
 
                   {/* WebRTC Call Triggers & Group Member Management */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                     {!isDirect && (
                       <button
                         onClick={() => handleOpenManageMembersModal(activeConv)}
@@ -1067,7 +1259,7 @@ function ChatsContent() {
                     )}
                     <button
                       onClick={() => handleInitiateCall("AUDIO")}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-600 hover:text-orange-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                      className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-600 hover:text-orange-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
                       title="Audio call"
                     >
                       <Phone size={13} strokeWidth={2} />
@@ -1075,7 +1267,7 @@ function ChatsContent() {
                     </button>
                     <button
                       onClick={() => handleInitiateCall("VIDEO")}
-                      className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs"
+                      className="px-2.5 sm:px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs"
                       title="Video call"
                     >
                       <Video size={13} strokeWidth={2} />
@@ -1083,7 +1275,7 @@ function ChatsContent() {
                     </button>
                     <button
                       onClick={() => handleDeleteConversation(activeConv.id)}
-                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl text-xs font-semibold transition-all border border-rose-200 flex items-center gap-1.5 cursor-pointer"
+                      className="px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl text-xs font-semibold transition-all border border-rose-200 flex items-center gap-1.5 cursor-pointer"
                       title={isDirect ? "Delete chat conversation" : "Delete group conversation"}
                     >
                       <Trash2 size={13} strokeWidth={2} />
@@ -1100,7 +1292,7 @@ function ChatsContent() {
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 space-y-4 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
+                <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -1125,7 +1317,7 @@ function ChatsContent() {
                           </span>
                         </div>
                         <div
-                          className={`max-w-md p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all ${isMe
+                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] overflow-hidden ${isMe
                             ? "bg-orange-50/90 border border-orange-200/90 text-slate-900 font-medium rounded-br-xs"
                             : "bg-white text-slate-800 border border-slate-200/90 font-medium rounded-bl-xs"
                             }`}
@@ -1156,15 +1348,16 @@ function ChatsContent() {
                                       rel="noreferrer"
                                       className="px-3.5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition-all"
                                     >
-                                      📥 Download Image
+                                      <Download size={14} strokeWidth={2.5} />
+                                      <span>Download Image</span>
                                     </a>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-orange-300 text-xs font-bold flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-2 truncate">
-                                    <span className="text-base">
-                                      {m.attachmentType === "LINK" ? "🔗" : "📄"}
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-orange-400 shrink-0 border border-slate-700">
+                                      {m.attachmentType === "LINK" ? <Link2 size={15} strokeWidth={2.2} /> : <FileText size={15} strokeWidth={2.2} />}
                                     </span>
                                     <span className="truncate max-w-[180px]">
                                       {m.attachmentUrl.length > 40
@@ -1177,18 +1370,28 @@ function ChatsContent() {
                                     download="attached-file"
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[11px] font-black transition-all flex items-center gap-1 flex-shrink-0 shadow-xs"
+                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[11px] font-black transition-all flex items-center gap-1.5 flex-shrink-0 shadow-xs cursor-pointer"
                                   >
-                                    📥 Download
+                                    {m.attachmentType === "LINK" ? (
+                                      <>
+                                        <ExternalLink size={12} strokeWidth={2.5} />
+                                        <span>Open</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Download size={12} strokeWidth={2.5} />
+                                        <span>Download</span>
+                                      </>
+                                    )}
                                   </a>
                                 </div>
                               )}
                             </div>
                           )}
 
-                          <p className={`whitespace-pre-wrap ${isDeleted ? "italic opacity-60" : ""}`}>
+                          <div className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text ${isDeleted ? "italic opacity-60" : ""}`}>
                             {m.content}
-                          </p>
+                          </div>
 
                           <div className="mt-1 flex items-center justify-end gap-1.5 text-[10px] opacity-75 font-medium">
                             {m.editedAt && <span>(edited)</span>}
@@ -1214,7 +1417,27 @@ function ChatsContent() {
 
                           {/* Hover Actions */}
                           {!isDeleted && (
-                            <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-0.5 bg-white p-1 rounded-xl shadow-md border border-slate-200">
+                            <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-0.5 bg-white p-1 rounded-xl shadow-md border border-slate-200 z-10 animate-in fade-in duration-100">
+                              {/* Quick Reaction Bar */}
+                              <div className="flex items-center gap-0.5 border-r border-slate-200/80 pr-1 mr-0.5">
+                                {["👍", "❤️", "😂", "🎉", "🙏"].map((emoji) => {
+                                  const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={() => handleReact(m.id, emoji)}
+                                      className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
+                                        userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
+                                      }`}
+                                      title={`React with ${emoji}`}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
                               {/* Reply */}
                               <button
                                 onClick={() => setReplyingTo(m)}
@@ -1226,11 +1449,10 @@ function ChatsContent() {
                               {/* Copy */}
                               <button
                                 onClick={() => handleCopyMessage(m)}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  copyFeedbackId === m.id
-                                    ? "text-emerald-600 bg-emerald-50"
-                                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                                }`}
+                                className={`p-1.5 rounded-lg transition-colors ${copyFeedbackId === m.id
+                                  ? "text-emerald-600 bg-emerald-50"
+                                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                  }`}
                                 title={copyFeedbackId === m.id ? "Copied!" : "Copy"}
                               >
                                 <Copy size={14} strokeWidth={2} />
@@ -1272,6 +1494,34 @@ function ChatsContent() {
                             </div>
                           )}
                         </div>
+
+                        {/* Reaction Badges Below Message Bubble */}
+                        {m.reactions && Object.keys(m.reactions).length > 0 && (
+                          <div className={`flex flex-wrap gap-1 mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                            {Object.entries(m.reactions).map(([emoji, users]) => {
+                              if (!users || users.length === 0) return null;
+                              const userReacted = users.some((u) => u.userId === currentUserId);
+                              const tooltipText = users.map((u) => (u.userId === currentUserId ? "You" : u.userName)).join(", ");
+
+                              return (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => handleReact(m.id, emoji)}
+                                  title={tooltipText}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                                    userReacted
+                                      ? "bg-orange-50 border-orange-300 text-orange-700"
+                                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <span>{emoji}</span>
+                                  <span className="text-[10px] text-slate-500">{users.length}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1285,11 +1535,14 @@ function ChatsContent() {
                   </p>
                 )}
 
-                {/* Message Composer with Attachment Button (📎) */}
-                <div className="p-4 bg-white border-t border-slate-200/80 space-y-2 flex-shrink-0">
+                {/* Message Composer with Attachment Button (📎) and Clipboard Paste Support */}
+                <div
+                  onPaste={handlePaste}
+                  className="p-2 bg-white border-t border-slate-200/80 space-y-2 flex-shrink-0"
+                >
                   {/* Reply Banner */}
                   {replyingTo && (
-                    <div className="flex items-center justify-between bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-xl text-xs">
+                    <div className="flex items-center justify-between bg-orange-50 border border-orange-200 px-1.5 py-1.5 rounded-xl text-xs">
                       <span className="text-orange-800 truncate">
                         Replying to <strong>{replyingTo.sender.name}</strong>: "{replyingTo.content}"
                       </span>
@@ -1302,22 +1555,45 @@ function ChatsContent() {
                     </div>
                   )}
 
-                  {/* Compact Smart Icon Chip Preview */}
-                  {attachmentUrl && (
-                    <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-2xl text-xs shadow-md border border-slate-700 animate-fade-in">
-                      <span className="text-sm">
-                        {attachmentType === "IMAGE" ? "🖼️" : attachmentType === "LINK" ? "🔗" : "📄"}
-                      </span>
-                      <span className="font-bold text-[11px] max-w-[140px] truncate">
-                        {attachmentFileName || "Attached File"}
-                      </span>
+                  {/* Uploading Progress Indicator */}
+                  {isUploadingAttachment && (
+                    <div className="inline-flex items-center gap-2 bg-slate-900 text-slate-200 px-3 py-1.5 rounded-xl text-xs border border-slate-700 animate-pulse shadow-md">
+                      <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="font-semibold text-[11px]">Uploading pasted image...</span>
+                    </div>
+                  )}
+
+                  {/* Compact Smart Icon / Thumbnail Chip Preview */}
+                  {attachmentUrl && !isUploadingAttachment && (
+                    <div className="inline-flex items-center gap-2.5 bg-slate-900 text-white pl-2 pr-3 py-1.5 rounded-2xl text-xs shadow-md border border-slate-700 animate-fade-in">
+                      {attachmentType === "IMAGE" ? (
+                        <img
+                          src={attachmentUrl}
+                          alt="Pasted Attachment"
+                          className="w-7 h-7 object-cover rounded-lg border border-slate-700 shadow-xs shrink-0"
+                        />
+                      ) : (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-800 text-orange-400 shrink-0 border border-slate-700">
+                          {attachmentType === "LINK" ? <Link2 size={13} strokeWidth={2.2} /> : <FileText size={13} strokeWidth={2.2} />}
+                        </span>
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-[11px] max-w-[170px] truncate leading-tight">
+                          {attachmentFileName || "Attached File"}
+                        </span>
+                        {attachmentType === "IMAGE" && (
+                          <span className="text-[9px] text-emerald-400 font-semibold leading-tight">
+                            Image ready to send
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
                           setAttachmentUrl("");
                           setAttachmentFileName("");
                         }}
-                        className="w-5 h-5 rounded-full bg-slate-800 hover:bg-rose-500 text-white font-black text-[10px] flex items-center justify-center transition-colors ml-1 shadow-xs"
+                        className="w-5 h-5 rounded-full bg-slate-800 hover:bg-rose-500 text-white font-black text-[10px] flex items-center justify-center transition-colors ml-1 shadow-xs cursor-pointer shrink-0"
                         title="Remove attachment"
                       >
                         ✕
@@ -1325,32 +1601,75 @@ function ChatsContent() {
                     </div>
                   )}
 
-                  <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                  <form onSubmit={handleSendMessage} onPaste={handlePaste} className="flex items-center gap-2 sm:gap-3 relative">
+                    {/* Emoji Picker Popover */}
+                    {showEmojiPicker && (
+                      <div ref={emojiPickerRef} className="absolute bottom-16 right-4 sm:right-14 z-50 shadow-2xl rounded-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+                        <EmojiPicker
+                          onEmojiClick={handleEmojiClick}
+                          autoFocusSearch={false}
+                          width={320}
+                          height={390}
+                          lazyLoadEmojis={true}
+                          searchPlaceHolder="Search emojis..."
+                        />
+                      </div>
+                    )}
+
+                    {/* Input Field (Pill Shape) */}
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
+                      placeholder="Type a message..."
+                      value={msgInput}
+                      onChange={(e) => {
+                        handleInputChange(e as any);
+                        e.target.style.height = "auto";
+                        e.target.style.height = e.target.value
+                          ? `${Math.min(e.target.scrollHeight, 120)}px`
+                          : "44px";
+                      }}
+                      onPaste={handlePaste}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e as any);
+                        }
+                      }}
+                      className="chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 text-slate-900 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all placeholder:text-slate-400 shadow-2xs"
+                    />
+
                     {/* Attachment Popover Trigger */}
-                    <div className="relative">
+                    <div ref={attachmentMenuRef} className="relative">
                       <button
                         type="button"
-                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                        className="w-11 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-base flex items-center justify-center transition-all"
+                        onClick={() => {
+                          setShowAttachmentMenu(!showAttachmentMenu);
+                          setShowEmojiPicker(false);
+                        }}
+                        className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
                         title="Attach File or Link"
                       >
-                        📎
+                        <Paperclip size={21} strokeWidth={2} />
                       </button>
 
                       {showAttachmentMenu && (
-                        <div className="absolute bottom-14 left-0 z-50 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg shadow-slate-900/10">
+                        <div className="absolute bottom-14 right-0 z-50 w-56 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl shadow-slate-900/10">
                           <button
                             type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-50"
+                            onClick={() => {
+                              fileInputRef.current?.click();
+                              setShowAttachmentMenu(false);
+                            }}
+                            className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-50 cursor-pointer"
                           >
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm text-slate-600 group-hover:bg-orange-50 group-hover:text-orange-600">
-                              🖼️
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                              <ImageIcon size={17} strokeWidth={2} />
                             </span>
 
                             <div className="min-w-0">
-                              <p className="text-[12px] font-medium leading-4 text-slate-700">
-                                Image / Docs
+                              <p className="text-[12px] font-semibold leading-4 text-slate-800">
+                                Image / Document
                               </p>
                               <p className="text-[10px] leading-4 text-slate-400">
                                 PNG, JPG, PDF, DOCX
@@ -1360,15 +1679,18 @@ function ChatsContent() {
 
                           <button
                             type="button"
-                            onClick={handleAddLinkPrompt}
-                            className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-50"
+                            onClick={() => {
+                              setShowAttachmentMenu(false);
+                              handleAddLinkPrompt();
+                            }}
+                            className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-slate-50 cursor-pointer"
                           >
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600">
-                              🔗
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                              <Link2 size={17} strokeWidth={2} />
                             </span>
 
                             <div className="min-w-0">
-                              <p className="text-[12px] font-medium leading-4 text-slate-700">
+                              <p className="text-[12px] font-semibold leading-4 text-slate-800">
                                 Web Link
                               </p>
                               <p className="text-[10px] leading-4 text-slate-400">
@@ -1386,20 +1708,29 @@ function ChatsContent() {
                       />
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Type your message..."
-                      value={msgInput}
-                      onChange={handleInputChange}
-                      className="flex-1 h-11 px-4 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900 font-medium"
-                    />
+                    {/* Smiley / Emoji Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEmojiPicker(!showEmojiPicker);
+                        setShowAttachmentMenu(false);
+                      }}
+                      className={`w-10 h-10 flex items-center justify-center text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-colors cursor-pointer shrink-0 ${
+                        showEmojiPicker ? "bg-orange-50 text-orange-600 ring-2 ring-orange-500/30" : ""
+                      }`}
+                      title="Insert Emoji"
+                    >
+                      <Smile size={23} strokeWidth={2.2} />
+                    </button>
 
+                    {/* Send Button (Solid Orange Circle with Paper Plane) */}
                     <button
                       type="submit"
-                      className="h-11 px-6 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl transition-all shadow-xs text-xs flex items-center gap-1.5"
+                      disabled={isUploadingAttachment}
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/25 shrink-0 cursor-pointer"
+                      title={editingMsg ? "Update Message" : "Send Message"}
                     >
-                      <span>{editingMsg ? "Update" : "Send"}</span>
-                      <span>➔</span>
+                      <Send size={17} strokeWidth={2.4} className="text-white translate-x-px" />
                     </button>
                   </form>
                 </div>
@@ -1520,15 +1851,16 @@ function ChatsContent() {
                           {employees.filter((employee) => employee.id !== currentUserId).length} available
                         </span>
                       </div>
-                      <div className="relative mb-2">
-                        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <div className="relative mb-2 flex items-center">
+                        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
                         <input
                           type="search"
                           value={groupMemberSearch}
                           onChange={(e) => setGroupMemberSearch(e.target.value)}
                           placeholder="Search by employee name or email"
                           aria-label="Search employees"
-                          className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10"
+                          style={{ paddingLeft: "40px" }}
+                          className="h-10 w-full rounded-xl border border-slate-200 bg-white !pl-10 pr-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10"
                         />
                       </div>
                       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/60 p-2">
@@ -1540,15 +1872,13 @@ function ChatsContent() {
                             return (
                               <label
                                 key={emp.id}
-                                className={`!mt-0 !flex cursor-pointer items-center !gap-3 rounded-xl border p-2.5 transition ${
-                                  isSelected
-                                    ? "border-orange-200 bg-orange-50"
-                                    : "border-transparent bg-white hover:border-slate-200 hover:bg-white"
-                                }`}
+                                className={`!mt-0 !flex cursor-pointer items-center !gap-3 rounded-xl border p-2.5 transition ${isSelected
+                                  ? "border-orange-200 bg-orange-50"
+                                  : "border-transparent bg-white hover:border-slate-200 hover:bg-white"
+                                  }`}
                               >
-                                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                                  isSelected ? "bg-orange-500 text-white" : "bg-[#172554] text-white"
-                                }`}>
+                                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isSelected ? "bg-orange-500 text-white" : "bg-[#172554] text-white"
+                                  }`}>
                                   {emp.name.charAt(0).toUpperCase()}
                                 </span>
                                 <span className="min-w-0 flex-1">
@@ -1573,8 +1903,8 @@ function ChatsContent() {
                           employee.id !== currentUserId &&
                           `${employee.name} ${employee.email}`.toLowerCase().includes(groupMemberSearch.trim().toLowerCase())
                         ).length === 0 && (
-                          <p className="px-3 py-8 text-center text-xs text-slate-500">No employees match your search.</p>
-                        )}
+                            <p className="px-3 py-8 text-center text-xs text-slate-500">No employees match your search.</p>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -1586,27 +1916,27 @@ function ChatsContent() {
                       </p>
                     )}
                     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-[11px] text-slate-500">
-                      {selectedParticipantIds.length
-                        ? `${selectedParticipantIds.length} employee${selectedParticipantIds.length === 1 ? "" : "s"} selected`
-                        : "You can add employees now or invite them later"}
-                    </p>
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowGroupModal(false)}
-                        className="rounded-lg px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={creatingGroup}
-                        className="rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {creatingGroup ? "Saving..." : editingGroupId ? "Save members" : "Create group"}
-                      </button>
-                    </div>
+                      <p className="text-[11px] text-slate-500">
+                        {selectedParticipantIds.length
+                          ? `${selectedParticipantIds.length} employee${selectedParticipantIds.length === 1 ? "" : "s"} selected`
+                          : "You can add employees now or invite them later"}
+                      </p>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowGroupModal(false)}
+                          className="rounded-lg px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={creatingGroup}
+                          className="rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {creatingGroup ? "Saving..." : editingGroupId ? "Save members" : "Create group"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </form>
@@ -1647,15 +1977,13 @@ function ChatsContent() {
                         <button
                           key={conv.id}
                           onClick={() => setForwardTargetId(conv.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                            isSelected
-                              ? "bg-blue-50 border border-blue-200"
-                              : "hover:bg-slate-50 border border-transparent"
-                          }`}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${isSelected
+                            ? "bg-blue-50 border border-blue-200"
+                            : "hover:bg-slate-50 border border-transparent"
+                            }`}
                         >
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                            isGrp ? "bg-slate-900 text-orange-400" : "bg-slate-800 text-white"
-                          }`}>
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 ${isGrp ? "bg-slate-900 text-orange-400" : "bg-slate-800 text-white"
+                            }`}>
                             {isGrp ? <Users size={16} /> : partner?.name.charAt(0).toUpperCase() || "E"}
                           </div>
                           <div className="truncate">
@@ -1700,7 +2028,7 @@ function ChatsContent() {
             </div>
           )}
         </section>
-      </div>
-    </main>
+      </div >
+    </main >
   );
 }

@@ -216,9 +216,9 @@ label {
   margin-top: 18px;
 }
 
-input,
+input:not([type="checkbox"]):not([type="radio"]):not(.epr-search),
 select,
-textarea {
+textarea:not(.chat-composer-textarea) {
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -228,21 +228,86 @@ textarea {
   transition: border-color .15s, box-shadow .15s;
 }
 
-input {
+input:not([type="checkbox"]):not([type="radio"]):not(.epr-search) {
   height: 44px;
 }
 
-input:focus,
+input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
-textarea:focus {
+textarea:not(.chat-composer-textarea):focus {
   border-color: #f97316;
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
 }
 
-textarea {
+textarea:not(.chat-composer-textarea) {
   min-height: 100px;
   padding: 12px 14px;
   resize: vertical;
+}
+
+/* Modern Chat Composer Textarea */
+.chat-composer-textarea {
+  min-height: 44px !important;
+  max-height: 120px !important;
+  padding: 11px 20px !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  border-radius: 9999px !important;
+  resize: none !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+}
+
+.chat-composer-textarea:focus {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15) !important;
+}
+
+/* Emoji Picker React Custom Enhancements */
+.EmojiPickerReact {
+  --epr-search-input-bg-color: #f8fafc !important;
+  --epr-search-input-bg-color-active: #ffffff !important;
+  --epr-search-border-color: #e2e8f0 !important;
+  --epr-search-border-color-active: #f97316 !important;
+  --epr-search-input-border-radius: 12px !important;
+  --epr-search-input-height: 38px !important;
+  --epr-category-icon-active-color: #f97316 !important;
+  --epr-skin-tone-picker-menu-bg-color: #ffffff !important;
+  border-radius: 1rem !important;
+  font-family: inherit !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.EmojiPickerReact .epr-search-container {
+  padding: 0 !important;
+}
+
+.EmojiPickerReact .epr-search-container input.epr-search {
+  padding-left: 38px !important;
+  padding-right: 32px !important;
+  height: 38px !important;
+  font-size: 13px !important;
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  outline: none !important;
+  transition: all 0.15s ease-in-out !important;
+  box-sizing: border-box !important;
+}
+
+.EmojiPickerReact .epr-search-container input.epr-search:focus {
+  background-color: #ffffff !important;
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15) !important;
+}
+
+.EmojiPickerReact .epr-search-container .epr-icn-search {
+  left: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  opacity: 0.55 !important;
+  z-index: 2 !important;
 }
 
 .primary-button {
@@ -915,4 +980,18 @@ textarea {
   background: #fff1f2;
   color: #be123c;
   border: 1px solid #fecdd3;
+}
+
+/* Hide scrollbar while preserving smooth scrolling functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
 }

@@ -69,18 +69,26 @@ export function useAuth() {
   }, []);
 
   // Synchronize live permissions and role from backend
+  const userRoleKey = typeof session?.user?.role === "string" ? session.user.role : (session?.user?.role as any)?.name || "";
+
   useEffect(() => {
     if (!session?.token) return;
     let cancelled = false;
     getMe(session.token)
       .then((res) => {
         if (!cancelled && res?.user) {
-          const prevPerms = session.user.permissions?.join(",") || "";
-          const newPerms = res.user.permissions?.join(",") || "";
-          if (prevPerms !== newPerms || session.user.role !== res.user.role) {
+          const prevPerms = [...(session.user.permissions || [])].sort().join(",");
+          const newPerms = [...(res.user.permissions || [])].sort().join(",");
+          const currentRole = typeof session.user.role === "string" ? session.user.role : (session.user.role as any)?.name || "";
+          const updatedRole = typeof res.user.role === "string" ? res.user.role : (res.user.role as any)?.name || "";
+
+          if (prevPerms !== newPerms || currentRole !== updatedRole) {
             saveSession({
               ...session,
-              user: res.user,
+              user: {
+                ...res.user,
+                role: updatedRole,
+              },
             });
           }
         }
@@ -90,7 +98,7 @@ export function useAuth() {
     return () => {
       cancelled = true;
     };
-  }, [session?.token, session?.user?.role, saveSession]);
+  }, [session?.token, userRoleKey, saveSession]);
 
   const isLoading = !session && !isHydrated;
 

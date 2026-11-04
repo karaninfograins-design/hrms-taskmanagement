@@ -96,8 +96,7 @@ export default function SystemAdminsPage() {
 
           <div className="welcome flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <p className="eyebrow">ADMINISTRATION CONTROL</p>
-              <h1>System Administrators</h1>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">System Administrators</h3>
               <p>Manage system administrator accounts and privilege delegations.</p>
             </div>
 
@@ -159,8 +158,8 @@ export default function SystemAdminsPage() {
                         <td className="whitespace-nowrap">
                           <span
                             className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${admin.role.name === "SUPER_ADMIN"
-                                ? "bg-slate-900 text-white border-slate-900"
-                                : "bg-orange-50 text-orange-800 border-orange-200"
+                              ? "bg-slate-900 text-white border-slate-900"
+                              : "bg-orange-50 text-orange-800 border-orange-200"
                               }`}
                           >
                             {admin.role.name.replace("_", " ")}
@@ -173,8 +172,8 @@ export default function SystemAdminsPage() {
                         <td className="whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${admin.status === "ACTIVE"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                : "bg-rose-50 text-rose-800 border-rose-200"
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : "bg-rose-50 text-rose-800 border-rose-200"
                               }`}
                           >
                             {admin.status}

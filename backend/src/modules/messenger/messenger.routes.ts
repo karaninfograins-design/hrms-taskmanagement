@@ -11,6 +11,7 @@ import {
   uploadAttachment,
   updateGroupConversation,
   deleteConversation,
+  reactToMessage,
 } from "./messenger.controller.js";
 
 const router = Router();
@@ -22,6 +23,7 @@ router.put("/conversations/group/:id", updateGroupConversation);
 router.delete("/conversations/:id", deleteConversation);
 router.get("/conversations/:conversationId/messages", getMessages);
 router.post("/messages", sendMessage);
+router.post("/messages/:id/react", reactToMessage);
 router.post("/upload", uploadAttachment);
 router.put("/messages/:id", editMessage);
 router.delete("/messages/:id", deleteMessage);

@@ -32,7 +32,9 @@ const app = express();
 const httpServer = http.createServer(app);
 
 const PORT = Number(process.env.PORT) || 5000;
-const HOST = process.env.HOST || "127.0.0.1";
+// const HOST = process.env.HOST || "127.0.0.1";  for deployment
+const HOST = process.env.HOST || "0.0.0.0";
+
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {

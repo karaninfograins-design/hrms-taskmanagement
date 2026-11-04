@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Clock3, Plus, Users, Video } from "lucide-react";
+import { CalendarDays, Clock3, Plus, Users, Video, Volume2, Volume1, Mic, MicOff, PhoneCall } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSocket } from "@/hooks/use-socket";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
@@ -41,6 +42,7 @@ type Meeting = {
 export default function MeetingsPage() {
   const router = useRouter();
   const { session, isLoading, logout } = useAuth();
+  const { socket } = useSocket();
 
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -64,6 +66,33 @@ export default function MeetingsPage() {
   const [livekitToken, setLivekitToken] = useState<string | null>(null);
   const [livekitUrl, setLivekitUrl] = useState<string>(process.env.NEXT_PUBLIC_LIVEKIT_URL || "");
   const [tokenLoading, setTokenLoading] = useState<boolean>(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true);
+  const [isMicMuted, setIsMicMuted] = useState<boolean>(false);
+  const [audioTestPlaying, setAudioTestPlaying] = useState<boolean>(false);
+
+  const playSpeakerTestSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      setAudioTestPlaying(true);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(isSpeakerOn ? 0.35 : 0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+      setTimeout(() => setAudioTestPlaying(false), 500);
+    } catch (e) {
+      console.warn("Audio test error:", e);
+      setAudioTestPlaying(false);
+    }
+  };
 
   const handleSignOut = () => {
     logout();
@@ -231,6 +260,43 @@ export default function MeetingsPage() {
     }
   };
 
+  const enterMeetingCallRoom = (meeting: Meeting) => {
+    const channelName = meeting.roomName || `meeting-${meeting.id}`;
+    const targetUserIds = [
+      meeting.organizer.id,
+      ...meeting.members.map((m) => m.user.id),
+    ].filter((id) => id !== session?.user.id);
+
+    if (socket) {
+      socket.emit(
+        "call:initiate",
+        {
+          targetUserIds,
+          type: "VIDEO",
+          channelName,
+        },
+        (result: { callSessionId?: number; error?: string }) => {
+          const params = new URLSearchParams({
+            activeChannel: channelName,
+            groupCall: "true",
+            groupName: meeting.title,
+            type: "VIDEO",
+            ...(result?.callSessionId ? { callSessionId: String(result.callSessionId) } : {}),
+          });
+          router.push(`/dashboard/messenger/calls?${params.toString()}`);
+        }
+      );
+    } else {
+      const params = new URLSearchParams({
+        activeChannel: channelName,
+        groupCall: "true",
+        groupName: meeting.title,
+        type: "VIDEO",
+      });
+      router.push(`/dashboard/messenger/calls?${params.toString()}`);
+    }
+  };
+
   if (isLoading || !session) {
     return <main className="route-loading">Loading meetings...</main>;
   }
@@ -267,21 +333,21 @@ export default function MeetingsPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => router.push("/dashboard/meetings/calendar")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/20 w-full sm:w-auto"
-              >
-                <CalendarDays size={15} />
-                Calendar
-              </button>
-              <button
-                onClick={() => openScheduleModal()}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 w-full sm:w-auto"
-              >
-                <Plus size={15} />
-                Schedule meeting
-              </button>
-            </div>
+                  <button
+                    onClick={() => router.push("/dashboard/meetings/calendar")}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/20 w-full sm:w-auto"
+                  >
+                    <CalendarDays size={15} />
+                    Calendar
+                  </button>
+                  <button
+                    onClick={() => openScheduleModal()}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 w-full sm:w-auto"
+                  >
+                    <Plus size={15} />
+                    Schedule meeting
+                  </button>
+                </div>
               </div>
             </header>
 
@@ -303,132 +369,129 @@ export default function MeetingsPage() {
               ))}
             </div>
 
-          {/* Status Filters */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {["ALL", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((statusKey) => (
-              <button
-                key={statusKey}
-                onClick={() => setFilterStatus(statusKey)}
-                className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold transition-all border ${
-                  filterStatus === statusKey
-                    ? "bg-[#172554] text-white border-[#172554] shadow-xs"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
-              >
-                <span>{statusKey === "ALL" ? "All meetings" : statusKey.replace("_", " ")}</span>
-                <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[9px] ${
-                  filterStatus === statusKey ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"
-                }`}>
-                  {statusKey === "ALL"
-                    ? meetings.length
-                    : meetings.filter((meeting) => meeting.status === statusKey).length}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Meetings Grid */}
-          {loading ? (
-            <p className="text-xs text-slate-400 animate-pulse font-medium">Loading meetings...</p>
-          ) : error ? (
-            <p className="text-xs text-rose-500 font-semibold">{error}</p>
-          ) : filteredMeetings.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
-              <p className="text-slate-400 text-xs font-medium">No meetings found under this status filter.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {filteredMeetings.map((m) => (
-                <div
-                  key={m.id}
-                  className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5 lg:flex-row lg:items-center"
+            {/* Status Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {["ALL", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((statusKey) => (
+                <button
+                  key={statusKey}
+                  onClick={() => setFilterStatus(statusKey)}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold transition-all border ${filterStatus === statusKey
+                      ? "bg-[#172554] text-white border-[#172554] shadow-xs"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    }`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className="max-w-full truncate rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-700">
-                        {m.roomName}
-                      </span>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
-                          m.status === "SCHEDULED"
-                            ? "bg-blue-100 text-blue-800"
-                            : m.status === "IN_PROGRESS"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : m.status === "COMPLETED"
-                            ? "bg-slate-100 text-slate-700"
-                            : "bg-rose-100 text-rose-800"
-                        }`}
-                      >
-                        {m.status}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-base font-black text-slate-900">{m.title}</h3>
-                      <div className="flex items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-                        <button
-                          onClick={() => openScheduleModal(m)}
-                          className="rounded-lg p-2 text-xs hover:bg-slate-100"
-                          title="Edit"
-                          aria-label={`Edit ${m.title}`}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMeeting(m.id)}
-                          className="rounded-lg p-2 text-xs text-rose-600 hover:bg-rose-50"
-                          title="Cancel/Delete"
-                          aria-label={`Cancel or delete ${m.title}`}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-
-                    {m.agenda && (
-                      <div className="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-700 font-medium">
-                        <strong>Agenda:</strong> {m.agenda}
-                      </div>
-                    )}
-
-                    <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">
-                      {m.description || "No detailed description."}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] font-medium text-slate-500">
-                      <p className="inline-flex items-center gap-1.5">
-                        <CalendarDays size={13} className="text-slate-400" />
-                        <strong className="text-slate-700">{new Date(m.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</strong>
-                        {new Date(m.startTime).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                        <span>({m.timezone || "UTC"})</span>
-                      </p>
-                      <p>Organizer: <strong className="text-slate-700">{m.organizer.name}</strong></p>
-                      {m.members.length > 0 && (
-                        <p className="inline-flex items-center gap-1.5">
-                          <Users size={13} className="text-slate-400" />
-                          <strong className="text-slate-700">{m.members.length}</strong> participants
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleJoinCall(m)}
-                    className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] text-xs font-extrabold text-white shadow-sm transition hover:bg-[#1E3A8A] lg:w-48"
-                  >
-                    <Video size={15} />
-                    Join meeting
-                  </button>
-                </div>
+                  <span>{statusKey === "ALL" ? "All meetings" : statusKey.replace("_", " ")}</span>
+                  <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[9px] ${filterStatus === statusKey ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"
+                    }`}>
+                    {statusKey === "ALL"
+                      ? meetings.length
+                      : meetings.filter((meeting) => meeting.status === statusKey).length}
+                  </span>
+                </button>
               ))}
             </div>
-          )}
+
+            {/* Meetings Grid */}
+            {loading ? (
+              <p className="text-xs text-slate-400 animate-pulse font-medium">Loading meetings...</p>
+            ) : error ? (
+              <p className="text-xs text-rose-500 font-semibold">{error}</p>
+            ) : filteredMeetings.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
+                <p className="text-slate-400 text-xs font-medium">No meetings found under this status filter.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {filteredMeetings.map((m) => (
+                  <div
+                    key={m.id}
+                    className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5 lg:flex-row lg:items-center"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="max-w-full truncate rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-700">
+                          {m.roomName}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${m.status === "SCHEDULED"
+                              ? "bg-blue-100 text-blue-800"
+                              : m.status === "IN_PROGRESS"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : m.status === "COMPLETED"
+                                  ? "bg-slate-100 text-slate-700"
+                                  : "bg-rose-100 text-rose-800"
+                            }`}
+                        >
+                          {m.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-base font-black text-slate-900">{m.title}</h3>
+                        <div className="flex items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                          <button
+                            onClick={() => openScheduleModal(m)}
+                            className="rounded-lg p-2 text-xs hover:bg-slate-100"
+                            title="Edit"
+                            aria-label={`Edit ${m.title}`}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMeeting(m.id)}
+                            className="rounded-lg p-2 text-xs text-rose-600 hover:bg-rose-50"
+                            title="Cancel/Delete"
+                            aria-label={`Cancel or delete ${m.title}`}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+
+                      {m.agenda && (
+                        <div className="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-700 font-medium">
+                          <strong>Agenda:</strong> {m.agenda}
+                        </div>
+                      )}
+
+                      <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">
+                        {m.description || "No detailed description."}
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] font-medium text-slate-500">
+                        <p className="inline-flex items-center gap-1.5">
+                          <CalendarDays size={13} className="text-slate-400" />
+                          <strong className="text-slate-700">{new Date(m.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</strong>
+                          {new Date(m.startTime).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                          <span>({m.timezone || "UTC"})</span>
+                        </p>
+                        <p>Organizer: <strong className="text-slate-700">{m.organizer.name}</strong></p>
+                        {m.members.length > 0 && (
+                          <p className="inline-flex items-center gap-1.5">
+                            <Users size={13} className="text-slate-400" />
+                            <strong className="text-slate-700">{m.members.length}</strong> participants
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleJoinCall(m)}
+                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] text-xs font-extrabold text-white shadow-sm transition hover:bg-[#1E3A8A] lg:w-48"
+                    >
+                      <Video size={15} />
+                      Join meeting
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
           </div>
           {/* Schedule / Edit Modal */}
           {showScheduleModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
                 <h2 className="text-base font-black text-slate-900">
                   {editingMeeting ? "Edit Meeting" : "Schedule New Meeting"}
                 </h2>
@@ -460,7 +523,7 @@ export default function MeetingsPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                         Start Time
@@ -556,34 +619,96 @@ export default function MeetingsPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 min-h-[350px] bg-slate-950 rounded-2xl border border-slate-800/80 p-6 flex flex-col items-center justify-center space-y-4">
-                  {tokenLoading ? (
-                    <p className="text-xs text-slate-400 animate-pulse font-medium">Generating LiveKit security token...</p>
-                  ) : livekitToken ? (
-                    <div className="text-center space-y-4 max-w-md">
-                      <div className="w-20 h-20 bg-orange-600/20 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto border border-orange-500/30 animate-pulse">
-                        🎙️
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-white">LiveKit Audio/Video Connected</h3>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Server Target: <span className="font-semibold text-orange-400">{livekitUrl}</span>
-                        </p>
-                      </div>
-                      <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-left space-y-1">
-                        <p className="text-[11px] text-slate-500 font-bold">LIVEKIT_ROOM_TOKEN</p>
-                        <p className="text-xs font-semibold text-emerald-400 truncate">{livekitToken}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-rose-400">Unable to establish LiveKit session.</p>
+                  <div className="flex-1 min-h-[300px] bg-slate-950 rounded-2xl border border-slate-800/80 p-6 flex flex-col items-center justify-center space-y-4">
+                    {tokenLoading ? (
+                      <p className="text-xs text-slate-400 animate-pulse font-medium">Generating LiveKit security token...</p>
+                    ) : livekitToken ? (
+                        <div className="text-center space-y-4 max-w-md w-full">
+                          <div className="w-20 h-20 bg-orange-600/20 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto border border-orange-500/30 animate-pulse">
+                            🎙️
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                              Step 1: Setup Verified • Ready to Connect
+                            </span>
+                            <h3 className="text-lg font-bold text-white mt-2">Meeting Audio & Video Ready</h3>
+                            <p className="text-xs text-slate-300 mt-1">
+                              Click <strong className="text-orange-400">"Enter Meeting Room Now"</strong> below to connect your microphone and talk with all participants in real time.
+                            </p>
+                          </div>
+
+                          {/* Mobile & Hands-Free Notice */}
+                          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-[11px] text-slate-300 flex items-start gap-2.5 text-left">
+                            <span className="text-base shrink-0">📱</span>
+                            <div className="leading-snug">
+                              <strong className="text-orange-400">Speakerphone Ready:</strong> You can talk and listen directly from mobile phones or PCs without headphones. Hardware Echo Cancellation (AEC) and noise suppression prevent echo or feedback loops.
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-left space-y-1">
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Session Security Token (Verified)</p>
+                            <p className="text-xs font-mono font-semibold text-emerald-400 truncate">{livekitToken}</p>
+                          </div>
+                        </div>
+                        ) : (
+                        <p className="text-xs text-rose-400">Unable to establish LiveKit session.</p>
                   )}
+                      </div>
+
+                {/* Meeting Controls Toolbar with Speaker Button */}
+                    <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Speaker Button (Hands-free / Loudspeaker) */}
+                        <button
+                          onClick={() => setIsSpeakerOn((prev) => !prev)}
+                          className={`h-10 px-3.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer text-xs ${isSpeakerOn
+                              ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400 hover:bg-orange-500/30"
+                              : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
+                            }`}
+                          title={isSpeakerOn ? "Speaker ON (Loudspeaker hands-free mode). Click for normal." : "Speaker Normal (Earpiece / Headset). Click for loudspeaker."}
+                        >
+                          {isSpeakerOn ? <Volume2 className="w-4 h-4 text-orange-400" /> : <Volume1 className="w-4 h-4 text-slate-400" />}
+                          <span>{isSpeakerOn ? "Speaker: ON" : "Speaker: Normal"}</span>
+                        </button>
+
+                        {/* Test Speaker Chime Button */}
+                        <button
+                          onClick={playSpeakerTestSound}
+                          disabled={audioTestPlaying}
+                          className="h-10 px-3 rounded-xl font-bold flex items-center gap-1.5 transition-all bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-600 text-xs cursor-pointer"
+                          title="Play audio test tone to verify speaker output without headphones"
+                        >
+                          <Volume2 className={`w-3.5 h-3.5 text-emerald-400 ${audioTestPlaying ? "animate-bounce" : ""}`} />
+                          <span>{audioTestPlaying ? "Playing Chime..." : "🔊 Test Speaker"}</span>
+                        </button>
+
+                        {/* Mic Toggle */}
+                        <button
+                          onClick={() => setIsMicMuted((prev) => !prev)}
+                          className={`h-10 px-3 rounded-xl font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${isMicMuted
+                              ? "bg-rose-500/20 border-2 border-rose-500 text-rose-400"
+                              : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
+                            }`}
+                        >
+                          {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400" />}
+                          <span>{isMicMuted ? "Muted" : "Mic ON"}</span>
+                        </button>
+                      </div>
+
+                      {/* Open Interactive WebRTC Group Call Room */}
+                      <button
+                        onClick={() => enterMeetingCallRoom(activeCallMeeting)}
+                        className="h-11 px-5 rounded-xl font-black flex items-center gap-2 transition-all bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white hover:opacity-95 shadow-lg text-xs cursor-pointer w-full sm:w-auto justify-center active:scale-95"
+                      >
+                        <PhoneCall className="w-4 h-4" />
+                        <span>Enter Meeting Room Now (Talk & Listen)</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
           )}
-        </section>
-      </div>
+              </section>
+            </div>
     </main>
-  );
+        );
 }

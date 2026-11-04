@@ -35,7 +35,8 @@ const canViewEmployees = async (userId: number): Promise<boolean> => {
   if (!user) return false;
 
   // SUPER_ADMIN and ADMIN can always view employees
-  if (user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN" || user.role.name === "HR") return true;
+  const roleName = (user.role.name || "").toUpperCase();
+  if (roleName === "SUPER_ADMIN" || roleName === "ADMIN" || roleName === "HR" || roleName.includes("HR")) return true;
 
   // Check if role has any view/manage employee permission
   const hasViewPermission = user.role.permissions.some(
@@ -77,7 +78,9 @@ const canManageEmployees = async (userId: number): Promise<boolean> => {
     }
   );
 
-  return hasManagePermission || user.role.name === "ADMIN" || user.role.name === "HR";
+  const roleName = (user.role.name || "").toUpperCase();
+  const isHR = roleName === "HR" || roleName === "HR_MANAGER" || roleName.includes("HR");
+  return hasManagePermission || roleName === "ADMIN" || isHR;
 };
 
 // Get all employees (with pagination)

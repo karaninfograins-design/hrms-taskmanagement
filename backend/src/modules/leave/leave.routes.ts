@@ -9,7 +9,9 @@ import {
   updateEmployeeBalance,
   getLeaveRequests,
   applyLeave,
+  updateLeaveRequest,
   updateLeaveStatus,
+  deleteLeaveRequest,
 } from "./leave.controller.js";
 
 const router = Router();
@@ -25,6 +27,8 @@ router.put("/admin/balances/:id", updateEmployeeBalance);
 
 router.get("/requests", getLeaveRequests);
 router.post("/requests", applyLeave);
+router.put("/requests/:id", updateLeaveRequest);
 router.put("/requests/:id/status", updateLeaveStatus);
+router.delete("/requests/:id", deleteLeaveRequest);
 
 export default router;

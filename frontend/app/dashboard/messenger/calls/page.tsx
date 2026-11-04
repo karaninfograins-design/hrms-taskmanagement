@@ -22,6 +22,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Volume2,
+  Volume1,
+  VolumeX,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
@@ -68,6 +71,42 @@ type ActiveCall = {
 type RemoteParticipant = {
   userId: number;
   stream: MediaStream;
+};
+
+// Production-ready STUN + TURN servers (Google STUN + OpenRelay TURN for strict firewalls/NAT)
+export const DEFAULT_RTC_CONFIGURATION: RTCConfiguration = {
+  iceServers: [
+    // Google Public STUN
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+
+    // OpenRelay Public STUN + TURN (Metered CA - Relays audio/video across strict NAT and firewalls)
+    { urls: "stun:openrelay.metered.ca:80" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turns:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+  ],
+  iceCandidatePoolSize: 10,
 };
 
 function getMediaUnavailableError(): Error {
@@ -122,12 +161,34 @@ async function requestLocalMedia(
   type: "AUDIO" | "VIDEO",
   onNoMicDetected?: (msg: string) => void
 ): Promise<{ stream: MediaStream; hasAudio: boolean }> {
-  if (
-    typeof window === "undefined" ||
-    !window.isSecureContext ||
-    !navigator.mediaDevices?.getUserMedia
-  ) {
-    throw getMediaUnavailableError();
+  const isSecure =
+    typeof window !== "undefined" &&
+    (window.isSecureContext ||
+      window.location?.hostname === "localhost" ||
+      window.location?.hostname === "127.0.0.1");
+
+  const hasGetUserMedia =
+    typeof navigator !== "undefined" &&
+    !!navigator.mediaDevices &&
+    typeof navigator.mediaDevices.getUserMedia === "function";
+
+  // Graceful fallback for LAN HTTP (e.g. 192.168.x.x) where browsers restrict microphone access
+  if (!isSecure || !hasGetUserMedia) {
+    console.warn(
+      "[Media] Insecure HTTP origin or navigator.mediaDevices.getUserMedia unavailable over LAN. Fallback to Listen-Only mode."
+    );
+    if (onNoMicDetected) {
+      onNoMicDetected(
+        "LAN HTTP Notice: Modern browsers require HTTPS (or localhost) to capture the microphone. You have joined in Listen-Only mode (you can hear incoming audio)."
+      );
+    }
+    const silentTrack = createSilentAudioTrack();
+    const tracks: MediaStreamTrack[] = [];
+    if (silentTrack) tracks.push(silentTrack);
+    return {
+      stream: new MediaStream(tracks),
+      hasAudio: false,
+    };
   }
 
   const audioOptions = {
@@ -217,51 +278,61 @@ function RemoteParticipantMedia({
   participant,
   name,
   type,
+  isSpeakerOn = true,
+  onAudioBlocked,
 }: {
   participant: RemoteParticipant;
   name: string;
   type: "AUDIO" | "VIDEO";
+  isSpeakerOn?: boolean;
+  onAudioBlocked?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.srcObject !== participant.stream) {
       videoRef.current.srcObject = participant.stream;
       videoRef.current.play().catch(console.warn);
     }
-    if (audioRef.current) {
-      audioRef.current.srcObject = participant.stream;
-      audioRef.current.muted = false;
-      audioRef.current.volume = 1.0;
-      audioRef.current.play().catch(console.warn);
-    }
   }, [participant.stream]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (audioRef.current.srcObject !== participant.stream) {
+        audioRef.current.srcObject = participant.stream;
+      }
+      audioRef.current.muted = false;
+      audioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
+      audioRef.current.play().catch((err) => {
+        if (err.name !== "AbortError") {
+          console.warn("[WebRTC Participant] Autoplay blocked, needs user interaction:", err);
+          onAudioBlocked?.();
+        }
+      });
+    }
+  }, [participant.stream, isSpeakerOn, onAudioBlocked]);
 
   if (type === "AUDIO") {
     return (
       <div
-        className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-4 cursor-pointer select-none transition-all hover:border-orange-500/40"
+        className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-4 cursor-pointer select-none transition-all hover:border-orange-500/40 relative"
         onClick={() => {
-          if (audioRef.current && audioRef.current.paused) {
+          if (audioRef.current) {
+            audioRef.current.muted = false;
+            audioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
             audioRef.current.play().catch(console.warn);
           }
-        }}
+        }
+        }
         title="Voice connected - Click if you need to resume audio playback"
       >
         <audio
           ref={audioRef}
+          data-participant-audio="true"
           autoPlay
           playsInline
-          style={{
-            position: "fixed",
-            left: "-9999px",
-            top: "-9999px",
-            width: "1px",
-            height: "1px",
-            opacity: 0.01,
-            pointerEvents: "none",
-          }}
+          style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
         />
         <div className="relative mb-3 flex items-center justify-center">
           <div className="absolute w-20 h-20 rounded-full border border-orange-500/20 animate-ping" style={{ animationDuration: "2s" }} />
@@ -276,7 +347,7 @@ function RemoteParticipantMedia({
           <span className="w-1 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
           <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "450ms" }} />
         </div>
-        <span className="mt-1 text-[10px] text-slate-400">Audio connected</span>
+        <span className="mt-1 text-[10px] text-slate-400">Audio connected (Speaker)</span>
       </div>
     );
   }
@@ -285,19 +356,12 @@ function RemoteParticipantMedia({
     <div className="relative min-h-40 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
       <audio
         ref={audioRef}
+        data-participant-audio="true"
         autoPlay
         playsInline
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "-9999px",
-          width: "1px",
-          height: "1px",
-          opacity: 0.01,
-          pointerEvents: "none",
-        }}
+        style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
       />
-      <video ref={videoRef} autoPlay playsInline className="h-full min-h-40 w-full object-cover" />
+      <video ref={videoRef} muted autoPlay playsInline className="h-full min-h-40 w-full object-cover" />
       <span className="absolute bottom-2 left-2 rounded bg-slate-950/70 px-2 py-1 text-xs font-semibold text-white">
         {name}
       </span>
@@ -390,6 +454,8 @@ function CallsContent() {
   const [addMemberSearch, setAddMemberSearch] = useState<string>("");
   const [invitingEmployeeId, setInvitingEmployeeId] = useState<number | null>(null);
   const [invitedEmployeeIds, setInvitedEmployeeIds] = useState<Set<number>>(new Set());
+  const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true); // Default to Speaker Mode (loudspeaker / hands-free)
+  const [isAudioBlocked, setIsAudioBlocked] = useState<boolean>(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -422,6 +488,17 @@ function CallsContent() {
       router.replace("/");
     }
   }, [isLoading, router, session]);
+
+  // Prevent background page scrolling and hide side scrollbars when in active call
+  useEffect(() => {
+    if (activeCall) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [activeCall]);
 
   // Fetch Call History
   const fetchCalls = async () => {
@@ -580,17 +657,37 @@ function CallsContent() {
     if (!socket || isIncomingCall || !channel || !session?.user || startedChannelRef.current === channel) return;
     startedChannelRef.current = channel;
 
-    if (isGroupCall && callSessionId) {
+    if (isGroupCall) {
       setCurrentActiveCall({
         callSessionId,
         channelName: channel,
-        targetName: groupName || "Group",
+        targetName: groupName || "Group Call",
         type,
         isGroupCall: true,
         isHost: true,
       });
-      // Broadcast host joining to group participants
-      socket?.emit("call:join", { callSessionId });
+
+      if (callSessionId) {
+        socket?.emit("call:join", { callSessionId });
+      } else {
+        socket?.emit(
+          "call:initiate",
+          {
+            type,
+            channelName: channel,
+          },
+          (result: { callSessionId?: number; error?: string }) => {
+            if (result?.callSessionId) {
+              const current = activeCallRef.current;
+              if (current) {
+                setCurrentActiveCall({ ...current, callSessionId: result.callSessionId });
+              }
+              socket?.emit("call:join", { callSessionId: result.callSessionId });
+            }
+          }
+        );
+      }
+
       void prepareGroupCallMedia(type).catch((error) => {
         console.error("Unable to access group call media:", error);
         showNotification({
@@ -642,7 +739,11 @@ function CallsContent() {
     };
 
     const onCallRejected = () => {
-      if (activeCallRef.current?.isGroupCall) return;
+      const call = activeCallRef.current;
+      if (call?.isGroupCall) {
+        showErrorToast("Invited colleague is currently unavailable.");
+        return;
+      }
       showNotification({
         title: "Call Declined",
         text: "The recipient declined the call or is currently unavailable.",
@@ -918,6 +1019,7 @@ function CallsContent() {
             setIsMicMuted(true);
           } else {
             setHasNoMic(false);
+            setIsMicMuted(false);
           }
           return res.stream;
         })();
@@ -957,9 +1059,7 @@ function CallsContent() {
       const call = activeCallRef.current;
       if (!call?.callSessionId) throw new Error("Group call session is not ready");
       await prepareGroupCallMedia(call.type);
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      });
+      const pc = new RTCPeerConnection(DEFAULT_RTC_CONFIGURATION);
       groupPeerConnectionsRef.current.set(targetUserId, pc);
       localStreamRef.current?.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!);
@@ -1041,13 +1141,7 @@ function CallsContent() {
       localVideoRef.current.srcObject = stream;
     }
 
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" },
-      ],
-    });
+    const pc = new RTCPeerConnection(DEFAULT_RTC_CONFIGURATION);
     peerConnectionRef.current = pc;
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -1063,14 +1157,20 @@ function CallsContent() {
       });
       setRemoteStream(incomingStream);
 
-      // Immediately wire audio element so headphones output without delay
+      // Immediately wire audio element so speaker/headphones output without delay
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = incomingStream;
         remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.volume = 1.0;
-        remoteAudioRef.current.play().catch((err) => {
-          console.warn("[WebRTC] Autoplay pending interaction:", err);
-        });
+        remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
+        remoteAudioRef.current
+          .play()
+          .then(() => {
+            setIsAudioBlocked(false);
+          })
+          .catch((err) => {
+            console.warn("[WebRTC] Autoplay pending interaction:", err);
+            setIsAudioBlocked(true);
+          });
       }
     };
 
@@ -1136,6 +1236,19 @@ function CallsContent() {
 
   // Retry connecting microphone when user plugs in headphones / headset / mic
   async function retryConnectMic() {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      showNotification({
+        title: "Microphone Inaccessible Over Plain HTTP LAN",
+        text: "Browsers require a secure HTTPS connection or localhost to access the microphone. If testing over LAN (e.g. 192.168.x.x), please open via HTTPS or add this origin to chrome://flags/#unsafely-treat-insecure-origin-as-secure.",
+        icon: "warning",
+      });
+      return;
+    }
+
     try {
       const newMedia = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -1371,6 +1484,57 @@ function CallsContent() {
     }
   };
 
+  // Unblock browser autoplay audio on user interaction or tap
+  const unblockAudio = async () => {
+    setIsAudioBlocked(false);
+    if (remoteAudioRef.current) {
+      try {
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
+        await remoteAudioRef.current.play();
+      } catch (err) {
+        console.warn("[WebRTC] unblockAudio error:", err);
+      }
+    }
+    const participantAudios = document.querySelectorAll<HTMLAudioElement>("audio[data-participant-audio]");
+    participantAudios.forEach((audioEl) => {
+      audioEl.muted = false;
+      audioEl.volume = isSpeakerOn ? 1.0 : 0.65;
+      audioEl.play().catch(console.warn);
+    });
+  };
+
+  // Speaker / Loudspeaker Toggle (Hands-free vs Ear/Headset)
+  const toggleSpeaker = async () => {
+    const nextState = !isSpeakerOn;
+    setIsSpeakerOn(nextState);
+
+    // Apply volume boost to remote audio
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = nextState ? 1.0 : 0.65;
+      if (typeof (remoteAudioRef.current as any).setSinkId === "function") {
+        try {
+          const devices = await navigator.mediaDevices?.enumerateDevices?.();
+          const speaker = devices?.find(
+            (d) => d.kind === "audiooutput" && (d.deviceId === "default" || d.label.toLowerCase().includes("speaker"))
+          );
+          if (speaker) {
+            await (remoteAudioRef.current as any).setSinkId(speaker.deviceId);
+          }
+        } catch (e) {
+          console.warn("setSinkId speaker error:", e);
+        }
+      }
+    }
+
+    const participantAudios = document.querySelectorAll<HTMLAudioElement>("audio[data-participant-audio]");
+    participantAudios.forEach((audioEl) => {
+      audioEl.volume = nextState ? 1.0 : 0.65;
+    });
+
+    showSuccessToast(nextState ? "Speaker: ON (Loudspeaker)" : "Speaker: Normal (Headset)");
+  };
+
   // Initiate New Call from Modal
   const handleStartCallSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1457,18 +1621,18 @@ function CallsContent() {
                 Calling history
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               {calls.length > 0 && (
                 <button
                   onClick={handleClearAllCalls}
-                  className="px-3 py-2 bg-black hover:bg-[#EA580C] hover:text-white text-white font-bold rounded-xl transition-all border border-slate-200 text-xs cursor-pointer"
+                  className="px-3 py-2 bg-black hover:bg-[#EA580C] hover:text-white text-white font-bold rounded-xl transition-all border border-slate-200 text-xs cursor-pointer flex-1 sm:flex-initial text-center"
                 >
                   Clear All Logs
                 </button>
               )}
               <button
                 onClick={() => setShowStartModal(true)}
-                className="px-3 py-2  bg-[#171717] hover:bg-[#EA580C] text-white font-bold rounded-xl transition-all shadow-xs text-xs flex items-center gap-2 cursor-pointer"
+                className="px-3 py-2 bg-[#171717] hover:bg-[#EA580C] text-white font-bold rounded-xl transition-all shadow-xs text-xs flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-initial"
               >
                 <Phone className="w-3.5 h-3.5" /> + New Call
               </button>
@@ -1484,7 +1648,8 @@ function CallsContent() {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full min-w-[620px] text-left text-xs whitespace-nowrap border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
@@ -1543,6 +1708,54 @@ function CallsContent() {
                 </table>
               </div>
 
+              {/* Mobile Cards View */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {paginatedCalls.map((call) => (
+                  <div key={call.id} className="p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-bold flex items-center gap-2 text-xs">
+                        {call.type === "VIDEO" ? (
+                          <Video className="w-4 h-4 text-orange-500" />
+                        ) : (
+                          <Phone className="w-4 h-4 text-emerald-600" />
+                        )}
+                        <span className="text-slate-800 font-extrabold">{call.type} Call</span>
+                      </div>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${call.status === "ACTIVE"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : call.status === "ENDED"
+                            ? "bg-slate-100 text-slate-700"
+                            : call.status === "MISSED"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                      >
+                        {call.status}
+                      </span>
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <p className="text-slate-700">
+                        <span className="font-semibold text-slate-400 text-[11px]">Host:</span> {call.host.name}
+                      </p>
+                      <p className="text-slate-500 truncate">
+                        <span className="font-semibold text-slate-400 text-[11px]">Participants:</span> {call.participants.map((p) => p.user.name).join(", ")}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400">
+                      <span>{new Date(call.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                      <button
+                        onClick={() => handleDeleteCall(call.id)}
+                        className="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 rounded-lg transition-colors cursor-pointer"
+                        title="Delete call log"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* Calling History Pagination Controls */}
               {totalCalls > 0 && (
                 <div className="bg-slate-50/80 border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -1552,7 +1765,7 @@ function CallsContent() {
                     <span className="font-bold text-slate-800">{totalCalls}</span> call logs
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                       <span>Rows per page:</span>
                       <select
@@ -1662,69 +1875,97 @@ function CallsContent() {
             </div>
           )}
 
-          {/* Always-mounted audio element for remote audio - offscreen so Chromium audio engine keeps hardware output active for headphones/speakers */}
+          {/* Always-mounted audio element for remote audio */}
           <audio
             ref={remoteAudioRef}
+            data-remote-audio="true"
             autoPlay
             playsInline
-            style={{
-              position: "fixed",
-              left: "-9999px",
-              top: "-9999px",
-              width: "1px",
-              height: "1px",
-              opacity: 0.01,
-              pointerEvents: "none",
-            }}
+            style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
           />
 
           {/* Active WebRTC Call Screen Overlay */}
           {activeCall && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-4">
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-2 sm:p-4 overflow-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              onClick={unblockAudio}
+              onTouchStart={unblockAudio}
+            >
 
-              <div className="bg-slate-900 text-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-700/60 flex flex-col max-h-[90vh]"
+              <div className="bg-slate-900 text-white rounded-2xl sm:rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border border-slate-700/60 flex flex-col max-h-[96vh] sm:max-h-[90vh] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                 style={{ boxShadow: "0 0 60px rgba(239,68,68,0.15), 0 25px 50px rgba(0,0,0,0.8)" }}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 truncate">
                       {activeCall.type === "VIDEO" ? (
-                        <Video className="w-5 h-5 text-orange-400" />
+                        <Video className="w-5 h-5 text-orange-400 shrink-0" />
                       ) : (
-                        <Mic className="w-5 h-5 text-orange-400" />
+                        <Mic className="w-5 h-5 text-orange-400 shrink-0" />
                       )}
-                      <span>{activeCall.isGroupCall ? `Group Call — ${activeCall.targetName}` : `Call with ${activeCall.targetName}`}</span>
+                      <span className="truncate">{activeCall.isGroupCall ? `Group Call — ${activeCall.targetName}` : `Call with ${activeCall.targetName}`}</span>
                     </h2>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="inline-block w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
                       <p className="text-xs text-emerald-400 font-mono font-bold">
                         {formatTime(callDuration)}
                       </p>
+                      <span className="text-[10px] text-slate-400">•</span>
+                      <span className="text-[11px] font-semibold text-orange-400 flex items-center gap-1">
+                        {isSpeakerOn ? <Volume2 className="w-3.5 h-3.5" /> : <Volume1 className="w-3.5 h-3.5" />}
+                        {isSpeakerOn ? "Speaker: ON (Hands-free)" : "Speaker: Normal"}
+                      </span>
                     </div>
                   </div>
                   {/* Top-right action buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                     <button
                       onClick={() => setShowAddMemberModal(true)}
-                      className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-xs rounded-xl transition-all border border-slate-700 flex items-center gap-2 cursor-pointer shadow-md"
+                      className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-xs rounded-xl transition-all border border-slate-700 flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-md"
                       title="Add Member to Call"
                     >
                       <UserPlus className="w-4 h-4 text-orange-400" />
-                      <span>Add Member</span>
+                      <span className="hidden xs:inline">Add Member</span>
                     </button>
                     <button
                       onClick={endWebRTCCall}
-                      className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-extrabold text-xs rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+                      className="px-3.5 sm:px-5 py-2 sm:py-2.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-extrabold text-xs rounded-xl transition-all shadow-lg flex items-center gap-1.5 sm:gap-2 cursor-pointer"
                       style={{ boxShadow: "0 0 20px rgba(239,68,68,0.5)" }}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
                       </svg>
-                      End Call
+                      <span>End Call</span>
                     </button>
                   </div>
                 </div>
+
+                {/* Autoplay blocked alert banner */}
+                {isAudioBlocked && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      unblockAudio();
+                    }}
+                    className="mb-3 p-3 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 rounded-xl flex items-center justify-between gap-3 text-white shadow-lg animate-pulse cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                      <Volume2 className="w-5 h-5 shrink-0" />
+                      <span>Audio playback paused by browser. Tap here to unmute and hear voice!</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        unblockAudio();
+                      }}
+                      className="px-3 py-1.5 bg-white text-orange-700 font-extrabold rounded-lg text-xs hover:bg-orange-50 transition-all shrink-0 cursor-pointer shadow-sm"
+                    >
+                      Tap to Unmute
+                    </button>
+                  </div>
+                )}
 
                 {/* Listen-Only Notification Banner */}
                 {hasNoMic && (
@@ -1743,15 +1984,17 @@ function CallsContent() {
                 )}
 
                 {/* Video / Audio Streams Display */}
-                <div className={`flex-1 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative min-h-[360px] ${activeCall.isGroupCall ? "p-3" : "flex items-center justify-center"}`}>
+                <div className={`flex-1 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative min-h-[260px] sm:min-h-[360px] ${activeCall.isGroupCall ? "p-2 sm:p-3" : "flex items-center justify-center"}`}>
                   {activeCall.isGroupCall ? (
-                    <div className="grid h-full min-h-[330px] grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="grid h-full min-h-[260px] sm:min-h-[330px] grid-cols-1 gap-2.5 sm:gap-3 sm:grid-cols-2">
                       {remoteParticipants.map((participant) => (
                         <RemoteParticipantMedia
                           key={participant.userId}
                           participant={participant}
                           name={employees.find((employee) => employee.id === participant.userId)?.name || `Employee #${participant.userId}`}
                           type={activeCall.type}
+                          isSpeakerOn={isSpeakerOn}
+                          onAudioBlocked={() => setIsAudioBlocked(true)}
                         />
                       ))}
                       {remoteParticipants.length === 0 && (
@@ -1768,6 +2011,7 @@ function CallsContent() {
                       {activeCall.type === "VIDEO" ? (
                         <video
                           ref={remoteVideoRef}
+                          muted
                           autoPlay
                           playsInline
                           className="w-full h-full object-cover rounded-2xl"
@@ -1806,7 +2050,7 @@ function CallsContent() {
 
                   {/* Local Video Stream Preview (PiP) */}
                   {activeCall.type === "VIDEO" && (
-                    <div className="absolute bottom-4 right-4 w-40 h-28 bg-slate-900 border-2 border-orange-500/50 rounded-xl overflow-hidden shadow-2xl">
+                    <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-28 h-20 sm:w-40 sm:h-28 bg-slate-900 border-2 border-orange-500/50 rounded-xl overflow-hidden shadow-2xl">
                       <video
                         ref={localVideoRef}
                         autoPlay
@@ -1820,27 +2064,27 @@ function CallsContent() {
                 </div>
 
                 {/* Call Control Toolbar */}
-                <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-center gap-4">
+                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-800 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4">
                   {/* Mute Mic / No Mic */}
                   {hasNoMic ? (
                     <button
                       onClick={retryConnectMic}
-                      className="w-14 h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg bg-amber-500/20 border-2 border-amber-500 text-amber-400 hover:bg-amber-500/30 cursor-pointer"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg bg-amber-500/20 border-2 border-amber-500 text-amber-400 hover:bg-amber-500/30 cursor-pointer"
                       title="No microphone detected. Click to connect headphones or microphone."
                     >
-                      <MicOff className="w-5 h-5 text-amber-400" />
+                      <MicOff className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                       <span className="text-[8px] font-bold">No Mic</span>
                     </button>
                   ) : (
                     <button
                       onClick={toggleMic}
-                      className={`w-14 h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg ${isMicMuted
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg ${isMicMuted
                         ? "bg-rose-600/20 border-2 border-rose-500 text-rose-400"
                         : "bg-slate-800 border-2 border-slate-700 text-slate-200 hover:bg-slate-700"
                         }`}
                       title={isMicMuted ? "Unmute Mic" : "Mute Mic"}
                     >
-                      {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                      {isMicMuted ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
                       <span className="text-[8px] font-bold">{isMicMuted ? "Muted" : "Mic"}</span>
                     </button>
                   )}
@@ -1849,31 +2093,44 @@ function CallsContent() {
                   {activeCall.type === "VIDEO" && (
                     <button
                       onClick={toggleCam}
-                      className={`w-14 h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg ${isCamOff
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg ${isCamOff
                         ? "bg-rose-600/20 border-2 border-rose-500 text-rose-400"
                         : "bg-slate-800 border-2 border-slate-700 text-slate-200 hover:bg-slate-700"
                         }`}
                       title={isCamOff ? "Turn Camera On" : "Turn Camera Off"}
                     >
-                      {isCamOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                      {isCamOff ? <VideoOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Video className="w-4 h-4 sm:w-5 sm:h-5" />}
                       <span className="text-[8px] font-bold">{isCamOff ? "Cam Off" : "Camera"}</span>
                     </button>
                   )}
 
+                  {/* Speaker / Loudspeaker Mode Toggle */}
+                  <button
+                    onClick={toggleSpeaker}
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg cursor-pointer ${isSpeakerOn
+                      ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400 hover:bg-orange-500/30"
+                      : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    title={isSpeakerOn ? "Speaker ON (Loudspeaker / Hands-Free mode). Click for normal/headset." : "Speaker Normal. Click to enable loud speaker."}
+                  >
+                    {isSpeakerOn ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" /> : <Volume1 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />}
+                    <span className="text-[8px] font-bold">{isSpeakerOn ? "Speaker" : "Normal"}</span>
+                  </button>
+
                   {/* Add Member Button in Toolbar */}
                   <button
                     onClick={() => setShowAddMemberModal(true)}
-                    className="w-14 h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg bg-slate-800 border-2 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-orange-500/50 cursor-pointer"
+                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg bg-slate-800 border-2 border-slate-700 text-slate-200 hover:bg-slate-700 hover:border-orange-500/50 cursor-pointer"
                     title="Add Member to Call"
                   >
-                    <UserPlus className="w-5 h-5 text-orange-400" />
+                    <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
                     <span className="text-[8px] font-bold">Add</span>
                   </button>
 
                   {/* ============ ENHANCED END CALL BUTTON ============ */}
                   <button
                     onClick={endWebRTCCall}
-                    className="relative w-20 h-14 rounded-2xl text-white font-black text-sm flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer"
+                    className="relative w-16 h-12 sm:w-20 sm:h-14 rounded-2xl text-white font-black text-sm flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer"
                     style={{
                       background: "linear-gradient(135deg, #dc2626, #b91c1c)",
                       boxShadow: "0 0 30px rgba(220,38,38,0.6), 0 4px 15px rgba(0,0,0,0.4)",
@@ -1885,10 +2142,10 @@ function CallsContent() {
                       className="absolute inset-0 rounded-2xl animate-ping"
                       style={{ background: "rgba(220,38,38,0.3)", animationDuration: "1.5s" }}
                     />
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 relative z-10" fill="currentColor" viewBox="0 0 24 24">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 sm:w-5 sm:h-5 relative z-10" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
                     </svg>
-                    <span className="text-[9px] font-extrabold relative z-10 tracking-wide">END</span>
+                    <span className="text-[8px] sm:text-[9px] font-extrabold relative z-10 tracking-wide">END</span>
                   </button>
                 </div>
               </div>
@@ -1966,14 +2223,15 @@ function CallsContent() {
                 </div>
 
                 {/* Search Input */}
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <div className="relative flex items-center">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                   <input
                     type="text"
                     value={addMemberSearch}
                     onChange={(e) => setAddMemberSearch(e.target.value)}
-                    placeholder="Search colleagues by name or email..."
-                    className="w-full h-10 pl-9 pr-3 text-xs bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    placeholder="Search by name or email"
+                    style={{ paddingLeft: "40px" }}
+                    className="w-full h-10 !pl-10 pr-3 text-xs bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                   />
                 </div>
 

@@ -49,6 +49,7 @@ export default function EmployeesPage() {
   const { session, isLoading, logout } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
@@ -68,11 +69,10 @@ export default function EmployeesPage() {
     limit: 20,
   });
 
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const isSearchActive = isSearchFocused || Boolean(filters.search);
 
   const userRole = session?.user?.role;
   const roleName = typeof userRole === "string"
@@ -83,30 +83,124 @@ export default function EmployeesPage() {
     : (userRole as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
 
   const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || roleName === "HR" || userRoleId === 2 || userRoleId === 3;
+  const isHRUser = roleName === "HR" || roleName === "HR_MANAGER" || roleName.includes("HR") || userRoleId === 3;
+  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || isHRUser || userRoleId === 2 || userRoleId === 3;
 
-  const canManageEmployees = isSuperAdmin || (isAdminUser && session?.user?.permissions?.includes("MANAGE_EMPLOYEES"));
+  const canManageEmployees =
+    isSuperAdmin ||
+    isHRUser ||
+    (isAdminUser && (
+      session?.user?.permissions?.includes("MANAGE_EMPLOYEES") ||
+      session?.user?.permissions?.some((p: string) => {
+        const lp = p.toLowerCase();
+        return (
+          lp === "manage_employees" ||
+          lp.includes("employee:create") ||
+          lp.includes("employee:manage") ||
+          lp.includes("employee:write")
+        );
+      }) ||
+      roleName === "ADMIN" ||
+      roleName === "HR"
+    ));
   const canCreateAdmins = isSuperAdmin;
 
-  const fetchEmployees = useCallback(async () => {
+  // Debounce search input only
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filters.search]);
+
+  // Fetch filter options (roles and designations) once on mount
+  useEffect(() => {
+    if (!session?.token) return;
+    let isMounted = true;
+    getEmployeeFilters(session.token)
+      .then(({ roles: rolesData, designations: designationsData }) => {
+        if (isMounted) {
+          setRoles(rolesData);
+          setDesignations(designationsData);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch filters:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.token]);
+
+  // Main data fetching effect
+  useEffect(() => {
     if (!session?.token) return;
 
-    setLoading(true);
+    let isCurrent = true;
+    setIsFetching(true);
     setError(null);
 
+    getEmployees(
+      {
+        page: filters.page,
+        limit: filters.limit,
+        search: debouncedSearch.trim() || undefined,
+        roleId: filters.roleId ? Number(filters.roleId) : undefined,
+        designationId: filters.designationId ? Number(filters.designationId) : undefined,
+        status: filters.status || undefined,
+      },
+      session.token
+    )
+      .then((response: EmployeeListResponse) => {
+        if (!isCurrent) return;
+        setEmployees(response.employees);
+        setPagination({
+          total: response.total,
+          page: response.page,
+          pageSize: response.pageSize,
+          totalPages: response.totalPages,
+        });
+      })
+      .catch((err) => {
+        if (!isCurrent) return;
+        const errorMessage = err instanceof Error ? err.message : "Failed to fetch employees";
+        setError(errorMessage);
+      })
+      .finally(() => {
+        if (!isCurrent) return;
+        setLoading(false);
+        setIsFetching(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [
+    session?.token,
+    debouncedSearch,
+    filters.roleId,
+    filters.designationId,
+    filters.status,
+    filters.page,
+    filters.limit,
+  ]);
+
+  const refreshEmployees = useCallback(async () => {
+    if (!session?.token) return;
+    setIsFetching(true);
     try {
       const response: EmployeeListResponse = await getEmployees(
         {
           page: filters.page,
           limit: filters.limit,
-          search: filters.search || undefined,
+          search: debouncedSearch.trim() || undefined,
           roleId: filters.roleId ? Number(filters.roleId) : undefined,
           designationId: filters.designationId ? Number(filters.designationId) : undefined,
           status: filters.status || undefined,
         },
         session.token
       );
-
       setEmployees(response.employees);
       setPagination({
         total: response.total,
@@ -115,56 +209,17 @@ export default function EmployeesPage() {
         totalPages: response.totalPages,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to fetch employees";
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : "Failed to fetch employees");
     } finally {
-      setLoading(false);
+      setIsFetching(false);
     }
-  }, [session?.token, filters]);
-
-  const fetchFilters = useCallback(async () => {
-    if (!session?.token) return;
-
-    try {
-      const { roles: rolesData, designations: designationsData } = await getEmployeeFilters(
-        session.token
-      );
-      setRoles(rolesData);
-      setDesignations(designationsData);
-    } catch (err) {
-      console.error("Failed to fetch filters:", err);
-    }
-  }, [session?.token]);
+  }, [session?.token, filters, debouncedSearch]);
 
   useEffect(() => {
     if (!isLoading && !session) {
       router.replace("/");
     }
   }, [isLoading, router, session]);
-
-  useEffect(() => {
-    if (session?.token) {
-      fetchEmployees();
-      fetchFilters();
-    }
-  }, [session?.token, fetchEmployees, fetchFilters]);
-
-  useEffect(() => {
-    // Debounce filter changes
-    const timer = setTimeout(() => {
-      if (filters.page === 1) {
-        fetchEmployees();
-      } else {
-        setFilters((prev) => ({ ...prev, page: 1 }));
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [filters.search, filters.roleId, filters.designationId, filters.status, fetchEmployees]);
-
-  useEffect(() => {
-    fetchEmployees();
-  }, [filters.page, filters.limit, fetchEmployees]);
 
   const handleFilterChange = (field: keyof FilterState, value: string | number) => {
     setFilters((prev) => ({ ...prev, [field]: value, page: 1 }));
@@ -207,7 +262,7 @@ export default function EmployeesPage() {
       setActionMessage(`Employee ${employeeToDelete.name} deactivated successfully.`);
       setShowDeleteModal(false);
       setEmployeeToDelete(null);
-      fetchEmployees(); // Refresh the list
+      refreshEmployees(); // Refresh the list without destroying DOM
       setTimeout(() => setActionMessage(null), 5000);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete employee";
@@ -240,10 +295,10 @@ export default function EmployeesPage() {
     return <main className="route-loading">Loading employees...</main>;
   }
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     logout();
     router.replace("/");
-  };
+  }, [logout, router]);
 
   return (
     <main className="app-shell">
@@ -264,8 +319,8 @@ export default function EmployeesPage() {
                 <span className="text-xs text-slate-500 font-medium">View, search, and manage team members and system permissions</span>
               </div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 self-start sm:self-auto">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{pagination.total} Team Members</span>
+                <span className={`w-2 h-2 rounded-full ${isFetching ? "bg-orange-500 animate-ping" : "bg-emerald-500 animate-pulse"}`} />
+                <span>{isFetching ? "Updating..." : `${pagination.total} Team Members`}</span>
               </div>
             </div>
           </div>
@@ -286,9 +341,9 @@ export default function EmployeesPage() {
 
           {/* Modern Action & Filter Bar */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-sm mb-6 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-3.5">
-            <div className="flex flex-wrap items-center gap-2.5 flex-1">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 flex-1">
               {/* Modern Search Input */}
-              <div className="relative flex-1 min-w-[240px] sm:min-w-[280px]">
+              <div className="relative w-full sm:flex-1 sm:min-w-[240px] md:min-w-[280px]">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                 <input
                   type="text"
@@ -296,8 +351,8 @@ export default function EmployeesPage() {
                   placeholder="Search employees by name or email..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange("search", e.target.value)}
-                  style={{ paddingLeft: "38px", paddingRight: "34px" }}
-                  className="w-full h-10.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all shadow-2xs"
+                  style={{ paddingLeft: "42px", paddingRight: "34px" }}
+                  className="w-full h-10.5 !pl-11 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all shadow-2xs"
                 />
                 {filters.search && (
                   <button
@@ -313,7 +368,7 @@ export default function EmployeesPage() {
               </div>
 
               {/* System Role Filter */}
-              <div className="relative min-w-[155px] flex-1 sm:flex-initial">
+              <div className="relative w-full sm:w-auto min-w-0 sm:min-w-[155px] flex-1 sm:flex-initial">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
                   <Shield className="w-3.5 h-3.5" />
                 </div>
@@ -335,7 +390,7 @@ export default function EmployeesPage() {
               </div>
 
               {/* Designation Filter */}
-              <div className="relative min-w-[165px] flex-1 sm:flex-initial">
+              <div className="relative w-full sm:w-auto min-w-0 sm:min-w-[165px] flex-1 sm:flex-initial">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
                   <Briefcase className="w-3.5 h-3.5" />
                 </div>
@@ -357,7 +412,7 @@ export default function EmployeesPage() {
               </div>
 
               {/* Status Filter */}
-              <div className="relative min-w-[135px] flex-1 sm:flex-initial">
+              <div className="relative w-full sm:w-auto min-w-0 sm:min-w-[135px] flex-1 sm:flex-initial">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
                   <Activity className="w-3.5 h-3.5" />
                 </div>
@@ -382,7 +437,7 @@ export default function EmployeesPage() {
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="h-10.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="w-full sm:w-auto justify-center h-10.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
                   title="Reset all filters"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
@@ -394,7 +449,7 @@ export default function EmployeesPage() {
             {canManageEmployees && (
               <button
                 onClick={handleAddEmployee}
-                className="h-10.5 px-4 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] text-white font-bold text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                className="w-full xl:w-auto h-10.5 px-4 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] text-white font-bold text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Employee</span>
@@ -404,7 +459,8 @@ export default function EmployeesPage() {
 
           {/* Table Container Card */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-100">
@@ -431,8 +487,8 @@ export default function EmployeesPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {loading ? (
+                <tbody className={`divide-y divide-slate-100 transition-opacity duration-150 ${isFetching ? "opacity-60 pointer-events-none" : ""}`}>
+                  {loading && employees.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-12 text-slate-400 font-semibold text-xs whitespace-nowrap">
                         Loading employee list...
@@ -570,13 +626,115 @@ export default function EmployeesPage() {
               </table>
             </div>
 
+            {/* Mobile Card List (shown on mobile, hidden on md+) */}
+            <div className={`md:hidden divide-y divide-slate-100 p-3 sm:p-4 transition-opacity duration-150 ${isFetching ? "opacity-60 pointer-events-none" : ""}`}>
+              {loading && employees.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 font-semibold text-xs">
+                  Loading employee list...
+                </div>
+              ) : employees.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 font-semibold text-xs">
+                  No employees found matching the filters.
+                </div>
+              ) : (
+                employees.map((employee) => {
+                  const isRowActive = employee.status === "ACTIVE";
+                  const avatarLetter = (employee.name || "U").charAt(0).toUpperCase();
+
+                  return (
+                    <div key={employee.id} className="py-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 font-black text-sm flex items-center justify-center shrink-0">
+                            {avatarLetter}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 text-sm leading-snug truncate">{employee.name}</p>
+                            <p className="text-[11px] font-medium text-slate-400">ID: #{employee.id}</p>
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${isRowActive
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-rose-50 text-rose-700 border border-rose-200"
+                            }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isRowActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+                          {employee.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold">Role</span>
+                          <span className="font-bold text-slate-700 truncate block mt-0.5">
+                            {employee.role?.name || "N/A"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold">Designation</span>
+                          <span className="font-semibold text-slate-700 truncate block mt-0.5">
+                            {employee.designation?.name || "N/A"}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold">Email</span>
+                          <a
+                            href={`mailto:${employee.email}`}
+                            className="font-medium text-orange-600 hover:text-orange-700 truncate block mt-0.5"
+                          >
+                            {employee.email}
+                          </a>
+                        </div>
+                        {employee.phoneNumber && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Phone</span>
+                            <span className="font-medium text-slate-700 block mt-0.5">
+                              {employee.phoneNumber}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {canManageEmployees && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={() => employee.id && handleViewEmployee(employee.id)}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300 text-slate-700 font-bold text-xs shadow-2xs transition-colors"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span>View Profile</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(employee)}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs shadow-2xs transition-colors"
+                            title="Deactivate Employee"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <circle cx="12" cy="7" r="3.5" strokeWidth={2} />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 20a7 7 0 0114 0" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4l16 16" />
+                            </svg>
+                            <span>Deactivate</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
             {/* Pagination Controls */}
             {pagination.totalPages >= 1 && (
               <div className="bg-slate-50/50 border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="text-xs font-medium text-slate-500">
                   Showing <span className="font-bold text-slate-800">{employees.length > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0}</span> to <span className="font-bold text-slate-800">{Math.min(pagination.page * pagination.pageSize, pagination.total)}</span> of <span className="font-bold text-slate-800">{pagination.total}</span> employees
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                   <select
                     value={filters.limit}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
@@ -632,17 +790,17 @@ export default function EmployeesPage() {
                 <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6">
                   Are you sure you want to deactivate <strong>{employeeToDelete.name}</strong>?
                 </p>
-                <div className="flex gap-3 justify-end">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
                   <button
                     onClick={() => setShowDeleteModal(false)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={confirmDelete}
                     disabled={loading}
-                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50"
                   >
                     {loading ? "Deactivating..." : "Deactivate Employee"}
                   </button>

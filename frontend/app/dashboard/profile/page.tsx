@@ -10,6 +10,7 @@ import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
 import type { User } from "@/types/auth";
 import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
+import { Eye, EyeOff } from "lucide-react";
 
 type ProfileFormData = {
   name: string;
@@ -57,6 +58,7 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [leaveBalances, setLeaveBalances] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
@@ -600,21 +602,24 @@ export default function ProfilePage() {
                   <form onSubmit={handleSavePassword} className="space-y-5">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Current Password</label>
-                      <div className="relative">
+                      <div className="relative flex items-center">
                         <input
                           type={showCurrentPassword ? "text" : "password"}
                           value={passwordData.currentPassword}
                           onChange={(e) => handlePasswordInputChange("currentPassword", e.target.value)}
-                          placeholder="Enter your current account password"
+                          placeholder="Current password"
                           required
-                          className="w-full h-10 pl-3.5 pr-10 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                          style={{ paddingLeft: "14px", paddingRight: "68px" }}
+                          className="w-full h-10 !pl-3.5 !pr-18 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 text-xs font-bold"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400 hover:text-slate-700 text-xs font-semibold px-1.5 py-1 rounded-md transition-colors cursor-pointer"
+                          aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
                         >
-                          {showCurrentPassword ? "Hide" : "Show"}
+                          {showCurrentPassword ? <EyeOff className="w-4 h-4 text-slate-600" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                          <span className="text-[11px] font-bold">{showCurrentPassword ? "Hide" : "Show"}</span>
                         </button>
                       </div>
                     </div>
@@ -622,35 +627,50 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">New Password</label>
-                        <div className="relative">
+                        <div className="relative flex items-center">
                           <input
                             type={showNewPassword ? "text" : "password"}
                             value={passwordData.newPassword}
                             onChange={(e) => handlePasswordInputChange("newPassword", e.target.value)}
-                            placeholder="Minimum 8 characters"
+                            placeholder="Min. 8 characters"
                             required
-                            className="w-full h-10 pl-3.5 pr-10 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                            style={{ paddingLeft: "14px", paddingRight: "68px" }}
+                            className="w-full h-10 !pl-3.5 !pr-18 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
                           />
                           <button
                             type="button"
                             onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 text-xs font-bold"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400 hover:text-slate-700 text-xs font-semibold px-1.5 py-1 rounded-md transition-colors cursor-pointer"
+                            aria-label={showNewPassword ? "Hide new password" : "Show new password"}
                           >
-                            {showNewPassword ? "Hide" : "Show"}
+                            {showNewPassword ? <EyeOff className="w-4 h-4 text-slate-600" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                            <span className="text-[11px] font-bold">{showNewPassword ? "Hide" : "Show"}</span>
                           </button>
                         </div>
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">Confirm New Password</label>
-                        <input
-                          type="password"
-                          value={passwordData.confirmPassword}
-                          onChange={(e) => handlePasswordInputChange("confirmPassword", e.target.value)}
-                          placeholder="Re-enter new password"
-                          required
-                          className="w-full h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                        />
+                        <div className="relative flex items-center">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={passwordData.confirmPassword}
+                            onChange={(e) => handlePasswordInputChange("confirmPassword", e.target.value)}
+                            placeholder="Re-enter new password"
+                            required
+                            style={{ paddingLeft: "14px", paddingRight: "68px" }}
+                            className="w-full h-10 !pl-3.5 !pr-18 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-slate-800 placeholder:text-slate-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400 hover:text-slate-700 text-xs font-semibold px-1.5 py-1 rounded-md transition-colors cursor-pointer"
+                            aria-label={showConfirmPassword ? "Hide confirmed password" : "Show confirmed password"}
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-4 h-4 text-slate-600" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                            <span className="text-[11px] font-bold">{showConfirmPassword ? "Hide" : "Show"}</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
