@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { getEmployees, type Employee } from "@/services/employee.service";
+import { getAdmins } from "@/services/admin.service";
 import { getWorkspaceList } from "@/services/workspace.service";
 import { EmployeeDashboard } from "@/components/dashboard/EmployeeDashboard";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
@@ -87,8 +88,11 @@ export default function DashboardPage() {
 
   const [employeesList, setEmployeesList] = useState<Employee[]>([]);
   const [totalEmployees, setTotalEmployees] = useState<number>(0);
+  const [activeEmployeesCount, setActiveEmployeesCount] = useState<number>(0);
+  const [adminCount, setAdminCount] = useState<number>(0);
   const [projectsCount, setProjectsCount] = useState<number>(0);
   const [sprintsCount, setSprintsCount] = useState<number>(0);
+  const [completedSprintsCount, setCompletedSprintsCount] = useState<number>(0);
 
   const [activeSprints, setActiveSprints] = useState<ActiveSprintOverview[]>([]);
   const [recentWorkItems, setRecentWorkItems] = useState<WorkItem[]>([]);
@@ -101,23 +105,48 @@ export default function DashboardPage() {
   const loadDashboardMetrics = useCallback(async () => {
     if (!session?.token) return;
     try {
-      const [empData, projData, sprintData, workItemData] = await Promise.all([
-        getEmployees({ limit: 10 }, session.token).catch(() => null),
+      const [empData, projData, sprintData, workItemData, adminData] = await Promise.all([
+        getEmployees({ limit: 100 }, session.token).catch(() => null),
         getWorkspaceList("projects", session.token).catch(() => null),
         getWorkspaceList("sprints", session.token).catch(() => null),
         getWorkspaceList("work-items", session.token).catch(() => null),
+        getAdmins(session.token).catch(() => null),
       ]);
 
       if (empData) {
         setEmployeesList(empData.employees || []);
         setTotalEmployees(empData.total || empData.employees.length);
+        setActiveEmployeesCount(
+          (empData.employees || []).filter((e) => e.status === "ACTIVE").length
+        );
       }
 
-      if (projData?.items) setProjectsCount(projData.items.length);
+      if (adminData?.admins) {
+        setAdminCount(adminData.admins.length);
+      } else if (empData?.employees) {
+        setAdminCount(
+          empData.employees.filter(
+            (e) => e.role?.name === "ADMIN" || e.role?.name === "SUPER_ADMIN"
+          ).length
+        );
+      }
+
+      if (projData?.items) {
+        setProjectsCount(projData.items.length);
+      }
 
       if (sprintData?.items) {
-        setSprintsCount(sprintData.items.length);
-        const formattedSprints: ActiveSprintOverview[] = sprintData.items.map((s: any) => ({
+        const sprints = sprintData.items;
+        const activeOnly = sprints.filter(
+          (s: any) => s.status === "ACTIVE" || !s.status || s.status === "IN_PROGRESS"
+        );
+        const completedOnly = sprints.filter(
+          (s: any) => s.status === "COMPLETED" || s.status === "DONE"
+        );
+        setSprintsCount(activeOnly.length);
+        setCompletedSprintsCount(completedOnly.length);
+
+        const formattedSprints: ActiveSprintOverview[] = sprints.map((s: any) => ({
           id: Number(s.id),
           name: s.name,
           projectName: typeof s.project === "object" ? s.project?.name : (s.project || "General"),
@@ -185,9 +214,6 @@ export default function DashboardPage() {
       </main>
     );
   }
-
-  const activeEmployeesCount = employeesList.filter((e) => e.status === "ACTIVE").length;
-  const adminCount = employeesList.filter((e) => e.role?.name === "ADMIN" || e.role?.name === "SUPER_ADMIN").length;
 
   if (!isAdminUser) {
     return (
@@ -259,37 +285,37 @@ export default function DashboardPage() {
               <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1 truncate">
                 Total Projects
               </span>
-              <span className="text-xl sm:text-2xl font-black text-slate-900 block truncate">{projectsCount || 8}</span>
+              <span className="text-xl sm:text-2xl font-black text-slate-900 block truncate">{loading ? "..." : projectsCount}</span>
             </div>
             <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
               <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1 truncate">
                 Active Sprints
               </span>
-              <span className="text-xl sm:text-2xl font-black text-orange-600 block truncate">{sprintsCount || 4}</span>
+              <span className="text-xl sm:text-2xl font-black text-orange-600 block truncate">{loading ? "..." : sprintsCount}</span>
             </div>
             <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
               <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1 truncate">
                 Total Staff
               </span>
-              <span className="text-xl sm:text-2xl font-black text-slate-900 block truncate">{totalEmployees || 24}</span>
+              <span className="text-xl sm:text-2xl font-black text-slate-900 block truncate">{loading ? "..." : totalEmployees}</span>
             </div>
             <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
               <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1 truncate">
                 Active Employees
               </span>
-              <span className="text-xl sm:text-2xl font-black text-emerald-600 block truncate">{activeEmployeesCount || totalEmployees || 20}</span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-600 block truncate">{loading ? "..." : activeEmployeesCount}</span>
             </div>
             <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
               <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1 truncate">
                 System Admins
               </span>
-              <span className="text-xl sm:text-2xl font-black text-blue-600 block truncate">{adminCount || 3}</span>
+              <span className="text-xl sm:text-2xl font-black text-blue-600 block truncate">{loading ? "..." : adminCount}</span>
             </div>
             <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs min-w-0">
               <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1 truncate">
                 Completed Sprints
               </span>
-              <span className="text-xl sm:text-2xl font-black text-slate-900 block truncate">12</span>
+              <span className="text-xl sm:text-2xl font-black text-slate-900 block truncate">{loading ? "..." : completedSprintsCount}</span>
             </div>
           </div>
 
@@ -308,8 +334,8 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="workspace-list-card rounded-xl sm:rounded-2xl">
-              <div className="workspace-table-scroll">
+            <div className="workspace-list-card rounded-xl sm:rounded-2xl scrollbar-none no-scrollbar">
+              <div className="workspace-table-scroll scrollbar-none no-scrollbar">
                 <table className="workspace-table min-w-[620px]">
                   <thead>
                     <tr>
@@ -422,8 +448,8 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="workspace-list-card rounded-xl sm:rounded-2xl">
-              <div className="workspace-table-scroll">
+            <div className="workspace-list-card rounded-xl sm:rounded-2xl scrollbar-none no-scrollbar">
+              <div className="workspace-table-scroll scrollbar-none no-scrollbar">
                 <table className="workspace-table min-w-[640px]">
                   <thead>
                     <tr>
@@ -517,8 +543,8 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="workspace-list-card rounded-xl sm:rounded-2xl">
-              <div className="workspace-table-scroll">
+            <div className="workspace-list-card rounded-xl sm:rounded-2xl scrollbar-none no-scrollbar">
+              <div className="workspace-table-scroll scrollbar-none no-scrollbar">
                 <table className="workspace-table min-w-[700px]">
                   <thead>
                     <tr>

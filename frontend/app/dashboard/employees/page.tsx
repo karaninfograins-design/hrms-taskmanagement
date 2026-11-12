@@ -477,7 +477,7 @@ export default function EmployeesPage() {
           {/* Table Container Card */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto scrollbar-none no-scrollbar">
               <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-100">

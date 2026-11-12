@@ -114,11 +114,11 @@ export const getGroupDailySummaries = async (req: Request, res: Response): Promi
         hasSubmitted: !!existing,
         summary: existing
           ? {
-              id: existing.id,
-              content: existing.content,
-              createdAt: existing.createdAt,
-              updatedAt: existing.updatedAt,
-            }
+            id: existing.id,
+            content: existing.content,
+            createdAt: existing.createdAt,
+            updatedAt: existing.updatedAt,
+          }
           : null,
       };
     });

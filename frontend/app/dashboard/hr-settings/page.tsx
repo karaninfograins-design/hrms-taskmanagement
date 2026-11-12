@@ -501,7 +501,7 @@ export default function HRSettingsPage() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex flex-nowrap sm:flex-wrap gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto">
+          <div className="flex flex-nowrap sm:flex-wrap gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto scrollbar-none no-scrollbar">
             {categories.map((cat) => (
               <button
                 key={cat.key}
@@ -575,7 +575,7 @@ export default function HRSettingsPage() {
                     <p className="text-xs text-slate-400 font-medium">No options configured for this category yet.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto scrollbar-none no-scrollbar">
                     <table className="w-full min-w-[500px] text-left text-xs whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
@@ -702,7 +702,7 @@ export default function HRSettingsPage() {
                 ) : leaveTypes.length === 0 ? (
                   <p className="text-xs text-slate-400 font-medium">No leave types available.</p>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto scrollbar-none no-scrollbar">
                     <table className="w-full min-w-[500px] text-left text-xs whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
@@ -814,7 +814,7 @@ export default function HRSettingsPage() {
                   </div>
 
                   {/* Balances Grid Table */}
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto scrollbar-none no-scrollbar">
                     <table className="w-full min-w-[500px] text-left text-xs whitespace-nowrap">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">

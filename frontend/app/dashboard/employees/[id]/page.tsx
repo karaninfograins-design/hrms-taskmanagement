@@ -376,7 +376,7 @@ export default function ViewEmployeePage() {
           {editMode ? (
             <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
               <h2 className="text-lg font-black text-slate-600 mb-2 pb-2 border-b border-slate-100 flex items-center gap-2">
-                <span> Edit Employee Record</span>  
+                <span> Edit Employee Record</span>
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -594,12 +594,12 @@ export default function ViewEmployeePage() {
             </div>
           ) : (
             /* View Mode with Tabs */
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm space-y-6">
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 md:p-8 shadow-sm space-y-6">
               {/* Navigation Tabs */}
-              <div className="flex border-b border-slate-200 gap-6">
+              <div className="flex border-b border-slate-200 gap-2 sm:gap-6 overflow-x-auto scrollbar-none no-scrollbar pb-0.5">
                 <button
                   onClick={() => setActiveTab("overview")}
-                  className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === "overview"
+                  className={`pb-3 px-1 text-xs font-bold border-b-2 whitespace-nowrap shrink-0 transition-all cursor-pointer ${activeTab === "overview"
                     ? "border-orange-500 text-orange-600 font-black"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
@@ -608,7 +608,7 @@ export default function ViewEmployeePage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("credentials")}
-                  className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === "credentials"
+                  className={`pb-3 px-1 text-xs font-bold border-b-2 whitespace-nowrap shrink-0 transition-all cursor-pointer ${activeTab === "credentials"
                     ? "border-orange-500 text-orange-600 font-black"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
@@ -617,7 +617,7 @@ export default function ViewEmployeePage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("hr")}
-                  className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === "hr"
+                  className={`pb-3 px-1 text-xs font-bold border-b-2 whitespace-nowrap shrink-0 transition-all cursor-pointer ${activeTab === "hr"
                     ? "border-orange-500 text-orange-600 font-black"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
@@ -626,7 +626,7 @@ export default function ViewEmployeePage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("workItems")}
-                  className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === "workItems"
+                  className={`pb-3 px-1 text-xs font-bold border-b-2 whitespace-nowrap shrink-0 transition-all cursor-pointer ${activeTab === "workItems"
                     ? "border-orange-500 text-orange-600 font-black"
                     : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}

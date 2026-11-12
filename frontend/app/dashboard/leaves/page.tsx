@@ -363,14 +363,14 @@ export default function LeavesPage() {
                   <span>Refresh</span>
                 </button>
 
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 overflow-x-auto scrollbar-none no-scrollbar max-w-full">
                   <button
                     type="button"
                     onClick={() => {
                       setStatusFilter("ALL");
                       setCurrentPage(1);
                     }}
-                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "ALL"
+                    className={`h-7 px-3 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "ALL"
                       ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
                       : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
                       }`}
@@ -387,7 +387,7 @@ export default function LeavesPage() {
                       setStatusFilter("PENDING");
                       setCurrentPage(1);
                     }}
-                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "PENDING"
+                    className={`h-7 px-3 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "PENDING"
                       ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
                       : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
                       }`}
@@ -404,7 +404,7 @@ export default function LeavesPage() {
                       setStatusFilter("APPROVED");
                       setCurrentPage(1);
                     }}
-                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "APPROVED"
+                    className={`h-7 px-3 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "APPROVED"
                       ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
                       : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
                       }`}
@@ -421,7 +421,7 @@ export default function LeavesPage() {
                       setStatusFilter("REJECTED");
                       setCurrentPage(1);
                     }}
-                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "REJECTED"
+                    className={`h-7 px-3 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "REJECTED"
                       ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
                       : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
                       }`}
@@ -448,7 +448,7 @@ export default function LeavesPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+              <div className="overflow-x-auto scrollbar-none no-scrollbar rounded-xl border border-slate-200/80">
                 <table className="w-full min-w-[700px] text-left text-xs whitespace-nowrap">
                   <thead>
                     <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">

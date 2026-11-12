@@ -460,9 +460,17 @@
 .workspace-list-card {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
+}
+
+.workspace-list-card::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .workspace-list-empty {
@@ -474,6 +482,14 @@
 .workspace-table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.workspace-table-scroll::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 @media (max-width: 640px) {

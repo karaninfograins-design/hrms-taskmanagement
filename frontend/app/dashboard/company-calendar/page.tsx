@@ -274,7 +274,7 @@ export default function CompanyCalendarPage() {
                     {filteredHolidays.length} {filteredHolidays.length === 1 ? "event" : "events"} shown
                   </p>
                 </div>
-                <div className="flex gap-1.5 overflow-x-auto rounded-xl bg-slate-100 p-1">
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none no-scrollbar max-w-full rounded-xl bg-slate-100 p-1">
                   {holidayTypes.map((item) => {
                     const count = item.value === "ALL"
                       ? holidays.length

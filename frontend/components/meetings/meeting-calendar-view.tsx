@@ -420,73 +420,75 @@ export function MeetingCalendarView({
             <>
               {/* 1. MONTH VIEW */}
               {viewMode === "MONTH" && (
-                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-                  <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-black text-slate-500 uppercase tracking-wider py-3">
-                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                  </div>
-                  <div className="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-px">
-                    {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
-                      <div key={`empty-${idx}`} className="bg-slate-50/60 min-h-[90px] p-2" />
-                    ))}
-                    {daysArray.map((day) => {
-                      const thisDay = new Date(year, month, day);
-                      const isToday =
-                        day === new Date().getDate() &&
-                        month === new Date().getMonth() &&
-                        year === new Date().getFullYear();
-                      const dayMeetings = getMeetingsForDay(thisDay);
-                      const dayHolidays = getHolidaysForDay(thisDay);
+                <div className="overflow-x-auto scrollbar-none no-scrollbar rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                  <div className="min-w-[640px]">
+                    <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[11px] font-black text-slate-500 uppercase tracking-wider py-3">
+                      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div className="grid grid-cols-7 auto-rows-fr bg-slate-200 gap-px">
+                      {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
+                        <div key={`empty-${idx}`} className="bg-slate-50/60 min-h-[90px] p-2" />
+                      ))}
+                      {daysArray.map((day) => {
+                        const thisDay = new Date(year, month, day);
+                        const isToday =
+                          day === new Date().getDate() &&
+                          month === new Date().getMonth() &&
+                          year === new Date().getFullYear();
+                        const dayMeetings = getMeetingsForDay(thisDay);
+                        const dayHolidays = getHolidaysForDay(thisDay);
 
-                      return (
-                        <div
-                          key={`day-${day}`}
-                          className={`bg-white min-h-[100px] p-2 flex flex-col justify-between transition hover:bg-orange-50/20`}
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span
-                              className={`text-xs font-black inline-flex items-center justify-center w-6 h-6 rounded-full ${
-                                isToday ? "bg-[#ea580c] text-white" : "text-slate-800"
-                              }`}
-                            >
-                              {day}
-                            </span>
-                          </div>
+                        return (
+                          <div
+                            key={`day-${day}`}
+                            className={`bg-white min-h-[100px] p-2 flex flex-col justify-between transition hover:bg-orange-50/20`}
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span
+                                className={`text-xs font-black inline-flex items-center justify-center w-6 h-6 rounded-full ${
+                                  isToday ? "bg-[#ea580c] text-white" : "text-slate-800"
+                                }`}
+                              >
+                                {day}
+                              </span>
+                            </div>
 
-                          <div className="space-y-1 flex-1 overflow-y-auto max-h-[75px] scrollbar-none">
-                            {dayHolidays.map((h: any) => (
-                              <div
-                                key={h.id}
-                                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 truncate"
-                                title={`Holiday: ${h.name}`}
-                              >
-                                🎉 {h.name}
-                              </div>
-                            ))}
-                            {dayMeetings.map((m) => (
-                              <button
-                                key={m.id}
-                                onClick={() => {
-                                  if (onSwitchToMeetings) onSwitchToMeetings();
-                                  else router.push(`/dashboard/meetings?meetingId=${m.id}`);
-                                }}
-                                className={`w-full text-left text-[10px] font-bold px-1.5 py-0.5 rounded border truncate cursor-pointer transition ${getStatusBadge(m.status)}`}
-                                title={`${m.title} (${new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
-                              >
-                                {new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {m.title}
-                              </button>
-                            ))}
+                            <div className="space-y-1 flex-1 overflow-y-auto max-h-[75px] scrollbar-none no-scrollbar">
+                              {dayHolidays.map((h: any) => (
+                                <div
+                                  key={h.id}
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 truncate"
+                                  title={`Holiday: ${h.name}`}
+                                >
+                                  🎉 {h.name}
+                                </div>
+                              ))}
+                              {dayMeetings.map((m) => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => {
+                                    if (onSwitchToMeetings) onSwitchToMeetings();
+                                    else router.push(`/dashboard/meetings?meetingId=${m.id}`);
+                                  }}
+                                  className={`w-full text-left text-[10px] font-bold px-1.5 py-0.5 rounded border truncate cursor-pointer transition ${getStatusBadge(m.status)}`}
+                                  title={`${m.title} (${new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
+                                >
+                                  {new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {m.title}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* 2. WEEK VIEW */}
               {viewMode === "WEEK" && (
-                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm p-4">
-                  <div className="grid grid-cols-7 gap-2">
+                <div className="overflow-x-auto scrollbar-none no-scrollbar rounded-2xl border border-slate-200/80 bg-white shadow-sm p-4">
+                  <div className="grid grid-cols-7 gap-2 min-w-[680px]">
                     {Array.from({ length: 7 }).map((_, idx) => {
                       const startOfWeek = new Date(currentDate);
                       startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + idx);

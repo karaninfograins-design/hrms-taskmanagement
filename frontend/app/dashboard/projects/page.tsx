@@ -376,7 +376,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200">
+        <div className="hidden md:block overflow-x-auto scrollbar-none no-scrollbar rounded-xl border border-slate-200">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/90 border-b border-slate-200">

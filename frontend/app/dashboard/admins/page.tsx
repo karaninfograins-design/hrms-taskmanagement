@@ -115,8 +115,8 @@ export default function SystemAdminsPage() {
           {successMessage && <div className="success-message mb-4">{successMessage}</div>}
 
           {/* Admins Table */}
-          <div className="workspace-list-card rounded-xl sm:rounded-2xl">
-            <div className="workspace-table-scroll">
+          <div className="workspace-list-card rounded-xl sm:rounded-2xl scrollbar-none no-scrollbar">
+            <div className="workspace-table-scroll scrollbar-none no-scrollbar">
               <table className="workspace-table min-w-[640px]">
                 <thead>
                   <tr>

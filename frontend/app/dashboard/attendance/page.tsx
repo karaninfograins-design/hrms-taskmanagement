@@ -275,8 +275,8 @@ export default function AttendancePage() {
                 <p className="text-xs text-slate-400 font-medium">No attendance records found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs min-w-[560px]">
+              <div className="overflow-x-auto scrollbar-none no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                <table className="w-full text-left text-xs min-w-[620px]">
                   <thead>
                     <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
                       <th className="py-3 px-4 whitespace-nowrap">Employee</th>
