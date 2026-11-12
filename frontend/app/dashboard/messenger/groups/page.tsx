@@ -2,7 +2,31 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, Video, Users, Search, UserPlus, X, ArrowLeft, Settings2, Send, Smile } from "lucide-react";
+import {
+  Phone,
+  Video,
+  Users,
+  Search,
+  UserPlus,
+  X,
+  ArrowLeft,
+  Settings2,
+  Send,
+  Smile,
+  FileText,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Edit3,
+  Trash2,
+  Mic,
+  MicOff,
+  Check,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
 
@@ -61,6 +85,33 @@ type GroupConversation = {
   }>;
 };
 
+type MemberReport = {
+  userId: number;
+  name: string;
+  email: string;
+  designation: string;
+  role: string;
+  hasSubmitted: boolean;
+  summary: {
+    id: number;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+type DailySummaryResponse = {
+  conversationId: number;
+  groupName: string;
+  date: string;
+  stats: {
+    totalMembers: number;
+    submittedCount: number;
+    pendingCount: number;
+  };
+  members: MemberReport[];
+};
+
 export default function GroupChatsPage() {
   const router = useRouter();
   const { session, isLoading, logout } = useAuth();
@@ -72,6 +123,18 @@ export default function GroupChatsPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [msgInput, setMsgInput] = useState<string>("");
+
+  // Bitrix-Style Daily Work Summary State
+  const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false);
+  const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [summaryData, setSummaryData] = useState<DailySummaryResponse | null>(null);
+  const [loadingSummaries, setLoadingSummaries] = useState<boolean>(false);
+  const [isEditingReport, setIsEditingReport] = useState<boolean>(false);
+  const [reportInput, setReportInput] = useState<string>("");
+  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
+  const [summarySearchQuery, setSummarySearchQuery] = useState<string>("");
+  const [isDictating, setIsDictating] = useState<boolean>(false);
+  const speechRecognitionRef = useRef<any>(null);
 
   // Create Group Modal State
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
@@ -122,10 +185,10 @@ export default function GroupChatsPage() {
     }
   }, [isLoading, router, session]);
 
-  // Fetch employees
+  // Fetch employees (up to 1000 active employees to support 30-50+ users per group)
   useEffect(() => {
     if (!session?.token) return;
-    fetch(`${getApiUrl()}/api/employees`, {
+    fetch(`${getApiUrl()}/api/employees?limit=1000&status=ACTIVE`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
     })
       .then((res) => {
@@ -246,15 +309,30 @@ export default function GroupChatsPage() {
       );
     };
 
+    const onSummaryUpdated = (data: { conversationId: number; date: string }) => {
+      if (activeGroup?.id === data.conversationId) {
+        fetchDailySummaries(data.conversationId, data.date);
+      }
+    };
+    const onSummaryDeleted = (data: { conversationId: number; date: string }) => {
+      if (activeGroup?.id === data.conversationId) {
+        fetchDailySummaries(data.conversationId, data.date);
+      }
+    };
+
     socket.on("conversation:members-updated", onMembersUpdated);
     socket.on("conversation:deleted", onConvDeleted);
     socket.on("message:new", onNewMessage);
     socket.on("message:reaction", onReaction);
+    socket.on("group:summary-updated", onSummaryUpdated);
+    socket.on("group:summary-deleted", onSummaryDeleted);
     return () => {
       socket.off("conversation:members-updated", onMembersUpdated);
       socket.off("conversation:deleted", onConvDeleted);
       socket.off("message:new", onNewMessage);
       socket.off("message:reaction", onReaction);
+      socket.off("group:summary-updated", onSummaryUpdated);
+      socket.off("group:summary-deleted", onSummaryDeleted);
     };
   }, [socket, activeGroup?.id]);
 
@@ -476,6 +554,184 @@ export default function GroupChatsPage() {
     setShowCreateModal(true);
   };
 
+  // Bitrix-Style Daily Work Summary Handlers
+  const fetchDailySummaries = async (conversationId: number, dateStr?: string) => {
+    try {
+      setLoadingSummaries(true);
+      const targetDate = dateStr || summaryDate;
+      const res = await fetch(
+        `${getApiUrl()}/api/messenger/conversations/${conversationId}/daily-summaries?date=${targetDate}`,
+        {
+          headers: { Authorization: `Bearer ${getAuthToken()}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to load daily reports");
+      const data: DailySummaryResponse = await res.json();
+      setSummaryData(data);
+    } catch (err) {
+      console.error("Error loading daily summaries:", err);
+      showErrorToast("Could not load daily reports for this group");
+    } finally {
+      setLoadingSummaries(false);
+    }
+  };
+
+  const handleOpenDailySummaryModal = (group: GroupConversation) => {
+    setShowSummaryModal(true);
+    setIsEditingReport(false);
+    setReportInput("");
+    setSummarySearchQuery("");
+    const today = new Date().toISOString().slice(0, 10);
+    setSummaryDate(today);
+    fetchDailySummaries(group.id, today);
+  };
+
+  const handleChangeSummaryDate = (offsetDays: number) => {
+    const current = new Date(summaryDate);
+    current.setDate(current.getDate() + offsetDays);
+    const newDateStr = current.toISOString().slice(0, 10);
+    setSummaryDate(newDateStr);
+    setIsEditingReport(false);
+    setReportInput("");
+    if (activeGroup) {
+      fetchDailySummaries(activeGroup.id, newDateStr);
+    }
+  };
+
+  const handleSelectSummaryDate = (dateVal: string) => {
+    setSummaryDate(dateVal);
+    setIsEditingReport(false);
+    setReportInput("");
+    if (activeGroup) {
+      fetchDailySummaries(activeGroup.id, dateVal);
+    }
+  };
+
+  const handleStartWritingReport = (existingText = "") => {
+    setReportInput(existingText || "• ");
+    setIsEditingReport(true);
+  };
+
+  const handleSaveDailyReport = async () => {
+    if (!reportInput.trim() || !activeGroup) return;
+    try {
+      setSubmittingReport(true);
+      const res = await fetch(
+        `${getApiUrl()}/api/messenger/conversations/${activeGroup.id}/daily-summaries`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            content: reportInput.trim(),
+            date: summaryDate,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to save report");
+      }
+      showSuccessToast("Daily report saved successfully");
+      setIsEditingReport(false);
+      setReportInput("");
+      fetchDailySummaries(activeGroup.id, summaryDate);
+    } catch (err: any) {
+      showErrorToast(err.message || "Error saving report");
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
+  const handleDeleteDailyReport = async (summaryId: number) => {
+    if (!activeGroup) return;
+    const isConfirmed = await showConfirmDialog({
+      title: "Delete Daily Report?",
+      text: "Are you sure you want to delete this report?",
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#e11d48",
+      icon: "warning",
+    });
+    if (!isConfirmed) return;
+    try {
+      const res = await fetch(
+        `${getApiUrl()}/api/messenger/conversations/${activeGroup.id}/daily-summaries/${summaryId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${getAuthToken()}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to delete report");
+      showSuccessToast("Report deleted");
+      if (isEditingReport) {
+        setIsEditingReport(false);
+        setReportInput("");
+      }
+      fetchDailySummaries(activeGroup.id, summaryDate);
+    } catch (err: any) {
+      showErrorToast(err.message || "Could not delete report");
+    }
+  };
+
+  const toggleSpeechDictation = () => {
+    if (typeof window === "undefined") return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showNotification({
+        title: "Voice Dictation Notice",
+        text: "Your browser does not support Web Speech API. You can type your bullet points directly into the box.",
+        icon: "info",
+      });
+      return;
+    }
+
+    if (isDictating) {
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch { }
+      }
+      setIsDictating(false);
+    } else {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+
+        recognition.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              transcript += event.results[i][0].transcript + " ";
+            }
+          }
+          if (transcript) {
+            setReportInput((prev) => (prev ? `${prev.trim()}\n• ${transcript.trim()}` : `• ${transcript.trim()}`));
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("Speech recognition error:", event.error);
+          setIsDictating(false);
+        };
+
+        recognition.onend = () => {
+          setIsDictating(false);
+        };
+
+        speechRecognitionRef.current = recognition;
+        recognition.start();
+        setIsDictating(true);
+      } catch (err) {
+        console.error("Speech recognition start failed:", err);
+        setIsDictating(false);
+      }
+    }
+  };
+
   // Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -626,8 +882,18 @@ export default function GroupChatsPage() {
                   <div className="flex items-center justify-end gap-1 sm:gap-1.5 shrink-0">
                     <button
                       type="button"
+                      onClick={() => handleOpenDailySummaryModal(activeGroup)}
+                      className="flex h-9 items-center gap-1.5 px-3 rounded-xl border border-orange-200 bg-orange-50 text-orange-700 transition hover:bg-orange-100 hover:border-orange-300 font-bold text-xs shadow-xs cursor-pointer"
+                      title="View & Submit Daily Work Reports (Bitrix Style)"
+                      aria-label="Daily Work Reports"
+                    >
+                      <FileText size={15} />
+                      <span className="hidden sm:inline">Daily Reports</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleOpenManageGroup(activeGroup)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 cursor-pointer"
                       title="Manage group members"
                       aria-label="Manage group members"
                     >
@@ -924,11 +1190,31 @@ export default function GroupChatsPage() {
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <div>
                           <h3 className="text-xs font-bold text-slate-800">Add employees</h3>
-                          <p className="mt-0.5 text-[11px] text-slate-500">Select the teammates who need access.</p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">Select the teammates who need access (30–50+ supported).</p>
                         </div>
-                        <span className="shrink-0 text-[10px] font-semibold text-slate-400">
-                          {employees.filter((employee) => employee.id !== currentUserId).length} available
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const eligible = employees.filter((employee) => employee.id !== currentUserId);
+                              const allSelected = eligible.length > 0 && eligible.every((e) => selectedMemberIds.includes(e.id));
+                              if (allSelected) {
+                                setSelectedMemberIds([]);
+                              } else {
+                                setSelectedMemberIds(eligible.map((e) => e.id));
+                              }
+                            }}
+                            className="text-[11px] font-bold text-orange-600 hover:text-orange-700 underline cursor-pointer"
+                          >
+                            {employees.filter((employee) => employee.id !== currentUserId).length > 0 &&
+                            employees.filter((employee) => employee.id !== currentUserId).every((e) => selectedMemberIds.includes(e.id))
+                              ? "Deselect All"
+                              : "Select All"}
+                          </button>
+                          <span className="shrink-0 text-[10px] font-semibold text-slate-400">
+                            {employees.filter((employee) => employee.id !== currentUserId).length} available
+                          </span>
+                        </div>
                       </div>
                       <div className="relative mb-2 flex items-center">
                         <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
@@ -1019,6 +1305,360 @@ export default function GroupChatsPage() {
                     </div>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+          {/* Bitrix-Style Daily Work Summary Modal */}
+          {showSummaryModal && activeGroup && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-2 sm:p-4 backdrop-blur-sm">
+              <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                {/* Modal Header */}
+                <div className="messenger-modal-header relative shrink-0 overflow-hidden px-5 py-4 text-white sm:px-6">
+                  <div className="pointer-events-none absolute -right-8 -top-20 h-48 w-48 rounded-full border border-white/10" />
+                  <div className="relative flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white">
+                        <FileText size={20} />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-base font-black">Daily Work Reports</h2>
+                          <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                            Bitrix Format
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-orange-50">
+                          {activeGroup.name} · {summaryData?.stats.totalMembers || activeGroup.participants.length} Team Members
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSummaryModal(false)}
+                      aria-label="Close dialog"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-orange-50 transition hover:bg-white/15 hover:text-white cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Subheader: Date Bar & Statistics */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3 sm:px-6">
+                  {/* Date Navigation */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleChangeSummaryDate(-1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:border-slate-300 transition cursor-pointer"
+                      title="Previous Day"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 shadow-xs">
+                      <Calendar size={14} className="text-orange-500" />
+                      <span>
+                        {new Date(summaryDate + "T00:00:00").toLocaleDateString(undefined, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleChangeSummaryDate(1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:border-slate-300 transition cursor-pointer"
+                      title="Next Day"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+
+                    <input
+                      type="date"
+                      value={summaryDate}
+                      onChange={(e) => e.target.value && handleSelectSummaryDate(e.target.value)}
+                      className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 outline-none hover:border-orange-300 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Submission Statistics & Action Button */}
+                  <div className="flex items-center gap-2">
+                    {summaryData?.stats && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 size={13} />
+                          {summaryData.stats.submittedCount} Submitted
+                        </span>
+                        {summaryData.stats.pendingCount > 0 && (
+                          <span className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-700 border border-amber-200">
+                            <Clock size={13} />
+                            {summaryData.stats.pendingCount} Pending
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {!isEditingReport && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const myReport = summaryData?.members.find((m) => m.userId === session?.user?.id)?.summary;
+                          handleStartWritingReport(myReport?.content || "");
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition active:scale-95 cursor-pointer"
+                      >
+                        <Edit3 size={14} />
+                        <span>
+                          {summaryData?.members.find((m) => m.userId === session?.user?.id)?.hasSubmitted
+                            ? "Edit My Report"
+                            : "Submit My Report"}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6 space-y-4">
+                  {/* Report Editor Form (if writing/editing report) */}
+                  {isEditingReport && (
+                    <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-4 sm:p-5 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white">
+                            <Edit3 size={14} />
+                          </span>
+                          <h4 className="text-xs font-black text-slate-800">
+                            My Daily Work Report — {new Date(summaryDate + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={toggleSpeechDictation}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer border ${isDictating
+                                ? "bg-rose-500 text-white border-rose-600 animate-pulse"
+                                : "bg-white text-slate-700 border-slate-200 hover:border-orange-300"
+                              }`}
+                            title="Speak to dictate your points via microphone"
+                          >
+                            {isDictating ? <MicOff size={13} /> : <Mic size={13} className="text-orange-500" />}
+                            <span>{isDictating ? "Listening..." : "Voice Dictate"}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <textarea
+                          rows={5}
+                          value={reportInput}
+                          onChange={(e) => setReportInput(e.target.value)}
+                          placeholder="• What did you accomplish today?&#10;• What are you working on next?&#10;• Key decisions, blockers or deliverables..."
+                          className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-xs text-slate-800 font-medium placeholder:text-slate-400 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 leading-relaxed"
+                          maxLength={5000}
+                        />
+                        <span className="absolute bottom-2.5 right-3 text-[10px] text-slate-400 font-medium">
+                          {reportInput.length} / 5000
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReportInput((prev) => (prev ? `${prev.trim()}\n• ` : "• "));
+                            }}
+                            className="text-[11px] font-bold text-orange-600 hover:text-orange-700 underline cursor-pointer"
+                          >
+                            + Add bullet point
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingReport(false);
+                              setReportInput("");
+                              if (isDictating) toggleSpeechDictation();
+                            }}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!reportInput.trim() || submittingReport}
+                            onClick={handleSaveDailyReport}
+                            className="rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition cursor-pointer"
+                          >
+                            {submittingReport ? "Saving..." : "Save Report"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Search / Filter Member Reports */}
+                  <div className="flex items-center justify-between gap-3 pb-1">
+                    <div className="relative flex-1 max-w-xs">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={summarySearchQuery}
+                        onChange={(e) => setSummarySearchQuery(e.target.value)}
+                        placeholder="Search member by name..."
+                        className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-orange-400 focus:bg-white"
+                      />
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      Showing reports for {summaryData?.members.filter((m) => m.hasSubmitted).length || 0} participants
+                    </span>
+                  </div>
+
+                  {/* List of Member Reports (Bitrix Style) */}
+                  {loadingSummaries ? (
+                    <div className="flex h-48 flex-col items-center justify-center space-y-2 text-center text-slate-400">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+                      <p className="text-xs font-medium">Loading daily reports...</p>
+                    </div>
+                  ) : summaryData && summaryData.members.length > 0 ? (
+                    <div className="space-y-3">
+                      {/* Filter members by search query */}
+                      {summaryData.members
+                        .filter((m) =>
+                          `${m.name} ${m.email} ${m.designation}`.toLowerCase().includes(summarySearchQuery.toLowerCase())
+                        )
+                        .map((member) => {
+                          const isSelf = member.userId === session?.user?.id;
+                          return (
+                            <div
+                              key={member.userId}
+                              className={`rounded-xl border p-4 transition-all ${member.hasSubmitted
+                                  ? isSelf
+                                    ? "border-orange-300 bg-orange-50/30 shadow-xs"
+                                    : "border-slate-200 bg-white shadow-xs hover:border-slate-300"
+                                  : "border-dashed border-slate-200 bg-slate-50/50"
+                                }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                {/* Member Info */}
+                                <div className="flex items-center gap-3">
+                                  <div className="relative">
+                                    <span
+                                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white ${member.hasSubmitted ? "bg-[#172554]" : "bg-slate-400"
+                                        }`}
+                                    >
+                                      {member.name.charAt(0).toUpperCase()}
+                                    </span>
+                                    {member.hasSubmitted && (
+                                      <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white ring-2 ring-white">
+                                        <Check size={10} strokeWidth={3} />
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-xs font-black text-slate-900">{member.name}</h4>
+                                      {isSelf && (
+                                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[9px] font-black text-orange-700">
+                                          You
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] font-medium text-slate-500">
+                                      {member.designation} · {member.email}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Submission Time / Status & Actions */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {member.hasSubmitted && member.summary ? (
+                                    <>
+                                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
+                                        <Clock size={12} className="text-slate-400" />
+                                        {new Date(member.summary.createdAt).toLocaleTimeString(undefined, {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                      {isSelf && (
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleStartWritingReport(member.summary?.content || "")}
+                                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-orange-300 hover:text-orange-600 transition cursor-pointer"
+                                            title="Edit my report"
+                                          >
+                                            <Edit3 size={13} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => member.summary && handleDeleteDailyReport(member.summary.id)}
+                                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-rose-500 hover:border-rose-300 hover:bg-rose-50 transition cursor-pointer"
+                                            title="Delete my report"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-500">
+                                      <Clock size={11} />
+                                      Pending
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Member Report Content */}
+                              {member.hasSubmitted && member.summary ? (
+                                <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 p-3 text-xs text-slate-800 leading-relaxed whitespace-pre-line font-medium">
+                                  {member.summary.content}
+                                </div>
+                              ) : isSelf ? (
+                                <div className="mt-2.5 flex items-center justify-between rounded-lg bg-orange-50/60 p-2.5 text-xs text-orange-800">
+                                  <span>You haven’t submitted your daily work update for this date yet.</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartWritingReport("")}
+                                    className="font-bold underline text-orange-700 hover:text-orange-900 cursor-pointer"
+                                  >
+                                    Submit now
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <div className="flex h-40 flex-col items-center justify-center text-center text-slate-400">
+                      <p className="text-xs">No team members found in this group.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Note */}
+                <div className="border-t border-slate-100 bg-slate-50/90 px-5 py-3 text-[11px] text-slate-500 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-slate-500">
+                    <AlertCircle size={13} className="text-orange-500 shrink-0" />
+                    <span>Daily reports are automatically stored for 30 days and purged thereafter.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowSummaryModal(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1 font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           )}

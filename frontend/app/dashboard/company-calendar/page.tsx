@@ -190,7 +190,7 @@ export default function CompanyCalendarPage() {
                     HR & office policies
                   </div>
                   <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-                    Company calendar
+                    Event calendar
                   </h1>
                   <p className="max-w-xl text-sm leading-6 text-blue-100/80">
                     Keep your team in sync with upcoming holidays, optional leave days, and company events.
@@ -202,7 +202,7 @@ export default function CompanyCalendarPage() {
                     className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-md transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300/30 w-full sm:w-auto"
                   >
                     <Plus size={16} />
-                    Add calendar event
+                    Add event
                   </button>
                 )}
               </div>
@@ -285,16 +285,14 @@ export default function CompanyCalendarPage() {
                         key={item.value}
                         onClick={() => setFilterType(item.value)}
                         aria-pressed={isSelected}
-                        className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-bold transition ${
-                          isSelected
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
+                        className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-bold transition ${isSelected
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-500 hover:text-slate-800"
+                          }`}
                       >
                         {item.label}
-                        <span className={`rounded-md px-1.5 py-0.5 text-[10px] ${
-                          isSelected ? "bg-orange-50 text-orange-700" : "bg-slate-200/70 text-slate-500"
-                        }`}>
+                        <span className={`rounded-md px-1.5 py-0.5 text-[10px] ${isSelected ? "bg-orange-50 text-orange-700" : "bg-slate-200/70 text-slate-500"
+                          }`}>
                           {count}
                         </span>
                       </button>
@@ -338,27 +336,27 @@ export default function CompanyCalendarPage() {
                     const holidayDate = getHolidayDate(holiday.date);
                     const style = holiday.type === "OFFICIAL_HOLIDAY"
                       ? {
-                          accent: "border-l-rose-400",
-                          date: "bg-rose-50 text-rose-700",
-                          tag: "bg-rose-50 text-rose-700",
-                          icon: <Palmtree size={14} />,
-                          label: "Official holiday",
-                        }
+                        accent: "border-l-rose-400",
+                        date: "bg-rose-50 text-rose-700",
+                        tag: "bg-rose-50 text-rose-700",
+                        icon: <Palmtree size={14} />,
+                        label: "Official holiday",
+                      }
                       : holiday.type === "OPTIONAL_HOLIDAY"
                         ? {
-                            accent: "border-l-amber-400",
-                            date: "bg-amber-50 text-amber-700",
-                            tag: "bg-amber-50 text-amber-700",
-                            icon: <CalendarDays size={14} />,
-                            label: "Optional holiday",
-                          }
+                          accent: "border-l-amber-400",
+                          date: "bg-amber-50 text-amber-700",
+                          tag: "bg-amber-50 text-amber-700",
+                          icon: <CalendarDays size={14} />,
+                          label: "Optional holiday",
+                        }
                         : {
-                            accent: "border-l-violet-400",
-                            date: "bg-violet-50 text-violet-700",
-                            tag: "bg-violet-50 text-violet-700",
-                            icon: <PartyPopper size={14} />,
-                            label: "Company event",
-                          };
+                          accent: "border-l-violet-400",
+                          date: "bg-violet-50 text-violet-700",
+                          tag: "bg-violet-50 text-violet-700",
+                          icon: <PartyPopper size={14} />,
+                          label: "Company event",
+                        };
 
                     return (
                       <article

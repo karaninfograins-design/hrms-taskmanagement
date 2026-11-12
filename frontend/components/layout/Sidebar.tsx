@@ -8,7 +8,6 @@ import Link from "next/link";
 import {
   Menu,
   X,
-  LogOut,
   LayoutDashboard,
   FolderGit2,
   Users,
@@ -47,7 +46,8 @@ function NavigationLink({ label, href, icon, isCollapsed }: NavigationItem & { i
   const isActive =
     href !== "#" &&
     (pathname === href ||
-      (href !== "/dashboard" && pathname.startsWith(`${href}/`)));
+      (href !== "/dashboard" && pathname.startsWith(`${href}/`)) ||
+      (href === "/dashboard/messenger/chats" && pathname.startsWith("/dashboard/messenger")));
 
   const renderIcon = () => {
     if (isValidElement(icon)) {
@@ -94,23 +94,32 @@ function NavigationGroup({ title, items, isCollapsed }: { title: string; items: 
 
 function SidebarBrand({ isCollapsed, onToggle, onMobileClose }: { isCollapsed: boolean; onToggle: () => void; onMobileClose?: () => void }) {
   return (
-    <div className={`sidebar-brand ${isCollapsed ? "flex flex-col items-center gap-2 p-0 pb-3" : "flex items-center justify-between gap-2"}`}>
+    <div className={`sidebar-brand ${isCollapsed ? "flex items-center justify-center p-0 pb-4" : "flex items-center justify-between gap-2 px-1 pb-3"}`}>
       {!isCollapsed ? (
         <>
-          <div className="bg-white rounded-xl px-2 py-1 border border-slate-200/90 shadow-xs flex items-center justify-center max-w-[155px] overflow-hidden">
-            <img
-              src="/infograin_logo.jpg"
-              alt="Infograins Software Solutions"
-              className="object-contain max-h-7 w-auto"
-              loading="eager"
-              decoding="sync"
-            />
-          </div>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 min-w-0 select-none group"
+            title="Infograins HRMS"
+          >
+            <div className="w-8 h-8 rounded-xl bg-white p-1 border border-slate-200/90 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+              <img
+                src="/icon.png"
+                alt="Infograins"
+                className="w-full h-full object-contain"
+                loading="eager"
+              />
+            </div>
+            <span className="text-lg font-black tracking-tight text-white group-hover:text-orange-400 transition-colors truncate">
+              Infograins
+            </span>
+          </Link>
+
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={onToggle}
-              className="sidebar-toggle-btn sidebar-desktop-toggle-btn shrink-0 hidden lg:inline-flex"
+              className="sidebar-toggle-btn sidebar-desktop-toggle-btn shrink-0 hidden lg:inline-flex cursor-pointer"
               title="Collapse Sidebar"
               aria-label="Collapse Sidebar"
             >
@@ -120,7 +129,7 @@ function SidebarBrand({ isCollapsed, onToggle, onMobileClose }: { isCollapsed: b
               <button
                 type="button"
                 onClick={onMobileClose}
-                className="sidebar-toggle-btn sidebar-mobile-close-btn shrink-0 lg:hidden"
+                className="sidebar-toggle-btn sidebar-mobile-close-btn shrink-0 lg:hidden cursor-pointer"
                 title="Close Sidebar"
                 aria-label="Close Sidebar"
               >
@@ -130,38 +139,27 @@ function SidebarBrand({ isCollapsed, onToggle, onMobileClose }: { isCollapsed: b
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center gap-2.5 w-full">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center w-full">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="sidebar-toggle-btn sidebar-desktop-toggle-btn hidden lg:inline-flex cursor-pointer"
+            title="Expand Sidebar"
+            aria-label="Expand Sidebar"
+          >
+            <Menu className="w-4 h-4 text-slate-300 hover:text-white" />
+          </button>
+          {onMobileClose && (
             <button
               type="button"
-              onClick={onToggle}
-              className="sidebar-toggle-btn sidebar-desktop-toggle-btn hidden lg:inline-flex"
-              title="Expand Sidebar"
-              aria-label="Expand Sidebar"
+              onClick={onMobileClose}
+              className="sidebar-toggle-btn sidebar-mobile-close-btn lg:hidden cursor-pointer"
+              title="Close Sidebar"
+              aria-label="Close Sidebar"
             >
-              <Menu className="w-4 h-4 text-slate-300 hover:text-white" />
+              <X className="w-4 h-4 text-slate-300 hover:text-white" />
             </button>
-            {onMobileClose && (
-              <button
-                type="button"
-                onClick={onMobileClose}
-                className="sidebar-toggle-btn sidebar-mobile-close-btn lg:hidden"
-                title="Close Sidebar"
-                aria-label="Close Sidebar"
-              >
-                <X className="w-4 h-4 text-slate-300 hover:text-white" />
-              </button>
-            )}
-          </div>
-          <div className="bg-white p-1 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-center w-9 h-9 overflow-hidden">
-            <img
-              src="/icon.png"
-              alt="Infograins"
-              className="object-contain max-h-7 w-auto"
-              loading="eager"
-              decoding="sync"
-            />
-          </div>
+          )}
         </div>
       )}
     </div>
@@ -171,48 +169,6 @@ function SidebarBrand({ isCollapsed, onToggle, onMobileClose }: { isCollapsed: b
 function SidebarFooter({ isCollapsed }: { isCollapsed: boolean }) {
   if (isCollapsed) return null;
   return <p className="sidebar-footer">Infograins HRMS</p>;
-}
-
-function SidebarLogout({ user, canCreateAdmins, onSignOut, isCollapsed }: { user?: User | null; canCreateAdmins?: boolean; onSignOut: () => void; isCollapsed: boolean }) {
-  const roleName = typeof user?.role === "string" ? user.role : (user?.role as any)?.name || "";
-
-  if (isCollapsed) {
-    return (
-      <div className="mt-auto pt-4 border-t border-[#1e3a8a]/70 flex flex-col items-center gap-2">
-        <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} title={`${user?.name ?? "User"} (${roleName || "Employee"})`}>
-          {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
-        </span>
-        <button
-          onClick={onSignOut}
-          title="Sign out"
-          className="w-8 h-8 rounded-lg bg-[#1e293b] hover:bg-rose-900 text-rose-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
-        >
-          <LogOut size={14} />
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ padding: '16px 8px 10px', borderTop: '1px solid rgba(30, 58, 138, 0.7)', marginTop: 'auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '16px' }}>
-        <span className="sidebar-link-icon" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }} aria-hidden="true">
-          {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
-        </span>
-        <div style={{ overflow: 'hidden' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name ?? "User"}</p>
-          <small style={{ color: '#94a3b8', fontSize: '0.70rem', textTransform: 'uppercase' }}>{roleName ? roleName.replace(/_/g, " ") : "EMPLOYEE"}</small>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onSignOut}
-        className="w-full py-2 rounded-lg bg-[#1e293b] hover:bg-rose-950/70 text-rose-300 font-bold text-xs border border-[#1e3a8a]/80 transition-all cursor-pointer"
-      >
-        Sign out
-      </button>
-    </div>
-  );
 }
 
 const primaryNavigation: { title: string; items: NavigationItem[] } = {
@@ -240,9 +196,7 @@ const peopleNavigation: { title: string; items: NavigationItem[] } = {
 const messengerNavigation: { title: string; items: NavigationItem[] } = {
   title: "Messenger",
   items: [
-    { label: "Chats", href: "/dashboard/messenger/chats", icon: MessageSquare },
-    { label: "Groups", href: "/dashboard/messenger/groups", icon: Users2 },
-    { label: "Calls", href: "/dashboard/messenger/calls", icon: Phone },
+    { label: "Messenger", href: "/dashboard/messenger/chats", icon: MessageSquare },
   ],
 };
 
@@ -251,7 +205,7 @@ const hrNavigation: { title: string; items: NavigationItem[] } = {
   items: [
     { label: "Attendance", href: "/dashboard/attendance", icon: Clock },
     { label: "Leave Management", href: "/dashboard/leaves", icon: CalendarCheck },
-    { label: "Company Calendar", href: "/dashboard/company-calendar", icon: CalendarDays },
+    { label: "Event Calendar", href: "/dashboard/company-calendar", icon: CalendarDays },
     { label: "HRMS", href: "/dashboard/hr-settings", icon: SlidersHorizontal },
   ]
 };
@@ -260,7 +214,6 @@ const collaborationNavigation: { title: string; items: NavigationItem[] } = {
   title: "Collaboration",
   items: [
     { label: "Meetings", href: "/dashboard/meetings", icon: Video },
-    { label: "Meeting Calendar", href: "/dashboard/meetings/calendar", icon: CalendarRange },
   ]
 };
 
@@ -275,7 +228,7 @@ const personalNavigation: { title: string; items: NavigationItem[] } = {
   title: "",
   items: [
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
-    { label: "My profile", href: "/dashboard/profile", icon: UserIcon },
+    // {label: "My profile", href: "/dashboard/profile", icon: UserIcon },
   ]
 };
 
@@ -392,15 +345,6 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
           {isAdminUser && administrationItems.length > 0 && <NavigationGroup title={administrationNavigation.title} items={administrationItems} isCollapsed={effectivelyCollapsed} />}
           <NavigationGroup title={personalNavigation.title} items={personalItems} isCollapsed={effectivelyCollapsed} />
         </nav>
-
-        {user && onSignOut && (
-          <SidebarLogout
-            user={user}
-            canCreateAdmins={canCreateAdmins}
-            onSignOut={onSignOut}
-            isCollapsed={effectivelyCollapsed}
-          />
-        )}
 
         <SidebarFooter isCollapsed={effectivelyCollapsed} />
       </aside>

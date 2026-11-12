@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, Check, X, RefreshCw, Pencil } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -33,13 +34,25 @@ type LeaveRequest = {
   reason: string;
   status: string;
   userId?: number;
+  createdAt?: string;
+  approvedAt?: string | null;
+  rejectionReason?: string | null;
   user: {
     id?: number;
     name: string;
     email: string;
+    designation?: { name: string } | null;
+    department?: { name: string } | null;
+    employeeProfile?: {
+      employeeCode?: string;
+      employeeId?: string;
+      designation?: string;
+      department?: { name: string } | null;
+    } | null;
   };
   leaveType: LeaveType;
   approvedBy?: {
+    id?: number;
     name: string;
   };
 };
@@ -56,6 +69,9 @@ export default function LeavesPage() {
 
   const [showApplyModal, setShowApplyModal] = useState<boolean>(false);
   const [editingLeave, setEditingLeave] = useState<LeaveRequest | null>(null);
+  const [viewingLeave, setViewingLeave] = useState<LeaveRequest | null>(null);
+  const [viewingBalances, setViewingBalances] = useState<LeaveBalance[]>([]);
+  const [loadingViewingBalances, setLoadingViewingBalances] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
@@ -180,6 +196,35 @@ export default function LeavesPage() {
     }
   };
 
+  const handleOpenViewModal = async (req: LeaveRequest) => {
+    setViewingLeave(req);
+    const targetUserId = req.userId || req.user?.id;
+
+    if (!targetUserId || targetUserId === session?.user?.id) {
+      setViewingBalances(balances);
+      return;
+    }
+
+    setLoadingViewingBalances(true);
+    try {
+      const token = getAuthToken();
+      const res = await fetch(buildApiUrl(`/api/leaves/balances?userId=${targetUserId}`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setViewingBalances(data.balances || []);
+      } else {
+        setViewingBalances([]);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch employee balances for view modal:", e);
+      setViewingBalances([]);
+    } finally {
+      setLoadingViewingBalances(false);
+    }
+  };
+
   if (isLoading || !session) {
     return <main className="route-loading">Loading leave management...</main>;
   }
@@ -226,85 +271,69 @@ export default function LeavesPage() {
             )}
           </div>
 
-          {/* Summary Metric & Balance Cards - Single Row Layout */}
-          <div className="flex items-center gap-4 overflow-x-auto pb-3 mb-6 no-scrollbar">
+          {/* Summary Metric Cards - ONLY 4 Cards: Total, Pending, Approved, Rejected */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             {/* Metric Card: Total */}
-            <div className="min-w-[200px] flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 shrink-0">
-              <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-200 text-orange-600 flex items-center justify-center font-black text-base shrink-0">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-black text-lg shrink-0">
                 📋
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Requests</p>
-                <h3 className="text-lg font-black text-slate-900">{requests.length}</h3>
-                <span className="text-[10px] text-slate-500 font-medium">Applications</span>
+                <h3 className="text-xl font-black text-slate-900 leading-tight">{requests.length}</h3>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {isHR ? "All employee requests" : "Your submitted requests"}
+                </span>
               </div>
             </div>
 
             {/* Metric Card: Pending */}
-            <div className="min-w-[200px] flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 shrink-0">
-              <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-black text-base shrink-0">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-black text-lg shrink-0">
                 ⏳
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Pending</p>
-                <h3 className="text-lg font-black text-slate-900">
+                <h3 className="text-xl font-black text-slate-900 leading-tight">
                   {requests.filter((r) => r.status === "PENDING").length}
                 </h3>
-                <span className="text-[10px] text-amber-600 font-bold">Awaiting decision</span>
+                <span className="text-[10px] text-amber-600 font-bold">
+                  {isHR ? "Awaiting your decision" : "Awaiting HR review"}
+                </span>
               </div>
             </div>
 
             {/* Metric Card: Approved */}
-            <div className="min-w-[200px] flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 shrink-0">
-              <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-black text-base shrink-0">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-black text-lg shrink-0">
                 ✅
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Approved</p>
-                <h3 className="text-lg font-black text-slate-900">
+                <h3 className="text-xl font-black text-slate-900 leading-tight">
                   {requests.filter((r) => r.status === "APPROVED").length}
                 </h3>
-                <span className="text-[10px] text-emerald-600 font-bold">Approved</span>
+                <span className="text-[10px] text-emerald-600 font-bold">
+                  {isHR ? "Approved applications" : "Your approved leaves"}
+                </span>
               </div>
             </div>
 
             {/* Metric Card: Rejected */}
-            <div className="min-w-[200px] flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 shrink-0">
-              <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center font-black text-base shrink-0">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center font-black text-lg shrink-0">
                 ❌
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Rejected</p>
-                <h3 className="text-lg font-black text-slate-900">
+                <h3 className="text-xl font-black text-slate-900 leading-tight">
                   {requests.filter((r) => r.status === "REJECTED").length}
                 </h3>
-                <span className="text-[10px] text-rose-600 font-bold">Rejected</span>
+                <span className="text-[10px] text-rose-600 font-bold">
+                  {isHR ? "Rejected applications" : "Your rejected leaves"}
+                </span>
               </div>
             </div>
-
-            {/* Dynamic Leave Balance Cards */}
-            {balances.map((bal) => (
-              <div key={bal.id} className="min-w-[200px] flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between shrink-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                    {getLeaveTypeName(bal.leaveType)}
-                  </span>
-                  <span className="text-[10px] text-orange-600 font-extrabold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                    {bal.remaining}d Left
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xl font-black text-slate-900">{bal.remaining}</span>
-                  <span className="text-[11px] text-slate-400 font-semibold">/ {bal.allocated} days</span>
-                </div>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-orange-500 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (bal.remaining / (bal.allocated || 1)) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
           </div>
 
           {/* Leave Requests & Approvals Section */}
@@ -322,75 +351,87 @@ export default function LeavesPage() {
               </div>
 
               {/* Status Filter Tabs & Refresh Button */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => fetchData()}
                   disabled={loading}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  className="h-8 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 flex items-center gap-1.5 shadow-2xs active:scale-95 disabled:opacity-50"
                   title="Refresh leave requests"
                 >
-                  <span className={loading ? "animate-spin" : ""}>🔄</span>
+                  <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${loading ? "animate-spin" : ""}`} />
                   <span>Refresh</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter("ALL");
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === "ALL"
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                >
-                  All ({requests.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter("PENDING");
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "PENDING"
-                      ? "bg-amber-500 text-white shadow-xs"
-                      : "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60"
-                    }`}
-                >
-                  <span>Pending</span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${statusFilter === "PENDING" ? "bg-white/25 text-white" : "bg-amber-200/70 text-amber-900"
+
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter("ALL");
+                      setCurrentPage(1);
+                    }}
+                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "ALL"
+                      ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
+                      : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
                       }`}
                   >
-                    {requests.filter((r) => r.status === "PENDING").length}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter("APPROVED");
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === "APPROVED"
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60"
-                    }`}
-                >
-                  Approved ({requests.filter((r) => r.status === "APPROVED").length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter("REJECTED");
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === "REJECTED"
-                      ? "bg-rose-600 text-white shadow-xs"
-                      : "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60"
-                    }`}
-                >
-                  Rejected ({requests.filter((r) => r.status === "REJECTED").length})
-                </button>
+                    <span>All</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${statusFilter === "ALL" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-600"}`}>
+                      {requests.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter("PENDING");
+                      setCurrentPage(1);
+                    }}
+                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "PENDING"
+                      ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
+                      : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
+                      }`}
+                  >
+                    <span>Pending</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${statusFilter === "PENDING" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-600"}`}>
+                      {requests.filter((r) => r.status === "PENDING").length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter("APPROVED");
+                      setCurrentPage(1);
+                    }}
+                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "APPROVED"
+                      ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
+                      : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
+                      }`}
+                  >
+                    <span>Approved</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${statusFilter === "APPROVED" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-600"}`}>
+                      {requests.filter((r) => r.status === "APPROVED").length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter("REJECTED");
+                      setCurrentPage(1);
+                    }}
+                    className={`h-7 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === "REJECTED"
+                      ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs font-extrabold"
+                      : "text-slate-600 hover:text-orange-600 hover:bg-orange-50/70"
+                      }`}
+                  >
+                    <span>Rejected</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${statusFilter === "REJECTED" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-600"}`}>
+                      {requests.filter((r) => r.status === "REJECTED").length}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -484,10 +525,10 @@ export default function LeavesPage() {
                               <div className="flex flex-col gap-1 items-start">
                                 <span
                                   className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${req.status === "APPROVED"
-                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                      : req.status === "REJECTED"
-                                        ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                        : "bg-amber-50 text-amber-700 border border-amber-200"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : req.status === "REJECTED"
+                                      ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                      : "bg-amber-50 text-amber-700 border border-amber-200"
                                     }`}
                                 >
                                   {req.status === "APPROVED" && "✓ "}
@@ -507,63 +548,87 @@ export default function LeavesPage() {
                                 )}
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 text-right">
-                              {req.status === "PENDING" ? (
-                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                  {canModify && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingLeave(req);
-                                          setShowApplyModal(true);
-                                        }}
-                                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95 font-bold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
-                                        title="Edit leave request dates and reason"
-                                      >
-                                        ✏️ Edit
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={isSubmittingAction}
-                                        onClick={() => handleCancelRequest(req.id)}
-                                        className="px-2.5 py-1.5 bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 active:scale-95 font-bold text-xs rounded-xl border border-slate-200 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                                        title="Cancel this leave request"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </>
-                                  )}
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                {req.status === "PENDING" ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenViewModal(req)}
+                                      className="h-8 px-2.5 bg-white hover:bg-slate-100 text-slate-700 active:scale-95 font-bold text-xs rounded-lg border border-slate-200 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      title="View details and balances"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                      <span>View</span>
+                                    </button>
 
-                                  {isHR && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        disabled={isSubmittingAction}
-                                        onClick={() => handleAction(req.id, "APPROVED")}
-                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={isSubmittingAction}
-                                        onClick={() => {
-                                          setRejectionModalId(req.id);
-                                          setRejectionReasonInput("");
-                                        }}
-                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 active:scale-95 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
-                                      >
-                                        Reject
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-xs text-slate-400 font-medium">
-                                  Decision finalized
-                                </span>
-                              )}
+                                    {canModify && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingLeave(req);
+                                            setShowApplyModal(true);
+                                          }}
+                                          className="h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95 font-bold text-xs rounded-lg border border-slate-200 transition-all cursor-pointer flex items-center gap-1"
+                                          title="Edit leave request dates and reason"
+                                        >
+                                          <Pencil className="w-3 h-3 text-slate-500" />
+                                          <span>Edit</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isSubmittingAction}
+                                          onClick={() => handleCancelRequest(req.id)}
+                                          className="h-8 px-2.5 bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 active:scale-95 font-bold text-xs rounded-lg border border-slate-200 hover:border-rose-200 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                          title="Cancel this leave request"
+                                        >
+                                          <X className="w-3.5 h-3.5 text-slate-400" />
+                                          <span>Cancel</span>
+                                        </button>
+                                      </>
+                                    )}
+
+                                    {isHR && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          disabled={isSubmittingAction}
+                                          onClick={() => handleAction(req.id, "APPROVED")}
+                                          className="h-8 px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                          title="Approve this leave request"
+                                        >
+                                          <Check className="w-3.5 h-3.5 text-white" />
+                                          <span>Approve</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isSubmittingAction}
+                                          onClick={() => {
+                                            setRejectionModalId(req.id);
+                                            setRejectionReasonInput("");
+                                          }}
+                                          className="h-8 px-2.5 bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-slate-200 hover:border-rose-200 active:scale-95 font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                          title="Reject this leave request"
+                                        >
+                                          <X className="w-3.5 h-3.5 text-rose-600" />
+                                          <span>Reject</span>
+                                        </button>
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenViewModal(req)}
+                                    className="h-8 px-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 active:scale-95 font-bold text-xs rounded-lg border border-slate-200 hover:border-slate-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                                    title="View leave details and balance history"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>View </span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -645,6 +710,327 @@ export default function LeavesPage() {
               </div>
             )}
           </div>
+
+          {/* View Leave Details & History Modal */}
+          {viewingLeave && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150">
+              <div className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                {/* Header */}
+                <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-between border-b border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center font-black text-sm">
+                      {viewingLeave.user?.name ? viewingLeave.user.name.slice(0, 2).toUpperCase() : "LV"}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white leading-tight">
+                        Leave Request Details
+                      </h3>
+                      <p className="text-xs text-slate-300 font-medium">
+                        {viewingLeave.user?.name || "Employee"} •{" "}
+                        <span className="text-orange-400 font-semibold">
+                          {viewingLeave.user?.employeeProfile?.employeeCode || viewingLeave.user?.employeeProfile?.employeeId || `#${viewingLeave.userId || viewingLeave.user?.id || viewingLeave.id}`}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingLeave(null)}
+                    className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center font-bold text-sm transition-all cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Scrollable Body */}
+                <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 [scrollbar-width:thin]">
+                  {/* Employee Info Header Card */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-black text-slate-900">{viewingLeave.user?.name}</span>
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                          {viewingLeave.user?.employeeProfile?.employeeCode || viewingLeave.user?.employeeProfile?.employeeId || `ID #${viewingLeave.userId || viewingLeave.user?.id || viewingLeave.id}`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">{viewingLeave.user?.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
+                        <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Designation</div>
+                        <div className="text-xs font-bold text-slate-700">
+                          {viewingLeave.user?.designation?.name || viewingLeave.user?.employeeProfile?.designation || "Employee"}
+                        </div>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
+                        <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Department</div>
+                        <div className="text-xs font-bold text-slate-700">
+                          {viewingLeave.user?.employeeProfile?.department?.name || viewingLeave.user?.department?.name || "General"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Current Request Overview */}
+                  <div className="border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-slate-900">
+                          {getLeaveTypeName(viewingLeave.leaveType)}
+                        </span>
+                        {viewingLeave.halfDayPeriod && (
+                          <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-700 border border-orange-200">
+                            {viewingLeave.halfDayPeriod === "FIRST_HALF" ? "First half" : "Second half"}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`px-3 py-1 text-xs font-extrabold rounded-full ${viewingLeave.status === "APPROVED"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : viewingLeave.status === "REJECTED"
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                          }`}
+                      >
+                        {viewingLeave.status === "APPROVED" && "✓ "}
+                        {viewingLeave.status === "REJECTED" && "✕ "}
+                        {viewingLeave.status === "PENDING" && "⏳ "}
+                        {viewingLeave.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration</div>
+                        <div className="font-extrabold text-orange-600 mt-0.5">
+                          {Number(viewingLeave.totalDays).toLocaleString(undefined, { maximumFractionDigits: 1 })} Day(s)
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Leave Dates</div>
+                        <div className="font-bold text-slate-800 mt-0.5">
+                          {new Date(viewingLeave.startDate).toLocaleDateString()} - {new Date(viewingLeave.endDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Applied On</div>
+                        <div className="font-semibold text-slate-600 mt-0.5">
+                          {viewingLeave.createdAt ? new Date(viewingLeave.createdAt).toLocaleDateString() : "Recent"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Reason for Leave</div>
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-700 leading-relaxed italic">
+                        "{viewingLeave.reason || "No reason provided"}"
+                      </div>
+                    </div>
+
+                    {viewingLeave.approvedBy && (
+                      <div className="text-xs text-emerald-700 bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2">
+                        <span>✓</span>
+                        <span>Approved by <strong className="font-bold">{viewingLeave.approvedBy.name}</strong></span>
+                      </div>
+                    )}
+
+                    {viewingLeave.rejectionReason && (
+                      <div className="text-xs text-rose-700 bg-rose-50/70 border border-rose-200 rounded-xl p-2.5 space-y-0.5">
+                        <div className="font-bold">Rejection Note:</div>
+                        <div className="italic">"{viewingLeave.rejectionReason}"</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Employee Leave Balance Section */}
+                  <div className="border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>📊</span> Employee Leave Balances
+                      </h4>
+                      <span className="text-[10px] font-semibold text-slate-400">Current Year Allocation</span>
+                    </div>
+
+                    {loadingViewingBalances ? (
+                      <div className="py-4 text-center text-xs text-slate-400 font-medium animate-pulse">
+                        Fetching leave balances...
+                      </div>
+                    ) : viewingBalances.length === 0 ? (
+                      <div className="py-3 text-center text-xs text-slate-400 italic">
+                        No leave balance records found for this employee.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {viewingBalances.map((b) => {
+                          const rem = Number(b.remaining) || 0;
+                          const alloc = Number(b.allocated) || 0;
+                          const percent = alloc > 0 ? Math.min(100, Math.max(0, (rem / alloc) * 100)) : 0;
+                          return (
+                            <div key={b.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="font-bold text-slate-800">{b.leaveType?.name || "Leave"}</span>
+                                <span className="font-black text-slate-700 text-[11px]">
+                                  {rem} / {alloc} left
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${percent > 50 ? "bg-emerald-500" : percent > 20 ? "bg-amber-500" : "bg-rose-500"}`}
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Employee Leave History Section with Invisible Scrolling */}
+                  <div className="border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs space-y-3">
+                    {(() => {
+                      const targetUserId = viewingLeave.userId || viewingLeave.user?.id;
+                      const empHistory = requests.filter(
+                        (r) => (r.userId || r.user?.id) === targetUserId
+                      );
+
+                      return (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                              <span>🕒</span> Employee Leave History ({empHistory.length})
+                            </h4>
+                            <span className="text-[10px] font-semibold text-slate-400">Scrollable History</span>
+                          </div>
+
+                          {empHistory.length === 0 ? (
+                            <div className="py-3 text-center text-xs text-slate-400 italic">
+                              No leave history records found.
+                            </div>
+                          ) : (
+                            <div className="max-h-56 sm:max-h-64 overflow-y-auto space-y-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5">
+                              {empHistory.map((hReq) => {
+                                const isCurrent = hReq.id === viewingLeave.id;
+                                return (
+                                  <div
+                                    key={hReq.id}
+                                    className={`p-3 rounded-xl border text-xs transition-all ${isCurrent
+                                      ? "bg-orange-50/70 border-orange-300 ring-1 ring-orange-200"
+                                      : "bg-slate-50 border-slate-200 hover:bg-slate-100/70"
+                                      }`}
+                                  >
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-bold text-slate-800">
+                                          {getLeaveTypeName(hReq.leaveType)}
+                                        </span>
+                                        {isCurrent && (
+                                          <span className="text-[9px] font-extrabold uppercase bg-orange-600 text-white px-1.5 py-0.2 rounded-md">
+                                            Current
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span
+                                        className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${hReq.status === "APPROVED"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : hReq.status === "REJECTED"
+                                            ? "bg-rose-100 text-rose-800"
+                                            : "bg-amber-100 text-amber-800"
+                                          }`}
+                                      >
+                                        {hReq.status}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1">
+                                      <span>
+                                        {new Date(hReq.startDate).toLocaleDateString()} -{" "}
+                                        {new Date(hReq.endDate).toLocaleDateString()} ({Number(hReq.totalDays)} days)
+                                      </span>
+                                      {hReq.createdAt && (
+                                        <span className="text-[10px] text-slate-400">
+                                          Applied: {new Date(hReq.createdAt).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {hReq.reason && (
+                                      <p className="text-[11px] text-slate-500 mt-1 italic line-clamp-1">
+                                        "{hReq.reason}"
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Modal Footer / Action Buttons */}
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setViewingLeave(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer"
+                  >
+                    Close
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {viewingLeave.status === "PENDING" && (
+                      <>
+                        {/* If user is HR/Admin, show Approve & Reject */}
+                        {isHR && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={isSubmittingAction}
+                              onClick={() => {
+                                setRejectionModalId(viewingLeave.id);
+                                setRejectionReasonInput("");
+                                setViewingLeave(null);
+                              }}
+                              className="px-4 py-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              ✕ Reject Request
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSubmittingAction}
+                              onClick={async () => {
+                                await handleAction(viewingLeave.id, "APPROVED");
+                                setViewingLeave(null);
+                              }}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              ✓ Approve Request
+                            </button>
+                          </>
+                        )}
+
+                        {/* If user owns the request and it's pending, show Cancel */}
+                        {(viewingLeave.userId || viewingLeave.user?.id) === session?.user?.id && (
+                          <button
+                            type="button"
+                            disabled={isSubmittingAction}
+                            onClick={async () => {
+                              await handleCancelRequest(viewingLeave.id);
+                              setViewingLeave(null);
+                            }}
+                            className="px-4 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            Cancel Application
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Rejection Reason Modal */}
           {rejectionModalId !== null && (

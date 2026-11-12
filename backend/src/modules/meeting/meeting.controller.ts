@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
 import { createNotificationsForUsers } from "../../controllers/notification.controller.js";
+import { getIO } from "../../socket.js";
 
 dotenv.config();
 
@@ -199,6 +200,13 @@ export const createMeeting = async (req: Request, res: Response): Promise<void> 
       "/dashboard/meetings/calendar"
     ).catch((error) => console.error("Meeting invitation notification error:", error));
 
+    try {
+      const io = getIO();
+      io.emit("meeting:created", meeting);
+    } catch {
+      // Socket may not be initialized in standalone scripts or tests
+    }
+
     res.status(201).json({ message: "Meeting scheduled successfully", meeting });
   } catch (error) {
     console.error("Create meeting error:", error);
@@ -244,7 +252,7 @@ export const updateMeeting = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { title, description, agenda, startTime, endTime, timezone, notes, status } = req.body;
+    const { title, description, agenda, startTime, endTime, timezone, notes, status, participantIds } = req.body;
 
     let newStart = existing.startTime;
     let newEnd = existing.endTime;
@@ -275,6 +283,29 @@ export const updateMeeting = async (req: Request, res: Response): Promise<void> 
         message: `Invalid status. Valid options are: ${VALID_MEETING_STATUSES.join(", ")}`,
       });
       return;
+    }
+
+    if (Array.isArray(participantIds)) {
+      const cleanParticipantIds = Array.from(
+        new Set(
+          participantIds
+            .map((id: any) => Number(id))
+            .filter((id: number) => !isNaN(id) && id > 0 && id !== existing.organizerId)
+        )
+      );
+      await prisma.meetingParticipant.deleteMany({
+        where: {
+          meetingId,
+          userId: { notIn: [existing.organizerId, ...cleanParticipantIds] },
+        },
+      });
+      for (const pId of cleanParticipantIds) {
+        await prisma.meetingParticipant.upsert({
+          where: { meetingId_userId: { meetingId, userId: pId } },
+          update: {},
+          create: { meetingId, userId: pId, status: "INVITED" },
+        });
+      }
     }
 
     const updated = await prisma.meeting.update({
@@ -314,6 +345,17 @@ export const updateMeeting = async (req: Request, res: Response): Promise<void> 
       meetingStatusMessage,
       "/dashboard/meetings/calendar"
     ).catch((error) => console.error("Meeting update notification error:", error));
+
+    try {
+      const io = getIO();
+      io.emit("meeting:updated", {
+        meetingId: updated.id,
+        status: updated.status,
+        meeting: updated,
+      });
+    } catch {
+      // Socket may not be initialized in standalone scripts or tests
+    }
 
     res.json({ message: "Meeting updated successfully", meeting: updated });
   } catch (error) {
@@ -363,6 +405,13 @@ export const deleteMeeting = async (req: Request, res: Response): Promise<void> 
     await prisma.meeting.delete({
       where: { id: meetingId },
     });
+
+    try {
+      const io = getIO();
+      io.emit("meeting:deleted", { meetingId });
+    } catch {
+      // Socket may not be initialized in standalone scripts or tests
+    }
 
     res.json({ message: "Meeting deleted successfully" });
   } catch (error) {
@@ -417,6 +466,11 @@ export const getLiveKitToken = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    if (meeting.status === "COMPLETED") {
+      res.status(400).json({ message: "This meeting has already ended and is marked as completed" });
+      return;
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       res.status(404).json({ message: "User not found" });
@@ -429,6 +483,15 @@ export const getLiveKitToken = async (req: Request, res: Response): Promise<void
         where: { id: meetingId },
         data: { status: "IN_PROGRESS" },
       });
+      try {
+        const io = getIO();
+        io.emit("meeting:updated", {
+          meetingId,
+          status: "IN_PROGRESS",
+        });
+      } catch {
+        // Socket may not be initialized
+      }
     }
 
     // Mark user as ATTENDED if they are an invited participant, or record them

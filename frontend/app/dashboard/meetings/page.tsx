@@ -2,13 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Clock3, Plus, Users, Video, Volume2, Volume1, Mic, MicOff, PhoneCall } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  Plus,
+  Users,
+  Video,
+  Volume2,
+  Volume1,
+  Mic,
+  MicOff,
+  PhoneCall,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  PhoneOff,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { MeetingCalendarView } from "@/components/meetings/meeting-calendar-view";
 import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
+import { showConfirmDialog, showSuccessToast, showErrorToast, showWarningToast } from "@/lib/swal";
 
 type Meeting = {
   id: number;
@@ -39,11 +56,20 @@ type Meeting = {
   }>;
 };
 
+const STATUS_FILTER_TABS: Array<{ key: string; label: string }> = [
+  { key: "ALL", label: "All meetings" },
+  { key: "SCHEDULED", label: "Scheduled" },
+  { key: "IN_PROGRESS", label: "In progress" },
+  { key: "COMPLETED", label: "Completed" },
+  { key: "CANCELLED", label: "Cancelled" },
+];
+
 export default function MeetingsPage() {
   const router = useRouter();
   const { session, isLoading, logout } = useAuth();
   const { socket } = useSocket();
 
+  const [activeTab, setActiveTab] = useState<"meetings" | "calendar">("meetings");
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +85,9 @@ export default function MeetingsPage() {
   const [endTime, setEndTime] = useState<string>("");
   const [timezone, setTimezone] = useState<string>("UTC");
   const [notes, setNotes] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<"SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED">("SCHEDULED");
+  const [employees, setEmployees] = useState<Array<{ id: number; name: string; email: string }>>([]);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Active LiveKit Call State
@@ -123,11 +152,106 @@ export default function MeetingsPage() {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const token = getAuthToken();
+      const res = await fetch(buildApiUrl("/api/employees"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmployees(data.employees || []);
+      }
+    } catch {
+      // Handled gracefully for users without view employee permission
+    }
+  };
+
   useEffect(() => {
     if (session?.token) {
       fetchMeetings();
+      fetchEmployees();
     }
   }, [session?.token]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onMeetingCreated = (newMeeting: Meeting) => {
+      setMeetings((prev) => {
+        if (prev.some((m) => m.id === newMeeting.id)) return prev;
+        return [newMeeting, ...prev];
+      });
+    };
+    const onMeetingUpdated = (data: {
+      meetingId: number;
+      status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+      meeting?: Meeting;
+    }) => {
+      setMeetings((prev) =>
+        prev.map((m) => {
+          if (m.id !== data.meetingId) return m;
+          if (data.meeting) return { ...m, ...data.meeting, status: data.status };
+          return { ...m, status: data.status };
+        })
+      );
+    };
+    const onMeetingDeleted = (data: { meetingId: number }) => {
+      setMeetings((prev) => prev.filter((m) => m.id !== data.meetingId));
+    };
+
+    socket.on("meeting:created", onMeetingCreated);
+    socket.on("meeting:updated", onMeetingUpdated);
+    socket.on("meeting:deleted", onMeetingDeleted);
+    return () => {
+      socket.off("meeting:created", onMeetingCreated);
+      socket.off("meeting:updated", onMeetingUpdated);
+      socket.off("meeting:deleted", onMeetingDeleted);
+    };
+  }, [socket]);
+
+  const canManageMeeting = (m: Meeting) => {
+    if (!session?.user) return false;
+    const role = session.user.role;
+    return (
+      (m.organizer?.id != null && m.organizer.id === session.user.id) ||
+      role === "ADMIN" ||
+      role === "SUPER_ADMIN" ||
+      role === "HR"
+    );
+  };
+
+  const handleCompleteMeeting = async (meetingId: number) => {
+    const isConfirmed = await showConfirmDialog({
+      title: "End Meeting Call?",
+      text: "Are you sure you want to end this meeting call for all participants and mark it as completed?",
+      confirmButtonText: "Yes, end meeting",
+      confirmButtonColor: "#e11d48",
+      icon: "warning",
+    });
+    if (!isConfirmed) return;
+    try {
+      const token = getAuthToken();
+      const res = await fetch(buildApiUrl(`/api/meetings/${meetingId}`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "COMPLETED" }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to mark meeting as completed");
+      }
+      setMeetings((prev) =>
+        prev.map((m) => (m.id === meetingId ? { ...m, status: "COMPLETED" } : m))
+      );
+      showSuccessToast("Meeting completed successfully");
+      fetchMeetings();
+    } catch (err: any) {
+      showErrorToast(err.message || "Failed to complete meeting");
+    }
+  };
 
   const openScheduleModal = (meetingToEdit?: Meeting) => {
     const toLocalISO = (isoStr: string) => {
@@ -147,6 +271,12 @@ export default function MeetingsPage() {
       setEndTime(toLocalISO(meetingToEdit.endTime));
       setTimezone(meetingToEdit.timezone || "UTC");
       setNotes(meetingToEdit.notes || "");
+      setEditStatus(meetingToEdit.status);
+      setSelectedParticipantIds(
+        (meetingToEdit.members || [])
+          .map((m) => m.user?.id)
+          .filter((id): id is number => typeof id === "number" && id !== meetingToEdit.organizer?.id)
+      );
     } else {
       const nextHour = new Date();
       nextHour.setMinutes(0, 0, 0);
@@ -166,6 +296,8 @@ export default function MeetingsPage() {
       setEndTime(defaultEnd);
       setTimezone("UTC");
       setNotes("");
+      setEditStatus("SCHEDULED");
+      setSelectedParticipantIds([]);
     }
     setShowScheduleModal(true);
   };
@@ -175,7 +307,7 @@ export default function MeetingsPage() {
     if (!title.trim() || !startTime || !endTime) return;
 
     if (new Date(endTime) <= new Date(startTime)) {
-      alert("End time must be after start time");
+      showWarningToast("End time must be after start time");
       return;
     }
 
@@ -201,6 +333,8 @@ export default function MeetingsPage() {
           endTime,
           timezone,
           notes: notes.trim(),
+          participantIds: selectedParticipantIds,
+          ...(editingMeeting ? { status: editStatus } : {}),
         }),
       });
 
@@ -210,16 +344,24 @@ export default function MeetingsPage() {
       }
 
       setShowScheduleModal(false);
+      showSuccessToast(editingMeeting ? "Meeting updated successfully" : "Meeting scheduled successfully");
       fetchMeetings();
     } catch (err: any) {
-      alert(err.message || "Error saving meeting");
+      showErrorToast(err.message || "Error saving meeting");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteMeeting = async (meetingId: number) => {
-    if (!confirm("Are you sure you want to cancel and delete this meeting?")) return;
+    const isConfirmed = await showConfirmDialog({
+      title: "Cancel & Delete Meeting?",
+      text: "Are you sure you want to cancel and delete this meeting? This cannot be undone.",
+      confirmButtonText: "Yes, delete meeting",
+      confirmButtonColor: "#e11d48",
+      icon: "warning",
+    });
+    if (!isConfirmed) return;
     try {
       const token = getAuthToken();
       const res = await fetch(buildApiUrl(`/api/meetings/${meetingId}`), {
@@ -228,17 +370,26 @@ export default function MeetingsPage() {
       });
       if (res.ok) {
         setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
+        showSuccessToast("Meeting deleted successfully");
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.message || "Failed to delete meeting");
+        showErrorToast(errData.message || "Failed to delete meeting");
       }
     } catch (err: any) {
       console.error("Error deleting meeting:", err);
-      alert(err.message || "Error deleting meeting");
+      showErrorToast(err.message || "Error deleting meeting");
     }
   };
 
   const handleJoinCall = async (meeting: Meeting) => {
+    if (meeting.status === "COMPLETED") {
+      showWarningToast("This meeting has already ended and is marked as completed.");
+      return;
+    }
+    if (meeting.status === "CANCELLED") {
+      showWarningToast("This meeting has been cancelled.");
+      return;
+    }
     setActiveCallMeeting(meeting);
     setTokenLoading(true);
     try {
@@ -253,7 +404,7 @@ export default function MeetingsPage() {
       // Refresh list to update status if transitioned to IN_PROGRESS
       fetchMeetings();
     } catch (err: any) {
-      alert(err.message);
+      showErrorToast(err.message || "Failed to join meeting call");
       setActiveCallMeeting(null);
     } finally {
       setTokenLoading(false);
@@ -261,11 +412,15 @@ export default function MeetingsPage() {
   };
 
   const enterMeetingCallRoom = (meeting: Meeting) => {
+    if (meeting.status === "COMPLETED") {
+      showWarningToast("This meeting has already ended and is marked as completed.");
+      return;
+    }
     const channelName = meeting.roomName || `meeting-${meeting.id}`;
     const targetUserIds = [
-      meeting.organizer.id,
-      ...meeting.members.map((m) => m.user.id),
-    ].filter((id) => id !== session?.user.id);
+      meeting.organizer?.id,
+      ...(meeting.members || []).map((m) => m.user?.id),
+    ].filter((id): id is number => typeof id === "number" && id !== session?.user?.id);
 
     if (socket) {
       socket.emit(
@@ -274,6 +429,7 @@ export default function MeetingsPage() {
           targetUserIds,
           type: "VIDEO",
           channelName,
+          meetingId: meeting.id,
         },
         (result: { callSessionId?: number; error?: string }) => {
           const params = new URLSearchParams({
@@ -281,6 +437,7 @@ export default function MeetingsPage() {
             groupCall: "true",
             groupName: meeting.title,
             type: "VIDEO",
+            meetingId: String(meeting.id),
             ...(result?.callSessionId ? { callSessionId: String(result.callSessionId) } : {}),
           });
           router.push(`/dashboard/messenger/calls?${params.toString()}`);
@@ -292,6 +449,7 @@ export default function MeetingsPage() {
         groupCall: "true",
         groupName: meeting.title,
         type: "VIDEO",
+        meetingId: String(meeting.id),
       });
       router.push(`/dashboard/messenger/calls?${params.toString()}`);
     }
@@ -309,6 +467,7 @@ export default function MeetingsPage() {
     all: meetings.length,
     scheduled: meetings.filter((m) => m.status === "SCHEDULED").length,
     inProgress: meetings.filter((m) => m.status === "IN_PROGRESS").length,
+    completed: meetings.filter((m) => m.status === "COMPLETED").length,
   };
 
   return (
@@ -334,15 +493,17 @@ export default function MeetingsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => router.push("/dashboard/meetings/calendar")}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3.5 text-xs font-bold text-white transition hover:bg-white/20 w-full sm:w-auto"
+                    onClick={() => setActiveTab(activeTab === "calendar" ? "meetings" : "calendar")}
+                    className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 px-3.5 text-xs font-bold transition w-full sm:w-auto cursor-pointer ${
+                      activeTab === "calendar" ? "bg-white text-slate-900 shadow-sm" : "bg-white/10 text-white hover:bg-white/20"
+                    }`}
                   >
                     <CalendarDays size={15} />
-                    Calendar
+                    {activeTab === "calendar" ? "View Meeting List" : "Calendar View"}
                   </button>
                   <button
                     onClick={() => openScheduleModal()}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 w-full sm:w-auto"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 w-full sm:w-auto cursor-pointer"
                   >
                     <Plus size={15} />
                     Schedule meeting
@@ -351,13 +512,56 @@ export default function MeetingsPage() {
               </div>
             </header>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {/* Segmented Tab Switcher (Matching Messenger Chats/Calls Style) */}
+            <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-200/80 shadow-2xs w-fit">
+              <button
+                type="button"
+                onClick={() => setActiveTab("meetings")}
+                className={`flex items-center gap-2 py-2 px-3.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer select-none active:scale-[0.98] ${
+                  activeTab === "meetings"
+                    ? "bg-[#ea580c] hover:bg-[#c2410c] text-white shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
+                }`}
+              >
+                <Video size={14} />
+                <span>Video Meetings</span>
+                {meetings.length > 0 && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      activeTab === "meetings" ? "bg-white/20 text-white" : "bg-slate-300 text-slate-700"
+                    }`}
+                  >
+                    {meetings.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("calendar")}
+                className={`flex items-center gap-2 py-2 px-3.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer select-none active:scale-[0.98] ${
+                  activeTab === "calendar"
+                    ? "bg-[#ea580c] hover:bg-[#c2410c] text-white shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
+                }`}
+              >
+                <CalendarDays size={14} />
+                <span>Meeting Calendar</span>
+              </button>
+            </div>
+
+            {activeTab === "calendar" ? (
+              <MeetingCalendarView onSwitchToMeetings={() => setActiveTab("meetings")} />
+            ) : (
+              <>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 { label: "Total meetings", count: meetingCounts.all, icon: CalendarDays, tone: "text-blue-700 bg-blue-50" },
                 { label: "Scheduled", count: meetingCounts.scheduled, icon: Clock3, tone: "text-orange-700 bg-orange-50" },
                 { label: "In progress", count: meetingCounts.inProgress, icon: Video, tone: "text-emerald-700 bg-emerald-50" },
+                { label: "Completed", count: meetingCounts.completed, icon: CheckCircle2, tone: "text-slate-700 bg-slate-100" },
               ].map(({ label, count, icon: Icon, tone }) => (
-                <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
+                <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-2xs">
                   <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${tone}`}>
                     <Icon size={17} />
                   </span>
@@ -370,25 +574,35 @@ export default function MeetingsPage() {
             </div>
 
             {/* Status Filters */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {["ALL", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((statusKey) => (
-                <button
-                  key={statusKey}
-                  onClick={() => setFilterStatus(statusKey)}
-                  className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold transition-all border ${filterStatus === statusKey
-                      ? "bg-[#172554] text-white border-[#172554] shadow-xs"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                    }`}
-                >
-                  <span>{statusKey === "ALL" ? "All meetings" : statusKey.replace("_", " ")}</span>
-                  <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[9px] ${filterStatus === statusKey ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"
-                    }`}>
-                    {statusKey === "ALL"
-                      ? meetings.length
-                      : meetings.filter((meeting) => meeting.status === statusKey).length}
-                  </span>
-                </button>
-              ))}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {STATUS_FILTER_TABS.map(({ key, label }) => {
+                const isSelected = filterStatus === key;
+                const count =
+                  key === "ALL"
+                    ? meetings.length
+                    : meetings.filter((meeting) => meeting.status === key).length;
+
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setFilterStatus(key)}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${isSelected
+                        ? "bg-[#172554] text-white shadow-xs ring-1 ring-[#172554]"
+                        : "bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs"
+                      }`}
+                  >
+                    <span>{label}</span>
+                    <span
+                      className={`inline-flex items-center justify-center min-w-[20px] h-5 rounded-full px-1.5 text-[10px] font-bold ${isSelected
+                          ? "bg-white/20 text-white"
+                          : "bg-slate-100 text-slate-600"
+                        }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Meetings Grid */}
@@ -405,7 +619,7 @@ export default function MeetingsPage() {
                 {filteredMeetings.map((m) => (
                   <div
                     key={m.id}
-                    className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5 lg:flex-row lg:items-center"
+                    className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs transition hover:border-blue-200 hover:shadow-md sm:p-5 lg:flex-row lg:items-center"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -413,39 +627,53 @@ export default function MeetingsPage() {
                           {m.roomName}
                         </span>
                         <span
-                          className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${m.status === "SCHEDULED"
-                              ? "bg-blue-100 text-blue-800"
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold border ${m.status === "SCHEDULED"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
                               : m.status === "IN_PROGRESS"
-                                ? "bg-emerald-100 text-emerald-800"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                 : m.status === "COMPLETED"
-                                  ? "bg-slate-100 text-slate-700"
-                                  : "bg-rose-100 text-rose-800"
+                                  ? "bg-slate-100 text-slate-700 border-slate-200"
+                                  : "bg-rose-50 text-rose-700 border-rose-200"
                             }`}
                         >
-                          {m.status}
+                          {m.status === "IN_PROGRESS" && (
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                          )}
+                          {m.status === "SCHEDULED"
+                            ? "Scheduled"
+                            : m.status === "IN_PROGRESS"
+                              ? "In progress"
+                              : m.status === "COMPLETED"
+                                ? "Completed"
+                                : "Cancelled"}
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="text-base font-black text-slate-900">{m.title}</h3>
-                        <div className="flex items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-                          <button
-                            onClick={() => openScheduleModal(m)}
-                            className="rounded-lg p-2 text-xs hover:bg-slate-100"
-                            title="Edit"
-                            aria-label={`Edit ${m.title}`}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMeeting(m.id)}
-                            className="rounded-lg p-2 text-xs text-rose-600 hover:bg-rose-50"
-                            title="Cancel/Delete"
-                            aria-label={`Cancel or delete ${m.title}`}
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                        {canManageMeeting(m) && (
+                          <div className="flex items-center gap-1.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100">
+                            <button
+                              onClick={() => openScheduleModal(m)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 shadow-2xs cursor-pointer"
+                              title="Edit meeting"
+                              aria-label={`Edit ${m.title}`}
+                            >
+                              <Pencil size={13} className="text-slate-600" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMeeting(m.id)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 shadow-2xs cursor-pointer"
+                              title="Cancel or delete meeting"
+                              aria-label={`Cancel or delete ${m.title}`}
+                            >
+                              <Trash2 size={13} className="text-rose-600" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {m.agenda && (
@@ -465,26 +693,57 @@ export default function MeetingsPage() {
                           {new Date(m.startTime).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                           <span>({m.timezone || "UTC"})</span>
                         </p>
-                        <p>Organizer: <strong className="text-slate-700">{m.organizer.name}</strong></p>
-                        {m.members.length > 0 && (
+                        <p>Organizer: <strong className="text-slate-700">{m.organizer?.name || "Organizer"}</strong></p>
+                        {(m.members || []).length > 0 && (
                           <p className="inline-flex items-center gap-1.5">
                             <Users size={13} className="text-slate-400" />
-                            <strong className="text-slate-700">{m.members.length}</strong> participants
+                            <strong className="text-slate-700">{(m.members || []).length}</strong> participants
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleJoinCall(m)}
-                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] text-xs font-extrabold text-white shadow-sm transition hover:bg-[#1E3A8A] lg:w-48"
-                    >
-                      <Video size={15} />
-                      Join meeting
-                    </button>
+                    {m.status === "COMPLETED" ? (
+                      <div className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-5 text-xs font-bold text-slate-500 whitespace-nowrap cursor-not-allowed select-none">
+                        <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                        <span>Completed</span>
+                      </div>
+                    ) : m.status === "CANCELLED" ? (
+                      <div className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-5 text-xs font-bold text-rose-600 whitespace-nowrap cursor-not-allowed select-none">
+                        <span>Cancelled</span>
+                      </div>
+                    ) : m.status === "IN_PROGRESS" && canManageMeeting(m) ? (
+                      <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                        <button
+                          onClick={() => handleJoinCall(m)}
+                          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] px-4.5 text-xs font-extrabold text-white shadow-xs transition hover:bg-[#1E3A8A] whitespace-nowrap cursor-pointer"
+                        >
+                          <Video size={15} className="shrink-0" />
+                          <span>Join meeting</span>
+                        </button>
+                        <button
+                          onClick={() => handleCompleteMeeting(m.id)}
+                          className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 shadow-2xs whitespace-nowrap cursor-pointer"
+                          title="End call for all and mark as completed"
+                        >
+                          <PhoneOff size={14} className="shrink-0" />
+                          <span>End</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleJoinCall(m)}
+                        className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#172554] px-5 text-xs font-extrabold text-white shadow-xs transition hover:bg-[#1E3A8A] whitespace-nowrap cursor-pointer"
+                      >
+                        <Video size={15} className="shrink-0" />
+                        <span>Join meeting</span>
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
+            )}
+              </>
             )}
 
           </div>
@@ -563,6 +822,77 @@ export default function MeetingsPage() {
                     />
                   </div>
 
+                  {editingMeeting && (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Meeting Status
+                      </label>
+                      <select
+                        value={editStatus}
+                        onChange={(e) => setEditStatus(e.target.value as any)}
+                        className="w-full h-10 px-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-medium text-slate-700"
+                      >
+                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="IN_PROGRESS">In progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {employees.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Invite Attendees ({selectedParticipantIds.length} selected)
+                        </label>
+                        {selectedParticipantIds.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedParticipantIds([])}
+                            className="text-[10px] text-orange-600 font-bold hover:underline cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-slate-50/50 p-1">
+                        {employees
+                          .filter((emp) => emp.id !== session.user?.id)
+                          .map((emp) => {
+                            const isSelected = selectedParticipantIds.includes(emp.id);
+                            return (
+                              <label
+                                key={emp.id}
+                                className="flex items-center justify-between p-2 hover:bg-slate-100/70 rounded-lg cursor-pointer text-xs font-semibold text-slate-700"
+                              >
+                                <span className="truncate pr-2">
+                                  {emp.name}{" "}
+                                  <span className="text-[10px] text-slate-400 font-normal">
+                                    ({emp.email})
+                                  </span>
+                                </span>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    if (isSelected) {
+                                      setSelectedParticipantIds((prev) =>
+                                        prev.filter((id) => id !== emp.id)
+                                      );
+                                    } else {
+                                      setSelectedParticipantIds((prev) => [...prev, emp.id]);
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 cursor-pointer"
+                                />
+                              </label>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                       Description / Notes
@@ -603,112 +933,117 @@ export default function MeetingsPage() {
               <div className="bg-slate-900 text-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-800 space-y-6 flex flex-col max-h-[90vh]">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div>
-                    <span className="px-2.5 py-0.5 bg-orange-500/20 text-orange-400 rounded-full text-xs font-bold">
-                      LIVEKIT ROOM: {activeCallMeeting.roomName}
-                    </span>
-                    <h2 className="text-xl font-bold text-white mt-1">{activeCallMeeting.title}</h2>
+                    <h2 className="text-xl font-bold text-white">{activeCallMeeting.title}</h2>
                   </div>
-                  <button
-                    onClick={() => {
-                      setActiveCallMeeting(null);
-                      setLivekitToken(null);
-                    }}
-                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-all"
-                  >
-                    Leave Call
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setActiveCallMeeting(null);
+                        setLivekitToken(null);
+                      }}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition-all cursor-pointer"
+                    >
+                      Leave Call
+                    </button>
+                    {activeCallMeeting && canManageMeeting(activeCallMeeting) && (
+                      <button
+                        onClick={async () => {
+                          const isConfirmed = await showConfirmDialog({
+                            title: "End Meeting for All?",
+                            text: "Are you sure you want to end this meeting call for all participants?",
+                            confirmButtonText: "Yes, end meeting",
+                            confirmButtonColor: "#e11d48",
+                            icon: "warning",
+                          });
+                          if (!isConfirmed) return;
+                          await handleCompleteMeeting(activeCallMeeting.id);
+                          setActiveCallMeeting(null);
+                          setLivekitToken(null);
+                        }}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <PhoneOff size={14} />
+                        <span>End Call (Host)</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                  <div className="flex-1 min-h-[300px] bg-slate-950 rounded-2xl border border-slate-800/80 p-6 flex flex-col items-center justify-center space-y-4">
-                    {tokenLoading ? (
-                      <p className="text-xs text-slate-400 animate-pulse font-medium">Generating LiveKit security token...</p>
-                    ) : livekitToken ? (
-                        <div className="text-center space-y-4 max-w-md w-full">
-                          <div className="w-20 h-20 bg-orange-600/20 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto border border-orange-500/30 animate-pulse">
-                            🎙️
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                              Step 1: Setup Verified • Ready to Connect
-                            </span>
-                            <h3 className="text-lg font-bold text-white mt-2">Meeting Audio & Video Ready</h3>
-                            <p className="text-xs text-slate-300 mt-1">
-                              Click <strong className="text-orange-400">"Enter Meeting Room Now"</strong> below to connect your microphone and talk with all participants in real time.
-                            </p>
-                          </div>
-
-                          {/* Mobile & Hands-Free Notice */}
-                          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-[11px] text-slate-300 flex items-start gap-2.5 text-left">
-                            <span className="text-base shrink-0">📱</span>
-                            <div className="leading-snug">
-                              <strong className="text-orange-400">Speakerphone Ready:</strong> You can talk and listen directly from mobile phones or PCs without headphones. Hardware Echo Cancellation (AEC) and noise suppression prevent echo or feedback loops.
-                            </div>
-                          </div>
-
-                          <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-left space-y-1">
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Session Security Token (Verified)</p>
-                            <p className="text-xs font-mono font-semibold text-emerald-400 truncate">{livekitToken}</p>
-                          </div>
-                        </div>
-                        ) : (
-                        <p className="text-xs text-rose-400">Unable to establish LiveKit session.</p>
-                  )}
+                <div className="flex-1 min-h-[260px] bg-slate-950 rounded-2xl border border-slate-800/80 flex flex-col items-center justify-center space-y-5 py-10">
+                  {tokenLoading ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+                      <p className="text-xs text-slate-400 font-medium">Preparing your session…</p>
+                    </div>
+                  ) : livekitToken ? (
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl">
+                        🎙️
                       </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{activeCallMeeting.title}</p>
+                        <p className="text-xs text-slate-400 mt-1">Your audio is ready. Click below to join.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-rose-400">Unable to establish session. Please try again.</p>
+                  )}
+                </div>
 
                 {/* Meeting Controls Toolbar with Speaker Button */}
-                    <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Speaker Button (Hands-free / Loudspeaker) */}
-                        <button
-                          onClick={() => setIsSpeakerOn((prev) => !prev)}
-                          className={`h-10 px-3.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer text-xs ${isSpeakerOn
-                              ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400 hover:bg-orange-500/30"
-                              : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
-                            }`}
-                          title={isSpeakerOn ? "Speaker ON (Loudspeaker hands-free mode). Click for normal." : "Speaker Normal (Earpiece / Headset). Click for loudspeaker."}
-                        >
-                          {isSpeakerOn ? <Volume2 className="w-4 h-4 text-orange-400" /> : <Volume1 className="w-4 h-4 text-slate-400" />}
-                          <span>{isSpeakerOn ? "Speaker: ON" : "Speaker: Normal"}</span>
-                        </button>
+                <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Speaker Button (Hands-free / Loudspeaker) */}
+                    <button
+                      onClick={() => setIsSpeakerOn((prev) => !prev)}
+                      className={`h-10 px-3.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer text-xs ${isSpeakerOn
+                        ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400 hover:bg-orange-500/30"
+                        : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
+                        }`}
+                      title={isSpeakerOn ? "Speaker ON (Loudspeaker hands-free mode). Click for normal." : "Speaker Normal (Earpiece / Headset). Click for loudspeaker."}
+                    >
+                      {isSpeakerOn ? <Volume2 className="w-4 h-4 text-orange-400" /> : <Volume1 className="w-4 h-4 text-slate-400" />}
+                      <span>{isSpeakerOn ? "Speaker: ON" : "Speaker: Normal"}</span>
+                    </button>
 
-                        {/* Test Speaker Chime Button */}
-                        <button
-                          onClick={playSpeakerTestSound}
-                          disabled={audioTestPlaying}
-                          className="h-10 px-3 rounded-xl font-bold flex items-center gap-1.5 transition-all bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-600 text-xs cursor-pointer"
-                          title="Play audio test tone to verify speaker output without headphones"
-                        >
-                          <Volume2 className={`w-3.5 h-3.5 text-emerald-400 ${audioTestPlaying ? "animate-bounce" : ""}`} />
-                          <span>{audioTestPlaying ? "Playing Chime..." : "🔊 Test Speaker"}</span>
-                        </button>
+                    {/* Test Speaker Chime Button */}
+                    <button
+                      onClick={playSpeakerTestSound}
+                      disabled={audioTestPlaying}
+                      className="h-10 px-3 rounded-xl font-bold flex items-center gap-1.5 transition-all bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-600 text-xs cursor-pointer"
+                      title="Play audio test tone to verify speaker output without headphones"
+                    >
+                      <Volume2 className={`w-3.5 h-3.5 text-emerald-400 ${audioTestPlaying ? "animate-bounce" : ""}`} />
+                      <span>{audioTestPlaying ? "Playing Chime..." : "🔊 Test Speaker"}</span>
+                    </button>
 
-                        {/* Mic Toggle */}
-                        <button
-                          onClick={() => setIsMicMuted((prev) => !prev)}
-                          className={`h-10 px-3 rounded-xl font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${isMicMuted
-                              ? "bg-rose-500/20 border-2 border-rose-500 text-rose-400"
-                              : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
-                            }`}
-                        >
-                          {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400" />}
-                          <span>{isMicMuted ? "Muted" : "Mic ON"}</span>
-                        </button>
-                      </div>
-
-                      {/* Open Interactive WebRTC Group Call Room */}
-                      <button
-                        onClick={() => enterMeetingCallRoom(activeCallMeeting)}
-                        className="h-11 px-5 rounded-xl font-black flex items-center gap-2 transition-all bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white hover:opacity-95 shadow-lg text-xs cursor-pointer w-full sm:w-auto justify-center active:scale-95"
-                      >
-                        <PhoneCall className="w-4 h-4" />
-                        <span>Enter Meeting Room Now (Talk & Listen)</span>
-                      </button>
-                    </div>
+                    {/* Mic Toggle */}
+                    <button
+                      onClick={() => setIsMicMuted((prev) => !prev)}
+                      className={`h-10 px-3 rounded-xl font-bold flex items-center gap-1.5 transition-all text-xs cursor-pointer ${isMicMuted
+                        ? "bg-rose-500/20 border-2 border-rose-500 text-rose-400"
+                        : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
+                        }`}
+                    >
+                      {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400" />}
+                      <span>{isMicMuted ? "Muted" : "Mic ON"}</span>
+                    </button>
                   </div>
+
+                  {/* Open Interactive WebRTC Group Call Room */}
+                  <button
+                    onClick={() => enterMeetingCallRoom(activeCallMeeting)}
+                    className="h-11 px-5 rounded-xl font-black flex items-center gap-2 transition-all bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white hover:opacity-95 shadow-lg text-xs cursor-pointer w-full sm:w-auto justify-center active:scale-95"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    <span>Enter Meeting Room Now (Talk & Listen)</span>
+                  </button>
                 </div>
-          )}
-              </section>
+              </div>
             </div>
+          )}
+        </section>
+      </div>
     </main>
-        );
+  );
 }

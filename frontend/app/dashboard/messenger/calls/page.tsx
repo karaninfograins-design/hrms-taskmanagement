@@ -14,7 +14,8 @@ import {
   Trash2,
   Clock,
   UserPlus,
-  Headphones,
+  Smartphone,
+  CheckCircle,
   AlertCircle,
   RefreshCw,
   Search,
@@ -25,6 +26,17 @@ import {
   Volume2,
   Volume1,
   VolumeX,
+  ScreenShare,
+  ScreenShareOff,
+  Maximize2,
+  Minimize2,
+  Grid,
+  Layout,
+  User,
+  Info,
+  Pin,
+  Sparkles,
+  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/hooks/use-socket";
@@ -39,6 +51,7 @@ import {
   showWarningToast,
   showNotification,
 } from "@/lib/swal";
+import { playRingtone, playCallerTune, stopRingtone } from "@/lib/ringtone";
 
 type CallSession = {
   id: number;
@@ -56,7 +69,32 @@ type Employee = {
   id: number;
   name: string;
   email: string;
+  phoneNumber?: string | null;
+  role?: { id: number; name: string };
+  designation?: { id: number; name: string };
+  status?: string;
 };
+
+// Robust helper to find the video sender on a WebRTC peer connection
+// Works whether a video track has already been attached or if it was initialized via addTransceiver
+function getVideoSender(pc: RTCPeerConnection): RTCRtpSender | undefined {
+  const videoTransceiver = pc.getTransceivers().find(
+    (t) => t.receiver?.track?.kind === "video" || t.sender?.track?.kind === "video"
+  );
+  if (videoTransceiver) {
+    if (videoTransceiver.direction === "recvonly" || videoTransceiver.direction === "inactive") {
+      try {
+        videoTransceiver.direction = "sendrecv";
+      } catch (e) {
+        console.warn("Set transceiver direction error:", e);
+      }
+    }
+    return videoTransceiver.sender;
+  }
+  return pc.getSenders().find(
+    (s) => s.track?.kind === "video" || (s.track === null && pc.getReceivers().some((r) => r.track?.kind === "video"))
+  );
+}
 
 type ActiveCall = {
   callSessionId?: number;
@@ -66,6 +104,7 @@ type ActiveCall = {
   peerUserId?: number;
   isGroupCall?: boolean;
   isHost?: boolean;
+  meetingId?: number;
 };
 
 type RemoteParticipant = {
@@ -74,7 +113,7 @@ type RemoteParticipant = {
 };
 
 // Production-ready STUN + TURN servers (Google STUN + OpenRelay TURN for strict firewalls/NAT)
-export const DEFAULT_RTC_CONFIGURATION: RTCConfiguration = {
+const DEFAULT_RTC_CONFIGURATION: RTCConfiguration = {
   iceServers: [
     // Google Public STUN
     { urls: "stun:stun.l.google.com:19302" },
@@ -164,6 +203,7 @@ async function requestLocalMedia(
   const isSecure =
     typeof window !== "undefined" &&
     (window.isSecureContext ||
+      window.location?.protocol === "https:" ||
       window.location?.hostname === "localhost" ||
       window.location?.hostname === "127.0.0.1");
 
@@ -172,14 +212,16 @@ async function requestLocalMedia(
     !!navigator.mediaDevices &&
     typeof navigator.mediaDevices.getUserMedia === "function";
 
-  // Graceful fallback for LAN HTTP (e.g. 192.168.x.x) where browsers restrict microphone access
-  if (!isSecure || !hasGetUserMedia) {
+  // Fallback if browser environment lacks getUserMedia (e.g. plain HTTP on mobile browsers)
+  if (!hasGetUserMedia) {
     console.warn(
-      "[Media] Insecure HTTP origin or navigator.mediaDevices.getUserMedia unavailable over LAN. Fallback to Listen-Only mode."
+      "[Media] navigator.mediaDevices.getUserMedia unavailable. Fallback to Listen-Only mode."
     );
     if (onNoMicDetected) {
       onNoMicDetected(
-        "LAN HTTP Notice: Modern browsers require HTTPS (or localhost) to capture the microphone. You have joined in Listen-Only mode (you can hear incoming audio)."
+        isSecure
+          ? "Built-in microphone not accessible on this browser. You have joined in Listen-Only mode (you can hear all audio on your device speaker)."
+          : "LAN HTTP Notice: Modern mobile browsers require HTTPS (e.g., https://hrms.infograins.com) to access the phone's built-in microphone over Wi-Fi. You have joined in Listen-Only mode (you can hear audio on your phone speaker). In production over HTTPS, mobile phone mic & speaker work 100% without headphones."
       );
     }
     const silentTrack = createSilentAudioTrack();
@@ -231,9 +273,9 @@ async function requestLocalMedia(
         error?.name === "PermissionDeniedError";
 
       const promptMsg = isMissingDevice
-        ? "No microphone or headphones detected. Please connect a headset or microphone if you wish to speak. You are currently in Listen-Only mode."
+        ? "Microphone not detected. Mobile phones have built-in microphones (no headphones needed) — please check if microphone permission was granted in your browser."
         : isPermissionDenied
-          ? "Microphone access is blocked in browser settings. You have joined in Listen-Only mode. Please allow microphone permissions to speak."
+          ? "Microphone permission is blocked in your browser settings. Mobile phones and laptops do NOT require headphones — simply tap the lock/settings icon in your browser address bar and set Microphone to 'Allow' to speak."
           : "Microphone is unavailable or in use by another application. You have joined in Listen-Only mode.";
 
       if (onNoMicDetected) {
@@ -280,24 +322,52 @@ function RemoteParticipantMedia({
   type,
   isSpeakerOn = true,
   onAudioBlocked,
+  onFocus,
+  isFocused = false,
+  isThumbnail = false,
+  employee,
+  onViewProfile,
 }: {
   participant: RemoteParticipant;
   name: string;
   type: "AUDIO" | "VIDEO";
   isSpeakerOn?: boolean;
   onAudioBlocked?: () => void;
+  onFocus?: () => void;
+  isFocused?: boolean;
+  isThumbnail?: boolean;
+  employee?: Employee;
+  onViewProfile?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  useEffect(() => {
-    if (videoRef.current && videoRef.current.srcObject !== participant.stream) {
-      videoRef.current.srcObject = participant.stream;
-      videoRef.current.play().catch(console.warn);
-    }
-  }, [participant.stream]);
+  const hasLiveVideo = Boolean(
+    participant.stream?.getVideoTracks().length &&
+    participant.stream.getVideoTracks().some((t) => t.readyState !== "ended")
+  );
+  const shouldShowVideo = type === "VIDEO" || hasLiveVideo;
 
   useEffect(() => {
+    const bindMedia = () => {
+      if (videoRef.current && participant.stream) {
+        if (videoRef.current.srcObject !== participant.stream) {
+          videoRef.current.srcObject = participant.stream;
+        }
+        videoRef.current.play().catch(console.warn);
+      }
+    };
+    bindMedia();
+    participant.stream?.addEventListener?.("addtrack", bindMedia);
+    participant.stream?.addEventListener?.("removetrack", bindMedia);
+    return () => {
+      participant.stream?.removeEventListener?.("addtrack", bindMedia);
+      participant.stream?.removeEventListener?.("removetrack", bindMedia);
+    };
+  }, [participant.stream, shouldShowVideo]);
+
+  useEffect(() => {
+    if (isThumbnail) return;
     if (audioRef.current) {
       if (audioRef.current.srcObject !== participant.stream) {
         audioRef.current.srcObject = participant.stream;
@@ -311,22 +381,77 @@ function RemoteParticipantMedia({
         }
       });
     }
-  }, [participant.stream, isSpeakerOn, onAudioBlocked]);
+  }, [participant.stream, isSpeakerOn, onAudioBlocked, isThumbnail]);
 
-  if (type === "AUDIO") {
+  if (!shouldShowVideo) {
     return (
       <div
-        className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 p-4 cursor-pointer select-none transition-all hover:border-orange-500/40 relative"
+        className={`flex min-h-40 flex-col items-center justify-center rounded-2xl border bg-slate-900 p-4 cursor-pointer select-none transition-all relative ${
+          isFocused ? "border-orange-500 ring-2 ring-orange-500/30" : "border-slate-800 hover:border-slate-700"
+        }`}
         onClick={() => {
+          onFocus?.();
           if (audioRef.current) {
             audioRef.current.muted = false;
             audioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
             audioRef.current.play().catch(console.warn);
           }
-        }
-        }
-        title="Voice connected - Click if you need to resume audio playback"
+        }}
+        title="Click to focus / ensure audio is active"
       >
+        {!isThumbnail && (
+          <audio
+            ref={audioRef}
+            data-participant-audio="true"
+            autoPlay
+            playsInline
+            style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
+          />
+        )}
+        <div className="relative mb-3 flex items-center justify-center">
+          <div className="absolute w-16 h-16 rounded-full border border-orange-500/20 animate-ping" style={{ animationDuration: "2s" }} />
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-orange-400 border border-orange-500/30 text-lg font-bold">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        </div>
+        <p className="text-xs sm:text-sm font-bold text-white truncate max-w-full px-2">{name}</p>
+        {employee?.role?.name && (
+          <span className="text-[10px] text-slate-400 truncate max-w-full">{employee.role.name}</span>
+        )}
+        <div className="mt-2 flex items-center gap-1">
+          <span className="w-1 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="w-1 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "450ms" }} />
+        </div>
+
+        {/* Zoom-style quick profile action */}
+        {onViewProfile && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile();
+            }}
+            className="absolute top-2 right-2 p-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold border border-slate-700 transition-all opacity-80 hover:opacity-100 cursor-pointer shadow-sm"
+            title="View User Profile"
+          >
+            <User className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={onFocus}
+      className={`relative h-full min-h-44 overflow-hidden rounded-2xl border bg-slate-950 flex items-center justify-center cursor-pointer transition-all ${
+        isFocused ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-800 hover:border-slate-700"
+      }`}
+      title="Click to expand this presentation/video to Full View"
+    >
+      {!isThumbnail && (
         <audio
           ref={audioRef}
           data-participant-audio="true"
@@ -334,37 +459,45 @@ function RemoteParticipantMedia({
           playsInline
           style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
         />
-        <div className="relative mb-3 flex items-center justify-center">
-          <div className="absolute w-20 h-20 rounded-full border border-orange-500/20 animate-ping" style={{ animationDuration: "2s" }} />
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 text-orange-400 border border-orange-500/30">
-            <Mic className="w-8 h-8" />
-          </div>
-        </div>
-        <p className="text-sm font-bold text-white">{name}</p>
-        <div className="mt-2 flex items-center gap-1">
-          <span className="w-1 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-          <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-          <span className="w-1 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-          <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "450ms" }} />
-        </div>
-        <span className="mt-1 text-[10px] text-slate-400">Audio connected (Speaker)</span>
+      )}
+      <video ref={videoRef} muted autoPlay playsInline className="h-full w-full object-contain bg-black" />
+      <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg bg-slate-950/80 backdrop-blur-xs px-2.5 py-1 text-xs font-semibold text-white border border-slate-800/80 z-10">
+        <span className="truncate max-w-[120px] sm:max-w-[180px]">{name}</span>
+        {hasLiveVideo && (
+          <span className="px-1.5 py-0.2 rounded bg-orange-500/30 text-orange-300 text-[9px] font-bold shrink-0">
+            Live Stream
+          </span>
+        )}
       </div>
-    );
-  }
 
-  return (
-    <div className="relative min-h-40 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
-      <audio
-        ref={audioRef}
-        data-participant-audio="true"
-        autoPlay
-        playsInline
-        style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
-      />
-      <video ref={videoRef} muted autoPlay playsInline className="h-full min-h-40 w-full object-cover" />
-      <span className="absolute bottom-2 left-2 rounded bg-slate-950/70 px-2 py-1 text-xs font-semibold text-white">
-        {name}
-      </span>
+      <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+        {onViewProfile && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile();
+            }}
+            className="p-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-bold border border-slate-700 transition-all opacity-80 hover:opacity-100 cursor-pointer shadow-sm"
+            title="View User Profile"
+          >
+            <User className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onFocus && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFocus();
+            }}
+            className="p-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-bold border border-slate-700 transition-all opacity-80 hover:opacity-100 cursor-pointer shadow-sm"
+            title="Full View Stage"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -439,6 +572,7 @@ function CallsContent() {
     type: "AUDIO" | "VIDEO";
     conversationName?: string | null;
     isGroupCall?: boolean;
+    meetingId?: number;
   } | null>(null);
 
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
@@ -451,11 +585,16 @@ function CallsContent() {
   const [hasNoMic, setHasNoMic] = useState<boolean>(false);
   const [micPromptMessage, setMicPromptMessage] = useState<string | null>(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState<boolean>(false);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<Employee | null>(null);
   const [addMemberSearch, setAddMemberSearch] = useState<string>("");
   const [invitingEmployeeId, setInvitingEmployeeId] = useState<number | null>(null);
   const [invitedEmployeeIds, setInvitedEmployeeIds] = useState<Set<number>>(new Set());
   const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true); // Default to Speaker Mode (loudspeaker / hands-free)
   const [isAudioBlocked, setIsAudioBlocked] = useState<boolean>(false);
+  const [isScreenSharing, setIsScreenSharing] = useState<boolean>(false);
+  const [isCallMaximized, setIsCallMaximized] = useState<boolean>(false);
+  const [focusedParticipantId, setFocusedParticipantId] = useState<number | "local" | null>(null);
+  const [swap1to1View, setSwap1to1View] = useState<boolean>(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -465,6 +604,8 @@ function CallsContent() {
   const pendingGroupPeerConnectionsRef = useRef<Map<number, Promise<RTCPeerConnection>>>(new Map());
   const pendingIceCandidatesRef = useRef<Map<number, RTCIceCandidateInit[]>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const originalCameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const localMediaPromiseRef = useRef<Promise<MediaStream> | null>(null);
   const activeCallRef = useRef<ActiveCall | null>(null);
   const startedChannelRef = useRef<string | null>(null);
@@ -477,6 +618,24 @@ function CallsContent() {
     activeCallRef.current = call;
     setActiveCall(call);
   };
+
+  // Play caller tune / ringtone for incoming calls through headphones/speakers
+  useEffect(() => {
+    if (incomingCall) {
+      playRingtone();
+    } else {
+      stopRingtone();
+    }
+    return () => {
+      stopRingtone();
+    };
+  }, [incomingCall]);
+
+  useEffect(() => {
+    return () => {
+      stopRingtone();
+    };
+  }, []);
 
   const handleSignOut = () => {
     logout();
@@ -602,29 +761,37 @@ function CallsContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (activeCall?.type === "VIDEO" && localVideoRef.current && localStreamRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
+    if (localVideoRef.current) {
+      const activeLocal = screenStreamRef.current || localStreamRef.current;
+      if (activeLocal && localVideoRef.current.srcObject !== activeLocal) {
+        localVideoRef.current.srcObject = activeLocal;
+        localVideoRef.current.play().catch(console.warn);
+      }
     }
-  }, [activeCall]);
+  }, [activeCall, isScreenSharing, swap1to1View, focusedParticipantId]);
 
-  // ✅ KEY FIX: Assign remote stream to media elements reactively once DOM is ready
-  // This runs whenever remoteStream changes or the activeCall mounts the video/audio elements
+  // Assign remote stream to media elements reactively once DOM is ready
   useEffect(() => {
     if (!remoteStream) return;
 
     // Always play audio through the dedicated hidden <audio> element
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = remoteStream;
+      if (remoteAudioRef.current.srcObject !== remoteStream) {
+        remoteAudioRef.current.srcObject = remoteStream;
+      }
       remoteAudioRef.current.play().catch((err) => {
         console.warn("Remote audio autoplay blocked, waiting for user gesture:", err);
       });
     }
 
-    // Also wire video element for VIDEO calls
+    // Also wire video element for VIDEO or screen sharing calls
     if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
+      if (remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+      remoteVideoRef.current.play().catch(console.warn);
     }
-  }, [remoteStream, activeCall]); // re-run when activeCall changes (DOM elements mount/unmount)
+  }, [remoteStream, activeCall, isScreenSharing, swap1to1View, isCallMaximized]);
 
   // Fetch employees
   useEffect(() => {
@@ -653,6 +820,8 @@ function CallsContent() {
     const callSessionId = Number(searchParams.get("callSessionId")) || undefined;
     const groupName = searchParams.get("groupName");
     const targetNameParam = searchParams.get("targetName");
+    const meetingIdParam = searchParams.get("meetingId");
+    const meetingId = meetingIdParam ? Number(meetingIdParam) : undefined;
 
     if (!socket || isIncomingCall || !channel || !session?.user || startedChannelRef.current === channel) return;
     startedChannelRef.current = channel;
@@ -665,6 +834,7 @@ function CallsContent() {
         type,
         isGroupCall: true,
         isHost: true,
+        meetingId,
       });
 
       if (callSessionId) {
@@ -730,6 +900,7 @@ function CallsContent() {
       type: "AUDIO" | "VIDEO";
       conversationName?: string | null;
       isGroupCall?: boolean;
+      meetingId?: number;
     }) => {
       setIncomingCall(data);
     };
@@ -739,6 +910,7 @@ function CallsContent() {
     };
 
     const onCallRejected = () => {
+      stopRingtone();
       const call = activeCallRef.current;
       if (call?.isGroupCall) {
         showErrorToast("Invited colleague is currently unavailable.");
@@ -753,6 +925,7 @@ function CallsContent() {
     };
 
     const onCallEnded = (data: { callSessionId: number }) => {
+      stopRingtone();
       if (activeCallRef.current?.callSessionId !== data.callSessionId) return;
       cleanupCall();
     };
@@ -979,6 +1152,62 @@ function CallsContent() {
     socket.on("webrtc:answer", onWebRTCAnswer);
     socket.on("webrtc:ice-candidate", onWebRTCIceCandidate);
 
+    // Screen-share signalling: remote participants rebuild streams from PC receivers
+    const onScreenShareStarted = ({ callSessionId, fromUserId }: { callSessionId: number; fromUserId: number }) => {
+      const call = activeCallRef.current;
+      if (!call || call.callSessionId !== callSessionId) return;
+      const pc = groupPeerConnectionsRef.current.get(fromUserId) || (call.peerUserId === fromUserId ? peerConnectionRef.current : null);
+      if (!pc) return;
+      const freshStream = new MediaStream();
+      pc.getReceivers().forEach((receiver) => {
+        if (receiver.track && receiver.track.readyState !== "ended") {
+          freshStream.addTrack(receiver.track);
+        }
+      });
+      freshStream.getAudioTracks().forEach((t) => { t.enabled = true; });
+
+      if (call.isGroupCall) {
+        setRemoteParticipants((prev) => [
+          ...prev.filter((p) => p.userId !== fromUserId),
+          { userId: fromUserId, stream: freshStream },
+        ]);
+        if (freshStream.getVideoTracks().length > 0) {
+          setFocusedParticipantId(fromUserId);
+          setIsCallMaximized(true);
+        }
+      } else {
+        setRemoteStream(freshStream);
+        setIsCallMaximized(true);
+      }
+    };
+
+    const onScreenShareStopped = ({ callSessionId, fromUserId }: { callSessionId: number; fromUserId: number }) => {
+      const call = activeCallRef.current;
+      if (!call || call.callSessionId !== callSessionId) return;
+      const pc = groupPeerConnectionsRef.current.get(fromUserId) || (call.peerUserId === fromUserId ? peerConnectionRef.current : null);
+      if (!pc) return;
+      const freshStream = new MediaStream();
+      pc.getReceivers().forEach((receiver) => {
+        if (receiver.track && receiver.track.readyState !== "ended") {
+          freshStream.addTrack(receiver.track);
+        }
+      });
+      freshStream.getAudioTracks().forEach((t) => { t.enabled = true; });
+
+      if (call.isGroupCall) {
+        setRemoteParticipants((prev) => [
+          ...prev.filter((p) => p.userId !== fromUserId),
+          { userId: fromUserId, stream: freshStream },
+        ]);
+        setFocusedParticipantId((current) => (current === fromUserId ? null : current));
+      } else {
+        setRemoteStream(freshStream);
+      }
+    };
+
+    socket.on("call:screen-share-started", onScreenShareStarted);
+    socket.on("call:screen-share-stopped", onScreenShareStopped);
+
     if (activeCallRef.current?.isGroupCall && activeCallRef.current.callSessionId) {
       socket.emit("call:join", { callSessionId: activeCallRef.current.callSessionId });
     }
@@ -994,10 +1223,13 @@ function CallsContent() {
       socket.off("webrtc:offer", onWebRTCOffer);
       socket.off("webrtc:answer", onWebRTCAnswer);
       socket.off("webrtc:ice-candidate", onWebRTCIceCandidate);
+      socket.off("call:screen-share-started", onScreenShareStarted);
+      socket.off("call:screen-share-stopped", onScreenShareStopped);
     };
   }, [socket, session?.user.id]);
 
   function startTimer() {
+    stopRingtone();
     if (timerRef.current) return;
     setCallDuration(0);
     timerRef.current = setInterval(() => {
@@ -1061,6 +1293,12 @@ function CallsContent() {
       await prepareGroupCallMedia(call.type);
       const pc = new RTCPeerConnection(DEFAULT_RTC_CONFIGURATION);
       groupPeerConnectionsRef.current.set(targetUserId, pc);
+      // Pre-add video transceiver so screen-sharing / camera can be received and sent even if call is AUDIO
+      try {
+        pc.addTransceiver("video", { direction: "sendrecv" });
+      } catch (e) {
+        console.warn("addTransceiver video error:", e);
+      }
       localStreamRef.current?.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!);
       });
@@ -1071,10 +1309,39 @@ function CallsContent() {
         stream.getAudioTracks().forEach((track) => {
           track.enabled = true;
         });
+        const updateParticipantStream = () => {
+          // Build a fresh stream from all live receiver tracks for this PC so replaced tracks are captured
+          const freshStream = new MediaStream();
+          pc.getReceivers().forEach((receiver) => {
+            if (receiver.track && receiver.track.readyState !== "ended") {
+              freshStream.addTrack(receiver.track);
+            }
+          });
+          freshStream.getAudioTracks().forEach((t) => { t.enabled = true; });
+          setRemoteParticipants((prev) => [
+            ...prev.filter((p) => p.userId !== targetUserId),
+            { userId: targetUserId, stream: freshStream },
+          ]);
+          if (freshStream.getVideoTracks().some((t) => t.readyState === "live")) {
+            setFocusedParticipantId(targetUserId);
+            setIsCallMaximized(true);
+          }
+        };
+        // Initial bind
         setRemoteParticipants((prev) => [
           ...prev.filter((participant) => participant.userId !== targetUserId),
           { userId: targetUserId, stream },
         ]);
+        if (stream.getVideoTracks().some((t) => t.readyState === "live")) {
+          setFocusedParticipantId(targetUserId);
+          setIsCallMaximized(true);
+        }
+        // Listen for track replacement (e.g. screen share via replaceTrack — no new ontrack fires)
+        event.track.onunmute = updateParticipantStream;
+        event.track.onmute = updateParticipantStream;
+        // Also update when tracks are added/removed from the stream
+        stream.addEventListener("addtrack", updateParticipantStream);
+        stream.addEventListener("removetrack", updateParticipantStream);
       };
       pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -1143,6 +1410,12 @@ function CallsContent() {
 
     const pc = new RTCPeerConnection(DEFAULT_RTC_CONFIGURATION);
     peerConnectionRef.current = pc;
+    // Pre-add video transceiver so screen sharing can be streamed/received seamlessly even for AUDIO calls
+    try {
+      pc.addTransceiver("video", { direction: "sendrecv" });
+    } catch (e) {
+      console.warn("addTransceiver video error:", e);
+    }
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
     pc.ontrack = (event) => {
@@ -1156,6 +1429,9 @@ function CallsContent() {
         track.enabled = true;
       });
       setRemoteStream(incomingStream);
+      if (incomingStream.getVideoTracks().some((t) => t.readyState === "live")) {
+        setIsCallMaximized(true);
+      }
 
       // Immediately wire audio element so speaker/headphones output without delay
       if (remoteAudioRef.current) {
@@ -1234,7 +1510,7 @@ function CallsContent() {
     }
   }
 
-  // Retry connecting microphone when user plugs in headphones / headset / mic
+  // Retry connecting microphone (e.g. after granting mobile browser permission or unmuting)
   async function retryConnectMic() {
     if (
       typeof navigator === "undefined" ||
@@ -1243,25 +1519,31 @@ function CallsContent() {
     ) {
       showNotification({
         title: "Microphone Inaccessible Over Plain HTTP LAN",
-        text: "Browsers require a secure HTTPS connection or localhost to access the microphone. If testing over LAN (e.g. 192.168.x.x), please open via HTTPS or add this origin to chrome://flags/#unsafely-treat-insecure-origin-as-secure.",
+        text: "Browsers require a secure HTTPS connection (e.g. https://hrms.infograins.com) or localhost to capture microphone audio. In production over HTTPS, mobile phone mic & speaker work 100% without any headphones.",
         icon: "warning",
       });
       return;
     }
 
     try {
-      const newMedia = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      let newMedia: MediaStream;
+      try {
+        newMedia = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch {
+        newMedia = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
       const newAudioTrack = newMedia.getAudioTracks()[0];
       if (!newAudioTrack) {
         showNotification({
           title: "Microphone Not Detected",
-          text: "Microphone not detected. Please verify your headphones or microphone connection.",
+          text: "Microphone not detected. Mobile phones have built-in microphones — please verify site permissions in your browser bar.",
           icon: "warning",
         });
         return;
@@ -1302,7 +1584,7 @@ function CallsContent() {
       console.error("Retry microphone error:", err);
       showNotification({
         title: "Microphone Notice",
-        text: "Microphone was not found or access was denied. Please plug in your headphones/mic and grant permission in browser settings.",
+        text: "Microphone was not found or access was denied. Mobile phones and laptops do NOT need headphones — tap the lock/settings icon in your browser address bar and grant Microphone permission.",
         icon: "warning",
       });
     }
@@ -1380,6 +1662,7 @@ function CallsContent() {
         peerUserId: incomingCall.caller.id,
         isGroupCall: Boolean(incomingCall.isGroupCall),
         isHost: false,
+        meetingId: incomingCall.meetingId,
       };
       setCurrentActiveCall(call);
 
@@ -1388,11 +1671,13 @@ function CallsContent() {
       }
 
       socket.emit("call:accept", { callSessionId: incomingCall.callSessionId });
+      stopRingtone();
       setIncomingCall(null);
       startTimer();
     } catch (error) {
       console.error("Unable to access call media:", error);
       socket.emit("call:reject", { callSessionId: incomingCall.callSessionId });
+      stopRingtone();
       setIncomingCall(null);
       cleanupCall();
       showNotification({
@@ -1405,6 +1690,7 @@ function CallsContent() {
 
   // Reject Incoming Call
   const handleRejectIncomingCall = () => {
+    stopRingtone();
     if (!incomingCall || !socket) return;
     socket.emit("call:reject", { callSessionId: incomingCall.callSessionId });
     setIncomingCall(null);
@@ -1413,10 +1699,18 @@ function CallsContent() {
 
   // End Active Call
   function cleanupCall() {
+    stopRingtone();
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
     }
+
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
+    }
+    originalCameraTrackRef.current = null;
+    setIsScreenSharing(false);
 
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
@@ -1456,6 +1750,19 @@ function CallsContent() {
     if (socket && call?.callSessionId) {
       socket.emit("call:end", { callSessionId: call.callSessionId });
     }
+    if (call?.meetingId) {
+      const token = getAuthToken();
+      if (token) {
+        fetch(`${getApiUrl()}/api/meetings/${call.meetingId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: "COMPLETED" }),
+        }).catch((err) => console.error("Error marking meeting completed on call end:", err));
+      }
+    }
     cleanupCall();
   }
 
@@ -1482,6 +1789,180 @@ function CallsContent() {
         setIsCamOff(!videoTrack.enabled);
       }
     }
+  };
+
+  const renegotiateGroupPeer = async (targetUserId: number, pc: RTCPeerConnection) => {
+    try {
+      if (pc.signalingState !== "stable") return;
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket?.emit("webrtc:offer", {
+        targetUserId,
+        callSessionId: activeCallRef.current?.callSessionId,
+        offer,
+      });
+    } catch (e) {
+      console.warn("[WebRTC Group] Renegotiation error:", e);
+    }
+  };
+
+  const renegotiate1to1 = async (targetUserId: number, pc: RTCPeerConnection) => {
+    try {
+      if (pc.signalingState !== "stable") return;
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket?.emit("webrtc:offer", {
+        targetUserId,
+        offer,
+      });
+    } catch (e) {
+      console.warn("[WebRTC 1-to-1] Renegotiation error:", e);
+    }
+  };
+
+  // Screen Sharing
+  const toggleScreenShare = async () => {
+    if (isScreenSharing) {
+      await stopScreenShare();
+    } else {
+      await startScreenShare();
+    }
+  };
+
+  const startScreenShare = async () => {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== "function") {
+      showWarningToast("Screen sharing is not supported by your current browser or device.");
+      return;
+    }
+
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: "always",
+        } as any,
+        audio: false,
+      });
+
+      const screenTrack = displayStream.getVideoTracks()[0];
+      if (!screenTrack) return;
+
+      // Save the current camera track so we can restore it when screen share stops
+      if (localStreamRef.current) {
+        const existingCamTrack = localStreamRef.current.getVideoTracks()[0];
+        if (existingCamTrack) {
+          originalCameraTrackRef.current = existingCamTrack;
+        }
+      }
+
+      // Replace video track in 1-on-1 peer connection using robust transceiver sender lookup
+      if (peerConnectionRef.current) {
+        const sender = getVideoSender(peerConnectionRef.current);
+        if (sender) {
+          await sender.replaceTrack(screenTrack);
+        } else if (localStreamRef.current) {
+          peerConnectionRef.current.addTrack(screenTrack, localStreamRef.current);
+          if (activeCallRef.current?.peerUserId) {
+            void renegotiate1to1(activeCallRef.current.peerUserId, peerConnectionRef.current);
+          }
+        }
+      }
+
+      // Replace video track across all group peer connections using robust transceiver sender lookup
+      for (const [targetUserId, pc] of groupPeerConnectionsRef.current.entries()) {
+        const sender = getVideoSender(pc);
+        if (sender) {
+          await sender.replaceTrack(screenTrack).catch(console.warn);
+        } else if (localStreamRef.current) {
+          pc.addTrack(screenTrack, localStreamRef.current);
+          void renegotiateGroupPeer(targetUserId, pc);
+        }
+      }
+
+      // Update local stream and preview
+      if (localStreamRef.current) {
+        localStreamRef.current.getVideoTracks().forEach((t) => localStreamRef.current?.removeTrack(t));
+        localStreamRef.current.addTrack(screenTrack);
+      }
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = new MediaStream([screenTrack]);
+      }
+
+      screenStreamRef.current = displayStream;
+      setIsScreenSharing(true);
+      setIsCallMaximized(true);
+      showSuccessToast("Screen sharing started");
+
+      // Notify remote participants so they can re-bind the new video track
+      const callSessionId = activeCallRef.current?.callSessionId;
+      if (callSessionId && socket) {
+        socket.emit("call:screen-share-started", { callSessionId });
+      }
+
+      // Auto-stop when user clicks the browser's native floating "Stop sharing" bar
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+    } catch (err: any) {
+      if (err.name !== "NotAllowedError") {
+        console.warn("[ScreenShare] Error starting screen share:", err);
+        showErrorToast(err.message || "Failed to share screen");
+      }
+    }
+  };
+
+  const stopScreenShare = async () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      screenStreamRef.current = null;
+    }
+
+    setIsScreenSharing(false);
+
+    // Notify remote participants that screen share has stopped
+    const callSessionId = activeCallRef.current?.callSessionId;
+    if (callSessionId && socket) {
+      socket.emit("call:screen-share-stopped", { callSessionId });
+    }
+
+    // Restore camera track if camera was active, or fetch a fresh camera track
+    let restoreTrack = originalCameraTrackRef.current;
+    if (!restoreTrack || restoreTrack.readyState === "ended") {
+      if (!isCamOff && activeCallRef.current?.type === "VIDEO") {
+        try {
+          const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          restoreTrack = camStream.getVideoTracks()[0] || null;
+        } catch (err) {
+          console.warn("[ScreenShare] Could not restore camera track:", err);
+        }
+      }
+    }
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach((t) => localStreamRef.current?.removeTrack(t));
+      if (restoreTrack) {
+        localStreamRef.current.addTrack(restoreTrack);
+      }
+
+      if (peerConnectionRef.current) {
+        const sender = getVideoSender(peerConnectionRef.current);
+        if (sender) {
+          await sender.replaceTrack(restoreTrack || null).catch(console.warn);
+        }
+      }
+
+      groupPeerConnectionsRef.current.forEach((pc) => {
+        const sender = getVideoSender(pc);
+        if (sender) {
+          sender.replaceTrack(restoreTrack || null).catch(console.warn);
+        }
+      });
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = restoreTrack ? localStreamRef.current : null;
+      }
+    }
+
+    originalCameraTrackRef.current = null;
   };
 
   // Unblock browser autoplay audio on user interaction or tap
@@ -1532,7 +2013,7 @@ function CallsContent() {
       audioEl.volume = nextState ? 1.0 : 0.65;
     });
 
-    showSuccessToast(nextState ? "Speaker: ON (Loudspeaker)" : "Speaker: Normal (Headset)");
+    showSuccessToast(nextState ? "Speaker: ON (Loudspeaker / Hands-Free)" : "Speaker: Normal (Earpiece)");
   };
 
   // Initiate New Call from Modal
@@ -1564,6 +2045,7 @@ function CallsContent() {
       peerUserId: targetEmp.id,
     };
     setCurrentActiveCall(newCall);
+    playCallerTune();
 
     socket.emit(
       "call:initiate",
@@ -1574,6 +2056,7 @@ function CallsContent() {
       },
       (result: { callSessionId?: number; error?: string }) => {
         if (!result?.callSessionId) {
+          stopRingtone();
           showNotification({
             title: "Unable to Start Call",
             text: result?.error || "Unable to start the call session.",
@@ -1585,6 +2068,7 @@ function CallsContent() {
         setCurrentActiveCall({ ...newCall, callSessionId: result.callSessionId });
         void initiateWebRTC(targetEmp.id, true, callType).catch((error: unknown) => {
           console.error("Error setting up WebRTC media:", error);
+          stopRingtone();
           socket.emit("call:end", { callSessionId: result.callSessionId });
           cleanupCall();
           showNotification({
@@ -1842,33 +2326,42 @@ function CallsContent() {
 
           {/* Incoming Call Ringing Dialog Modal */}
           {incomingCall && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-              <div className="bg-slate-900 text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-800 text-center space-y-6 animate-bounce">
-                <div className="w-20 h-20 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center mx-auto border-2 border-orange-500/40 animate-pulse">
-                  {incomingCall.type === "VIDEO" ? <Video className="w-9 h-9" /> : <Phone className="w-9 h-9" />}
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+              <div className="bg-slate-900 text-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-slate-800 text-center space-y-5 animate-in zoom-in-95 duration-200">
+                <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-25 animate-ping"></span>
+                  <div className="relative w-20 h-20 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center border-2 border-orange-500/50 shadow-lg">
+                    {incomingCall.type === "VIDEO" ? <Video className="w-9 h-9" /> : <Phone className="w-9 h-9" />}
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-bold uppercase tracking-wider mb-2">
+                    <Volume2 className="w-3 h-3 animate-pulse" />
+                    <span>Ringing...</span>
+                  </div>
+                  <h3 className="text-lg font-black text-white truncate">
                     {incomingCall.conversationName || incomingCall.caller.name}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Incoming {incomingCall.isGroupCall ? "group " : ""}{incomingCall.type} call from {incomingCall.caller.name}...
+                    Incoming {incomingCall.isGroupCall ? "group " : ""}{incomingCall.type.toLowerCase()} call from <strong className="text-slate-200">{incomingCall.caller.name}</strong>
                   </p>
                 </div>
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center justify-center gap-4 pt-1">
                   <button
                     onClick={handleRejectIncomingCall}
-                    className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 active:scale-95 text-white transition shadow-lg flex items-center justify-center gap-2 cursor-pointer"
                     title="Decline"
                   >
-                    <PhoneOff className="w-6 h-6" />
+                    <PhoneOff className="w-4 h-4" />
+                    <span>Decline</span>
                   </button>
                   <button
                     onClick={handleAcceptIncomingCall}
-                    className="w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110"
-                    title="Accept"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white transition shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                    title="Answer"
                   >
-                    <Phone className="w-6 h-6" />
+                    <Phone className="w-4 h-4" />
+                    <span>Answer</span>
                   </button>
                 </div>
               </div>
@@ -1892,7 +2385,10 @@ function CallsContent() {
               onTouchStart={unblockAudio}
             >
 
-              <div className="bg-slate-900 text-white rounded-2xl sm:rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border border-slate-700/60 flex flex-col max-h-[96vh] sm:max-h-[90vh] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              <div className={`bg-slate-900 text-white shadow-2xl border border-slate-700/60 flex flex-col overflow-hidden transition-all duration-200 ${isCallMaximized
+                  ? "fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none p-2 sm:p-4 z-50 bg-slate-950 flex flex-col"
+                  : "h-[88vh] sm:h-[92vh] max-w-6xl w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 flex flex-col"
+                }`}
                 style={{ boxShadow: "0 0 60px rgba(239,68,68,0.15), 0 25px 50px rgba(0,0,0,0.8)" }}
               >
                 {/* Header */}
@@ -1916,10 +2412,29 @@ function CallsContent() {
                         {isSpeakerOn ? <Volume2 className="w-3.5 h-3.5" /> : <Volume1 className="w-3.5 h-3.5" />}
                         {isSpeakerOn ? "Speaker: ON (Hands-free)" : "Speaker: Normal"}
                       </span>
+                      {isScreenSharing && (
+                        <>
+                          <span className="text-[10px] text-slate-400">•</span>
+                          <span className="text-[11px] font-bold text-slate-200 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-600 flex items-center gap-1">
+                            <ScreenShare className="w-3.5 h-3.5 text-slate-300" />
+                            Sharing Screen
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                   {/* Top-right action buttons */}
                   <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    {/* Full View / Maximize Toggle */}
+                    <button
+                      onClick={() => setIsCallMaximized(!isCallMaximized)}
+                      className="px-3 sm:px-3.5 py-2 sm:py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-all border border-slate-700 flex items-center gap-1.5 cursor-pointer shadow-md"
+                      title={isCallMaximized ? "Exit Full View" : "Full View Screen"}
+                    >
+                      {isCallMaximized ? <Minimize2 className="w-4 h-4 text-orange-400" /> : <Maximize2 className="w-4 h-4 text-orange-400" />}
+                      <span className="hidden xs:inline">{isCallMaximized ? "Exit Full View" : "Full View"}</span>
+                    </button>
+
                     <button
                       onClick={() => setShowAddMemberModal(true)}
                       className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 font-bold text-xs rounded-xl transition-all border border-slate-700 flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-md"
@@ -1971,12 +2486,12 @@ function CallsContent() {
                 {hasNoMic && (
                   <div className="mb-3 px-3.5 py-2.5 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-300">
                     <div className="flex items-center gap-2">
-                      <Headphones className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span><strong>Listen-Only Mode:</strong> No microphone detected. You can hear others clearly, but your voice is not transmitted.</span>
+                      <Smartphone className="w-4 h-4 text-orange-400 shrink-0" />
+                      <span><strong>Listen-Only Mode:</strong> Phone microphone inactive. You can hear all voice on speakerphone. Grant browser mic permission or tap Connect Mic to speak.</span>
                     </div>
                     <button
                       onClick={retryConnectMic}
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-[10px] transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                      className="px-2.5 py-1 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black rounded-lg text-[10px] transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-sm"
                     >
                       <RefreshCw className="w-3 h-3" /> Connect Mic
                     </button>
@@ -1984,38 +2499,218 @@ function CallsContent() {
                 )}
 
                 {/* Video / Audio Streams Display */}
-                <div className={`flex-1 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 relative min-h-[260px] sm:min-h-[360px] ${activeCall.isGroupCall ? "p-2 sm:p-3" : "flex items-center justify-center"}`}>
+                <div className="flex-1 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800/80 relative flex flex-col min-h-0 w-full">
                   {activeCall.isGroupCall ? (
-                    <div className="grid h-full min-h-[260px] sm:min-h-[330px] grid-cols-1 gap-2.5 sm:gap-3 sm:grid-cols-2">
-                      {remoteParticipants.map((participant) => (
-                        <RemoteParticipantMedia
-                          key={participant.userId}
-                          participant={participant}
-                          name={employees.find((employee) => employee.id === participant.userId)?.name || `Employee #${participant.userId}`}
-                          type={activeCall.type}
-                          isSpeakerOn={isSpeakerOn}
-                          onAudioBlocked={() => setIsAudioBlocked(true)}
-                        />
-                      ))}
-                      {remoteParticipants.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center gap-3 text-sm text-slate-400">
-                          <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-700 flex items-center justify-center text-slate-500 animate-pulse">
-                            <Users className="w-7 h-7" />
+                    (() => {
+                      const liveVideoParticipant = remoteParticipants.find(p => p.stream?.getVideoTracks().some(t => t.readyState !== "ended" && t.enabled));
+                      const effectiveFocusId = focusedParticipantId !== null
+                        ? focusedParticipantId
+                        : (liveVideoParticipant ? liveVideoParticipant.userId : (isScreenSharing ? "local" : null));
+
+                      const focusedParticipant = typeof effectiveFocusId === "number"
+                        ? remoteParticipants.find(p => p.userId === effectiveFocusId)
+                        : null;
+                      const focusedEmployee = typeof effectiveFocusId === "number"
+                        ? employees.find((e) => e.id === effectiveFocusId)
+                        : null;
+
+                      if (effectiveFocusId && (focusedParticipant || effectiveFocusId === "local")) {
+                        return (
+                          <div className="flex-1 flex flex-col h-full w-full min-h-0 relative">
+                            {/* Main Stage View */}
+                            <div className="flex-1 relative w-full h-full min-h-0 bg-black flex items-center justify-center overflow-hidden">
+                              {effectiveFocusId === "local" ? (
+                                <video
+                                  ref={localVideoRef}
+                                  autoPlay
+                                  playsInline
+                                  muted
+                                  className="w-full h-full object-contain bg-black"
+                                />
+                              ) : focusedParticipant ? (
+                                <RemoteParticipantMedia
+                                  participant={focusedParticipant}
+                                  name={focusedEmployee?.name || `Participant #${focusedParticipant.userId}`}
+                                  type={activeCall.type}
+                                  isSpeakerOn={isSpeakerOn}
+                                  onAudioBlocked={() => setIsAudioBlocked(true)}
+                                  isFocused={true}
+                                  employee={focusedEmployee || undefined}
+                                  onViewProfile={() => {
+                                    if (focusedEmployee) setSelectedProfileUser(focusedEmployee);
+                                  }}
+                                />
+                              ) : null}
+
+                              {/* Stage Badge & Grid Toggle & Profile */}
+                              <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 z-10">
+                                <span className="px-2.5 py-1 bg-slate-900/90 border border-slate-700/80 text-white text-[11px] font-bold rounded-lg backdrop-blur-xs flex items-center gap-1.5 shadow-md">
+                                  <span>🖥️</span>
+                                  <span>
+                                    {effectiveFocusId === "local"
+                                      ? "Your Presentation (Full View Stage)"
+                                      : `${focusedEmployee?.name || "Participant"}'s Screen`}
+                                  </span>
+                                </span>
+                                {focusedEmployee && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedProfileUser(focusedEmployee)}
+                                    className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition-all cursor-pointer flex items-center gap-1 shadow-md"
+                                    title="View User Profile"
+                                  >
+                                    <User className="w-3.5 h-3.5 text-orange-400" />
+                                    <span>Profile</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setFocusedParticipantId(null)}
+                                  className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-bold rounded-lg border border-slate-700 transition-all cursor-pointer flex items-center gap-1 shadow-md"
+                                  title="Switch to Equal Grid View"
+                                >
+                                  <Grid className="w-3.5 h-3.5" />
+                                  <span>Grid View</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Bottom Participant Filmstrip Dock */}
+                            <div className="h-28 sm:h-32 bg-slate-900/95 border-t border-slate-800 flex items-center gap-2.5 px-3 overflow-x-auto shrink-0 [scrollbar-width:thin]">
+                              {/* Local Preview in Dock */}
+                              <div
+                                onClick={() => setFocusedParticipantId(effectiveFocusId === "local" ? null : "local")}
+                                className={`h-24 w-36 sm:h-28 sm:w-44 bg-slate-950 border-2 rounded-xl overflow-hidden shrink-0 relative cursor-pointer transition-all ${
+                                  effectiveFocusId === "local" ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-700 hover:border-slate-500"
+                                }`}
+                                title="Click to view your camera/screen on Main Stage"
+                              >
+                                <video
+                                  ref={localVideoRef}
+                                  autoPlay
+                                  playsInline
+                                  muted
+                                  className="w-full h-full object-contain bg-black"
+                                />
+                                <span className="absolute bottom-1 left-1.5 bg-slate-900/80 text-[10px] font-bold text-white px-1.5 py-0.5 rounded">
+                                  {isScreenSharing ? "Your Screen" : "You"}
+                                </span>
+                              </div>
+
+                              {/* Remote Participants in Dock */}
+                              {remoteParticipants.map((participant) => {
+                                const emp = employees.find((e) => e.id === participant.userId);
+                                return (
+                                  <div
+                                    key={participant.userId}
+                                    onClick={() => setFocusedParticipantId(effectiveFocusId === participant.userId ? null : participant.userId)}
+                                    className={`h-24 w-36 sm:h-28 sm:w-44 bg-slate-950 border-2 rounded-xl overflow-hidden shrink-0 relative cursor-pointer transition-all ${
+                                      effectiveFocusId === participant.userId ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-700 hover:border-slate-500"
+                                    }`}
+                                    title="Click to view on Main Stage in Full View"
+                                  >
+                                    <RemoteParticipantMedia
+                                      participant={participant}
+                                      name={emp?.name || `Employee #${participant.userId}`}
+                                      type={activeCall.type}
+                                      isSpeakerOn={isSpeakerOn}
+                                      onAudioBlocked={() => setIsAudioBlocked(true)}
+                                      onFocus={() => setFocusedParticipantId(participant.userId)}
+                                      isFocused={effectiveFocusId === participant.userId}
+                                      isThumbnail={true}
+                                      employee={emp}
+                                      onViewProfile={() => {
+                                        if (emp) setSelectedProfileUser(emp);
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <p>Waiting for group members to join...</p>
+                        );
+                      }
+
+                      return (
+                        <div className="grid h-full w-full min-h-0 flex-1 grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 p-2 sm:p-3 overflow-y-auto">
+                          {remoteParticipants.map((participant) => {
+                            const emp = employees.find((employee) => employee.id === participant.userId);
+                            return (
+                              <RemoteParticipantMedia
+                                key={participant.userId}
+                                participant={participant}
+                                name={emp?.name || `Employee #${participant.userId}`}
+                                type={activeCall.type}
+                                isSpeakerOn={isSpeakerOn}
+                                onAudioBlocked={() => setIsAudioBlocked(true)}
+                                onFocus={() => setFocusedParticipantId(participant.userId)}
+                                employee={emp}
+                                onViewProfile={() => {
+                                  if (emp) setSelectedProfileUser(emp);
+                                }}
+                              />
+                            );
+                          })}
+                          {remoteParticipants.length === 0 && (
+                            <div className="col-span-full flex flex-col items-center justify-center gap-3 text-sm text-slate-400 py-12">
+                              <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-700 flex items-center justify-center text-slate-500 animate-pulse">
+                                <Users className="w-7 h-7" />
+                              </div>
+                              <p>Waiting for group members to join...</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      {activeCall.type === "VIDEO" ? (
-                        <video
-                          ref={remoteVideoRef}
-                          muted
-                          autoPlay
-                          playsInline
-                          className="w-full h-full object-cover rounded-2xl"
-                        />
+                    /* 1-on-1 Call Stage */
+                    <div className="flex-1 h-full w-full min-h-0 relative flex items-center justify-center bg-black overflow-hidden">
+                      {/* Full View stage button */}
+                      <button
+                        type="button"
+                        onClick={() => setIsCallMaximized(!isCallMaximized)}
+                        className="absolute top-3 right-3 px-3 py-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-bold rounded-lg border border-slate-700/80 backdrop-blur-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-lg z-30"
+                        title={isCallMaximized ? "Exit Full View" : "Full View Screen"}
+                      >
+                        {isCallMaximized ? <Minimize2 className="w-3.5 h-3.5 text-orange-400" /> : <Maximize2 className="w-3.5 h-3.5 text-orange-400" />}
+                        <span>{isCallMaximized ? "Exit Full View" : "Full View"}</span>
+                      </button>
+                      {isScreenSharing ? (
+                        !swap1to1View ? (
+                          <video
+                            ref={localVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        ) : (
+                          <video
+                            ref={remoteVideoRef}
+                            muted
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        )
+                      ) : activeCall.type === "VIDEO" || remoteStream?.getVideoTracks().some(t => t.readyState === "live") ? (
+                        !swap1to1View ? (
+                          <video
+                            ref={remoteVideoRef}
+                            muted
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        ) : (
+                          <video
+                            ref={localVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        )
                       ) : (
                         <div
                           className="text-center space-y-4 cursor-pointer select-none"
@@ -2026,7 +2721,6 @@ function CallsContent() {
                           }}
                           title="Click anywhere to ensure audio is playing"
                         >
-                          {/* Animated audio waveform rings */}
                           <div className="relative flex items-center justify-center">
                             <div className="absolute w-40 h-40 rounded-full border border-orange-500/20 animate-ping" style={{ animationDuration: "2s" }}></div>
                             <div className="absolute w-32 h-32 rounded-full border border-orange-500/30 animate-ping" style={{ animationDuration: "1.5s" }}></div>
@@ -2045,20 +2739,57 @@ function CallsContent() {
                           <p className="text-xs text-slate-400">Voice call active • Audio connected</p>
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* Local Video Stream Preview (PiP) */}
-                  {activeCall.type === "VIDEO" && (
-                    <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-28 h-20 sm:w-40 sm:h-28 bg-slate-900 border-2 border-orange-500/50 rounded-xl overflow-hidden shadow-2xl">
-                      <video
-                        ref={localVideoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute bottom-1 left-2 text-[9px] font-bold text-white/70">You</div>
+                      {/* 1-on-1 PiP Window in corner */}
+                      {(activeCall.type === "VIDEO" || isScreenSharing || remoteStream?.getVideoTracks().some(t => t.readyState === "live")) && (
+                        <div
+                          onClick={() => setSwap1to1View(!swap1to1View)}
+                          className="absolute bottom-3 right-3 w-36 h-24 sm:w-48 sm:h-32 bg-slate-900 border-2 border-slate-700 hover:border-orange-500/80 rounded-xl overflow-hidden shadow-2xl cursor-pointer transition-all z-20 group"
+                          title="Click to swap views"
+                        >
+                          {isScreenSharing ? (
+                            !swap1to1View ? (
+                              <video
+                                ref={remoteVideoRef}
+                                muted
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-contain bg-black"
+                              />
+                            ) : (
+                              <video
+                                ref={localVideoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-contain bg-black"
+                              />
+                            )
+                          ) : (
+                            !swap1to1View ? (
+                              <video
+                                ref={localVideoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-contain bg-black"
+                              />
+                            ) : (
+                              <video
+                                ref={remoteVideoRef}
+                                muted
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-contain bg-black"
+                              />
+                            )
+                          )}
+                          <div className="absolute bottom-1 left-2 text-[9px] font-bold text-white/80 bg-slate-900/80 px-1.5 py-0.5 rounded flex items-center gap-1">
+                            <span>{isScreenSharing && !swap1to1View ? activeCall.targetName : "You"}</span>
+                            <span className="text-[8px] text-orange-400 group-hover:inline hidden">(Swap)</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2070,7 +2801,7 @@ function CallsContent() {
                     <button
                       onClick={retryConnectMic}
                       className="w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg bg-amber-500/20 border-2 border-amber-500 text-amber-400 hover:bg-amber-500/30 cursor-pointer"
-                      title="No microphone detected. Click to connect headphones or microphone."
+                      title="No microphone active. Tap to enable phone built-in microphone."
                     >
                       <MicOff className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                       <span className="text-[8px] font-bold">No Mic</span>
@@ -2104,6 +2835,32 @@ function CallsContent() {
                     </button>
                   )}
 
+                  {/* Screen Share Toggle — only in meeting calls (not in regular chat group calls) */}
+                  {Boolean(
+                    activeCall.meetingId ||
+                    activeCall.channelName?.startsWith("meeting-") ||
+                    activeCall.channelName?.startsWith("room-") ||
+                    activeCall.targetName?.toLowerCase().includes("meeting")
+                  ) && (
+                    <button
+                      onClick={toggleScreenShare}
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg cursor-pointer ${isScreenSharing
+                          ? "bg-slate-700 border-2 border-slate-400 text-slate-100 hover:bg-slate-600"
+                          : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-500"
+                        }`}
+                      title={isScreenSharing ? "Stop Sharing Screen" : "Share Your Screen"}
+                    >
+                      {isScreenSharing ? (
+                        <ScreenShareOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-100" />
+                      ) : (
+                        <ScreenShare className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
+                      )}
+                      <span className="text-[8px] font-bold">
+                        {isScreenSharing ? "Stop Share" : "Share"}
+                      </span>
+                    </button>
+                  )}
+
                   {/* Speaker / Loudspeaker Mode Toggle */}
                   <button
                     onClick={toggleSpeaker}
@@ -2111,7 +2868,7 @@ function CallsContent() {
                       ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400 hover:bg-orange-500/30"
                       : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700"
                       }`}
-                    title={isSpeakerOn ? "Speaker ON (Loudspeaker / Hands-Free mode). Click for normal/headset." : "Speaker Normal. Click to enable loud speaker."}
+                    title={isSpeakerOn ? "Speaker ON (Loudspeaker / Hands-Free mode). Tap for normal earpiece." : "Speaker Normal. Tap to enable loud speakerphone."}
                   >
                     {isSpeakerOn ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" /> : <Volume1 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />}
                     <span className="text-[8px] font-bold">{isSpeakerOn ? "Speaker" : "Normal"}</span>
@@ -2152,17 +2909,17 @@ function CallsContent() {
             </div>
           )}
 
-          {/* No Microphone / Headset Detected Friendly Dialog Modal */}
+          {/* No Microphone Detected Friendly Dialog Modal */}
           {micPromptMessage && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
               <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-white">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-                    <Headphones className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 shrink-0">
+                    <Smartphone className="w-6 h-6" />
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      Microphone / Headset Not Detected
+                      Microphone Access Notice
                     </h3>
                     <p className="text-xs text-slate-300 leading-relaxed">
                       {micPromptMessage}
@@ -2171,12 +2928,12 @@ function CallsContent() {
                 </div>
 
                 <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/50 text-xs text-slate-300 space-y-1.5">
-                  <div className="flex items-center gap-2 text-amber-400 font-semibold">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>Are headphones required?</span>
+                  <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    <span>Are headphones or a headset required?</span>
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-normal pl-6">
-                    <strong>No</strong>, headphones are not required to hear this call (your device speakers work fine). However, a microphone or headset with mic is needed if you want other participants to hear your voice.
+                  <p className="text-[11px] text-slate-300 leading-normal pl-6">
+                    <strong className="text-emerald-400">NO, headphones are NOT required!</strong> Mobile phones and laptops have high-quality built-in microphones and loud speakers. Both HR and employees can join, listen on speakerphone, and speak directly through the phone without any headset. Built-in Acoustic Echo Cancellation (AEC) automatically removes echo.
                   </p>
                 </div>
 
@@ -2191,9 +2948,9 @@ function CallsContent() {
                   <button
                     type="button"
                     onClick={retryConnectMic}
-                    className="px-4 py-2.5 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2.5 text-xs bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Retry / Connect Mic
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry / Connect Phone Mic
                   </button>
                 </div>
               </div>
@@ -2297,6 +3054,83 @@ function CallsContent() {
                   >
                     Close
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Zoom-style Participant Profile Modal */}
+          {selectedProfileUser && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+              <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-6 text-white shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  onClick={() => setSelectedProfileUser(null)}
+                  className="absolute top-3.5 right-3.5 w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition cursor-pointer"
+                  title="Close Profile"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-2xl font-black text-white shadow-lg mb-3">
+                    {selectedProfileUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <h3 className="text-base font-bold text-white">{selectedProfileUser.name}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{selectedProfileUser.email}</p>
+
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2.5">
+                    {selectedProfileUser.role?.name && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                        {selectedProfileUser.role.name}
+                      </span>
+                    )}
+                    {selectedProfileUser.designation?.name && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                        {selectedProfileUser.designation.name}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="w-full mt-5 pt-3.5 border-t border-slate-800 text-xs text-slate-400 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span>Call Status:</span>
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Connected
+                      </span>
+                    </div>
+                    {remoteParticipants.some((p) => p.userId === selectedProfileUser.id && p.stream?.getVideoTracks().some((t) => t.readyState !== "ended")) && (
+                      <div className="flex items-center justify-between">
+                        <span>Video / Screen:</span>
+                        <span className="text-orange-400 font-semibold flex items-center gap-1">
+                          <Monitor className="w-3.5 h-3.5" /> Active Live Stream
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="w-full mt-5 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFocusedParticipantId(selectedProfileUser.id);
+                        setIsCallMaximized(true);
+                        setSelectedProfileUser(null);
+                      }}
+                      className="flex-1 py-2 px-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl transition shadow flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <Pin className="w-3.5 h-3.5" />
+                      <span>Pin to Stage</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProfileUser(null)}
+                      className="py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs rounded-xl transition cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

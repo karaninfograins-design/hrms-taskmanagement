@@ -78,7 +78,8 @@ export const ModelName = {
   CallSession: 'CallSession',
   CallParticipant: 'CallParticipant',
   Notification: 'Notification',
-  CompanyHoliday: 'CompanyHoliday'
+  CompanyHoliday: 'CompanyHoliday',
+  GroupDailySummary: 'GroupDailySummary'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -496,6 +497,19 @@ export const CompanyHolidayScalarFieldEnum = {
 export type CompanyHolidayScalarFieldEnum = (typeof CompanyHolidayScalarFieldEnum)[keyof typeof CompanyHolidayScalarFieldEnum]
 
 
+export const GroupDailySummaryScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  userId: 'userId',
+  date: 'date',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GroupDailySummaryScalarFieldEnum = (typeof GroupDailySummaryScalarFieldEnum)[keyof typeof GroupDailySummaryScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -711,4 +725,12 @@ export const CompanyHolidayOrderByRelevanceFieldEnum = {
 } as const
 
 export type CompanyHolidayOrderByRelevanceFieldEnum = (typeof CompanyHolidayOrderByRelevanceFieldEnum)[keyof typeof CompanyHolidayOrderByRelevanceFieldEnum]
+
+
+export const GroupDailySummaryOrderByRelevanceFieldEnum = {
+  date: 'date',
+  content: 'content'
+} as const
+
+export type GroupDailySummaryOrderByRelevanceFieldEnum = (typeof GroupDailySummaryOrderByRelevanceFieldEnum)[keyof typeof GroupDailySummaryOrderByRelevanceFieldEnum]
 

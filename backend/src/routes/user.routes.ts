@@ -1,7 +1,10 @@
 import { Router } from "express";
-import { updateProfile, changePassword } from "../controllers/user.controller.js";
+import { getProfile, updateProfile, changePassword } from "../controllers/user.controller.js";
 
 const router = Router();
+
+// GET /api/users/:id - Get profile details
+router.get("/:id", getProfile);
 
 // PUT /api/users/:id - Update profile details
 router.put("/:id", updateProfile);

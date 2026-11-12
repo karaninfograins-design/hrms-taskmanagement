@@ -13,6 +13,11 @@ import {
   deleteConversation,
   reactToMessage,
 } from "./messenger.controller.js";
+import {
+  getGroupDailySummaries,
+  upsertGroupDailySummary,
+  deleteGroupDailySummary,
+} from "./group-summary.controller.js";
 
 const router = Router();
 
@@ -22,6 +27,9 @@ router.post("/conversations/group", createGroupConversation);
 router.put("/conversations/group/:id", updateGroupConversation);
 router.delete("/conversations/:id", deleteConversation);
 router.get("/conversations/:conversationId/messages", getMessages);
+router.get("/conversations/:conversationId/daily-summaries", getGroupDailySummaries);
+router.post("/conversations/:conversationId/daily-summaries", upsertGroupDailySummary);
+router.delete("/conversations/:conversationId/daily-summaries/:id", deleteGroupDailySummary);
 router.post("/messages", sendMessage);
 router.post("/messages/:id/react", reactToMessage);
 router.post("/upload", uploadAttachment);

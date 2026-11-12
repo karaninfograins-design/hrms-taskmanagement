@@ -6,10 +6,7 @@ import { getSocket } from "@/lib/socket";
 
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(() => getSocket());
-  const [isConnected, setIsConnected] = useState<boolean>(() => {
-    const s = getSocket();
-    return s?.connected ?? false;
-  });
+  const [isConnected, setIsConnected] = useState<boolean>(() => socket?.connected ?? false);
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -17,6 +14,7 @@ export function useSocket() {
     if (!s) return;
 
     setSocket(s);
+    setIsConnected(s.connected);
 
     const onConnect = () => setIsConnected(true);
     const onDisconnect = () => setIsConnected(false);
@@ -27,10 +25,6 @@ export function useSocket() {
     s.on("connect", onConnect);
     s.on("disconnect", onDisconnect);
     s.on("presence:update", onPresence);
-
-    if (s.connected) {
-      setIsConnected(true);
-    }
 
     return () => {
       s.off("connect", onConnect);

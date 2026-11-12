@@ -3,6 +3,7 @@ import { prisma } from "../config/prisma.js";
 import { hashPassword } from "../utils/password.js";
 import { verifyToken } from "../utils/jwt.js";
 import { createNotificationsForUsers } from "./notification.controller.js";
+import { emitUserUpdated } from "../socket.js";
 
 // Types for Employee operations
 type EmployeeInput = {
@@ -422,6 +423,7 @@ export const updateEmployee = async (
       phoneNumber,
       roleId,
       designationId,
+      designation,
       status,
       employeeCode,
       dob,
@@ -479,26 +481,25 @@ export const updateEmployee = async (
 
     if (canManage) {
       if (roleId) userUpdateData.roleId = Number(roleId);
-      if (designationId !== undefined) userUpdateData.designationId = designationId ? Number(designationId) : null;
       if (status) userUpdateData.status = status;
     }
 
-    const employee = await prisma.user.update({
-      where: { id: requestedEmployeeId },
-      data: userUpdateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phoneNumber: true,
-        status: true,
-        roleId: true,
-        designationId: true,
-        updatedAt: true,
-        role: { select: { id: true, name: true } },
-        designation: { select: { id: true, name: true } },
-      },
-    });
+    if (canManage || isSelf) {
+      if (typeof designation === "string") {
+        const trimmed = designation.trim();
+        if (trimmed) {
+          let desigRecord = await prisma.designation.findFirst({ where: { name: trimmed } });
+          if (!desigRecord) {
+            desigRecord = await prisma.designation.create({ data: { name: trimmed } });
+          }
+          userUpdateData.designationId = desigRecord.id;
+        } else {
+          userUpdateData.designationId = null;
+        }
+      } else if (designationId !== undefined) {
+        userUpdateData.designationId = designationId ? Number(designationId) : null;
+      }
+    }
 
     // Upsert EmployeeProfile
     const profileFieldsProvided = [
@@ -541,6 +542,36 @@ export const updateEmployee = async (
         },
       });
     }
+
+    const employee = await prisma.user.update({
+      where: { id: requestedEmployeeId },
+      data: userUpdateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        status: true,
+        roleId: true,
+        designationId: true,
+        updatedAt: true,
+        role: { select: { id: true, name: true } },
+        designation: { select: { id: true, name: true } },
+        employeeProfile: { include: { department: true } },
+      },
+    });
+
+    emitUserUpdated({
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      phoneNumber: employee.phoneNumber ?? null,
+      role: employee.role?.name,
+      roleId: employee.roleId,
+      designation: employee.designation?.name ?? null,
+      designationId: employee.designationId ?? null,
+      employeeProfile: employee.employeeProfile,
+    });
 
     res.json({ message: "Employee updated", employee });
   } catch (error) {

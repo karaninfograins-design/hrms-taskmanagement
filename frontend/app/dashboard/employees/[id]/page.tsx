@@ -13,6 +13,7 @@ import {
   type Role,
   type Designation,
 } from "@/services/employee.service";
+import { getSocket } from "@/lib/socket";
 
 export default function ViewEmployeePage() {
   const router = useRouter();
@@ -93,6 +94,24 @@ export default function ViewEmployeePage() {
       fetchFilters();
     }
   }, [session?.token, employeeId]);
+
+  // Real-time listener for this employee's updates
+  useEffect(() => {
+    if (!session?.token || !employeeId) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleEmployeeUpdated = (updatedEmp: any) => {
+      if (updatedEmp.id === employeeId && !editMode) {
+        fetchEmployee();
+      }
+    };
+
+    socket.on("employee:updated", handleEmployeeUpdated);
+    return () => {
+      socket.off("employee:updated", handleEmployeeUpdated);
+    };
+  }, [session?.token, employeeId, editMode]);
 
   useEffect(() => {
     if (employee) {

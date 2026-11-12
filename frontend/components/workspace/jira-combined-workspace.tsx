@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/workspace/management-pages";
 import { useAuth } from "@/hooks/use-auth";
+import { showConfirmDialog } from "@/lib/swal";
 import { Search } from "lucide-react";
 import {
   addWorkItemComment,
@@ -346,12 +347,14 @@ export function ProjectSprintPage({ mode }: Props) {
     id: number,
     name: string,
   ) {
-    if (
-      !session?.token ||
-      !confirm(`Delete project "${name}"?`)
-    ) {
-      return;
-    }
+    if (!session?.token) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Project?",
+      text: `Are you sure you want to delete project "${name}"?`,
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
 
     try {
       await deleteProject(id, session.token);
@@ -366,12 +369,14 @@ export function ProjectSprintPage({ mode }: Props) {
     id: number,
     name: string,
   ) {
-    if (
-      !session?.token ||
-      !confirm(`Delete sprint "${name}"?`)
-    ) {
-      return;
-    }
+    if (!session?.token) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Sprint?",
+      text: `Are you sure you want to delete sprint "${name}"?`,
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
 
     try {
       await deleteSprint(id, session.token);
@@ -1341,7 +1346,13 @@ export function ProjectDetailsPage() {
 
   async function handleDeleteWorkItem(id: number) {
     if (!session?.token) return;
-    if (!window.confirm("Are you sure you want to delete this work item?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Work Item?",
+      text: "Are you sure you want to delete this work item?",
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
     try {
       await deleteWorkItem(id, session.token);
       if (editingWorkItem?.id === id) setEditingWorkItem(null);
@@ -2194,8 +2205,14 @@ export function ProjectDetailsPage() {
                       <button
                         type="button"
                         className="sprint-btn sprint-btn-danger"
-                        onClick={() => {
-                          if (confirm("Are you sure you want to cancel this sprint?")) {
+                        onClick={async () => {
+                          const confirmed = await showConfirmDialog({
+                            title: "Cancel Sprint?",
+                            text: "Are you sure you want to cancel this sprint?",
+                            confirmButtonText: "Yes, Cancel Sprint",
+                            cancelButtonText: "Keep Sprint",
+                          });
+                          if (confirmed) {
                             handleUpdateSprintStatus(selectedSprintForView.id, "CANCELLED");
                           }
                         }}
@@ -2729,7 +2746,13 @@ export function ProjectDetailsPage() {
                                   type="button"
                                   className="sprint-btn sprint-btn-danger"
                                   onClick={async () => {
-                                    if (confirm(`Are you sure you want to delete sprint "${sprint.name}"?`)) {
+                                    const confirmed = await showConfirmDialog({
+                                      title: "Delete Sprint?",
+                                      text: `Are you sure you want to delete sprint "${sprint.name}"?`,
+                                      confirmButtonText: "Yes, Delete",
+                                      cancelButtonText: "Cancel",
+                                    });
+                                    if (confirmed) {
                                       try {
                                         await deleteSprint(sprint.id, session.token);
                                         await loadProject();
@@ -3640,7 +3663,13 @@ export function SprintDetailsPage() {
 
   async function handleDeleteSprint() {
     if (!session?.token || !sprint) return;
-    if (!confirm(`Are you sure you want to delete sprint "${sprint.name}"?`)) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Sprint?",
+      text: `Are you sure you want to delete sprint "${sprint.name}"?`,
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
     try {
       await deleteSprint(sprint.id, session.token);
       router.push(`/dashboard/projects/${sprint.project.id}`);
@@ -3832,7 +3861,13 @@ export function SprintDetailsPage() {
 
   async function handleDeleteComment(commentId: number) {
     if (!session?.token) return;
-    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Comment?",
+      text: "Are you sure you want to delete this comment?",
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
 
     try {
       await deleteWorkItemComment(commentId, session.token);
@@ -6346,7 +6381,13 @@ export function EpicDetailsPage() {
 
   async function handleDeleteChild(id: number) {
     if (!session?.token) return;
-    if (!window.confirm("Are you sure you want to delete this work item?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Work Item?",
+      text: "Are you sure you want to delete this work item?",
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
     try {
       await deleteWorkItem(id, session.token);
       await loadEpicDetails();

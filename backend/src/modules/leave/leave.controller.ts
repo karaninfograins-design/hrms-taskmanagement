@@ -274,12 +274,16 @@ export const getLeaveBalances = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    const { userId } = verifyToken(token);
+    const { userId: authUserId } = verifyToken(token);
+    const isHR = await checkHRAdminPermission(authUserId);
+    const queryUserId = req.query.userId ? Number(req.query.userId) : null;
+    const userId = (isHR && queryUserId) ? queryUserId : authUserId;
+
     const year = new Date().getFullYear();
 
     const types = await prisma.leaveType.findMany({ where: { status: true } });
 
-    // Initialize missing balances for current user
+    // Initialize missing balances for target user
     for (const type of types) {
       const existing = await prisma.leaveBalance.findUnique({
         where: {
@@ -345,7 +349,20 @@ export const getLeaveRequests = async (req: Request, res: Response): Promise<voi
       prisma.leaveRequest.findMany({
         where,
         include: {
-          user: { select: { id: true, name: true, email: true } },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              designation: { select: { name: true } },
+              employeeProfile: {
+                select: {
+                  employeeCode: true,
+                  department: { select: { name: true } },
+                },
+              },
+            },
+          },
           leaveType: true,
           approvedBy: { select: { id: true, name: true } },
         },

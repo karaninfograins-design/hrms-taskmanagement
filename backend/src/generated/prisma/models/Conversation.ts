@@ -240,6 +240,7 @@ export type ConversationWhereInput = {
   participants?: Prisma.ConversationParticipantListRelationFilter
   messages?: Prisma.MessageListRelationFilter
   callSessions?: Prisma.CallSessionListRelationFilter
+  dailySummaries?: Prisma.GroupDailySummaryListRelationFilter
 }
 
 export type ConversationOrderByWithRelationInput = {
@@ -254,6 +255,7 @@ export type ConversationOrderByWithRelationInput = {
   participants?: Prisma.ConversationParticipantOrderByRelationAggregateInput
   messages?: Prisma.MessageOrderByRelationAggregateInput
   callSessions?: Prisma.CallSessionOrderByRelationAggregateInput
+  dailySummaries?: Prisma.GroupDailySummaryOrderByRelationAggregateInput
   _relevance?: Prisma.ConversationOrderByRelevanceInput
 }
 
@@ -272,6 +274,7 @@ export type ConversationWhereUniqueInput = Prisma.AtLeast<{
   participants?: Prisma.ConversationParticipantListRelationFilter
   messages?: Prisma.MessageListRelationFilter
   callSessions?: Prisma.CallSessionListRelationFilter
+  dailySummaries?: Prisma.GroupDailySummaryListRelationFilter
 }, "id">
 
 export type ConversationOrderByWithAggregationInput = {
@@ -312,6 +315,7 @@ export type ConversationCreateInput = {
   participants?: Prisma.ConversationParticipantCreateNestedManyWithoutConversationInput
   messages?: Prisma.MessageCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationUncheckedCreateInput = {
@@ -325,6 +329,7 @@ export type ConversationUncheckedCreateInput = {
   participants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutConversationInput
   messages?: Prisma.MessageUncheckedCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionUncheckedCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationUpdateInput = {
@@ -337,6 +342,7 @@ export type ConversationUpdateInput = {
   participants?: Prisma.ConversationParticipantUpdateManyWithoutConversationNestedInput
   messages?: Prisma.MessageUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationUncheckedUpdateInput = {
@@ -350,6 +356,7 @@ export type ConversationUncheckedUpdateInput = {
   participants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutConversationNestedInput
   messages?: Prisma.MessageUncheckedUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUncheckedUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationCreateManyInput = {
@@ -536,6 +543,20 @@ export type ConversationUpdateOneWithoutCallSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ConversationUpdateToOneWithWhereWithoutCallSessionsInput, Prisma.ConversationUpdateWithoutCallSessionsInput>, Prisma.ConversationUncheckedUpdateWithoutCallSessionsInput>
 }
 
+export type ConversationCreateNestedOneWithoutDailySummariesInput = {
+  create?: Prisma.XOR<Prisma.ConversationCreateWithoutDailySummariesInput, Prisma.ConversationUncheckedCreateWithoutDailySummariesInput>
+  connectOrCreate?: Prisma.ConversationCreateOrConnectWithoutDailySummariesInput
+  connect?: Prisma.ConversationWhereUniqueInput
+}
+
+export type ConversationUpdateOneRequiredWithoutDailySummariesNestedInput = {
+  create?: Prisma.XOR<Prisma.ConversationCreateWithoutDailySummariesInput, Prisma.ConversationUncheckedCreateWithoutDailySummariesInput>
+  connectOrCreate?: Prisma.ConversationCreateOrConnectWithoutDailySummariesInput
+  upsert?: Prisma.ConversationUpsertWithoutDailySummariesInput
+  connect?: Prisma.ConversationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConversationUpdateToOneWithWhereWithoutDailySummariesInput, Prisma.ConversationUpdateWithoutDailySummariesInput>, Prisma.ConversationUncheckedUpdateWithoutDailySummariesInput>
+}
+
 export type ConversationCreateWithoutCreatedByInput = {
   type?: $Enums.ConversationType
   name?: string | null
@@ -545,6 +566,7 @@ export type ConversationCreateWithoutCreatedByInput = {
   participants?: Prisma.ConversationParticipantCreateNestedManyWithoutConversationInput
   messages?: Prisma.MessageCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationUncheckedCreateWithoutCreatedByInput = {
@@ -557,6 +579,7 @@ export type ConversationUncheckedCreateWithoutCreatedByInput = {
   participants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutConversationInput
   messages?: Prisma.MessageUncheckedCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionUncheckedCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationCreateOrConnectWithoutCreatedByInput = {
@@ -607,6 +630,7 @@ export type ConversationCreateWithoutParticipantsInput = {
   createdBy?: Prisma.UserCreateNestedOneWithoutCreatedConversationsInput
   messages?: Prisma.MessageCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationUncheckedCreateWithoutParticipantsInput = {
@@ -619,6 +643,7 @@ export type ConversationUncheckedCreateWithoutParticipantsInput = {
   updatedAt?: Date | string
   messages?: Prisma.MessageUncheckedCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionUncheckedCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationCreateOrConnectWithoutParticipantsInput = {
@@ -646,6 +671,7 @@ export type ConversationUpdateWithoutParticipantsInput = {
   createdBy?: Prisma.UserUpdateOneWithoutCreatedConversationsNestedInput
   messages?: Prisma.MessageUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationUncheckedUpdateWithoutParticipantsInput = {
@@ -658,6 +684,7 @@ export type ConversationUncheckedUpdateWithoutParticipantsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   messages?: Prisma.MessageUncheckedUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUncheckedUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationCreateWithoutMessagesInput = {
@@ -669,6 +696,7 @@ export type ConversationCreateWithoutMessagesInput = {
   createdBy?: Prisma.UserCreateNestedOneWithoutCreatedConversationsInput
   participants?: Prisma.ConversationParticipantCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationUncheckedCreateWithoutMessagesInput = {
@@ -681,6 +709,7 @@ export type ConversationUncheckedCreateWithoutMessagesInput = {
   updatedAt?: Date | string
   participants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutConversationInput
   callSessions?: Prisma.CallSessionUncheckedCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationCreateOrConnectWithoutMessagesInput = {
@@ -708,6 +737,7 @@ export type ConversationUpdateWithoutMessagesInput = {
   createdBy?: Prisma.UserUpdateOneWithoutCreatedConversationsNestedInput
   participants?: Prisma.ConversationParticipantUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationUncheckedUpdateWithoutMessagesInput = {
@@ -720,6 +750,7 @@ export type ConversationUncheckedUpdateWithoutMessagesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   participants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUncheckedUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationCreateWithoutCallSessionsInput = {
@@ -731,6 +762,7 @@ export type ConversationCreateWithoutCallSessionsInput = {
   createdBy?: Prisma.UserCreateNestedOneWithoutCreatedConversationsInput
   participants?: Prisma.ConversationParticipantCreateNestedManyWithoutConversationInput
   messages?: Prisma.MessageCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationUncheckedCreateWithoutCallSessionsInput = {
@@ -743,6 +775,7 @@ export type ConversationUncheckedCreateWithoutCallSessionsInput = {
   updatedAt?: Date | string
   participants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutConversationInput
   messages?: Prisma.MessageUncheckedCreateNestedManyWithoutConversationInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutConversationInput
 }
 
 export type ConversationCreateOrConnectWithoutCallSessionsInput = {
@@ -770,6 +803,7 @@ export type ConversationUpdateWithoutCallSessionsInput = {
   createdBy?: Prisma.UserUpdateOneWithoutCreatedConversationsNestedInput
   participants?: Prisma.ConversationParticipantUpdateManyWithoutConversationNestedInput
   messages?: Prisma.MessageUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationUncheckedUpdateWithoutCallSessionsInput = {
@@ -782,6 +816,73 @@ export type ConversationUncheckedUpdateWithoutCallSessionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   participants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutConversationNestedInput
   messages?: Prisma.MessageUncheckedUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutConversationNestedInput
+}
+
+export type ConversationCreateWithoutDailySummariesInput = {
+  type?: $Enums.ConversationType
+  name?: string | null
+  avatar?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  createdBy?: Prisma.UserCreateNestedOneWithoutCreatedConversationsInput
+  participants?: Prisma.ConversationParticipantCreateNestedManyWithoutConversationInput
+  messages?: Prisma.MessageCreateNestedManyWithoutConversationInput
+  callSessions?: Prisma.CallSessionCreateNestedManyWithoutConversationInput
+}
+
+export type ConversationUncheckedCreateWithoutDailySummariesInput = {
+  id?: number
+  type?: $Enums.ConversationType
+  name?: string | null
+  avatar?: string | null
+  createdById?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  participants?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutConversationInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutConversationInput
+  callSessions?: Prisma.CallSessionUncheckedCreateNestedManyWithoutConversationInput
+}
+
+export type ConversationCreateOrConnectWithoutDailySummariesInput = {
+  where: Prisma.ConversationWhereUniqueInput
+  create: Prisma.XOR<Prisma.ConversationCreateWithoutDailySummariesInput, Prisma.ConversationUncheckedCreateWithoutDailySummariesInput>
+}
+
+export type ConversationUpsertWithoutDailySummariesInput = {
+  update: Prisma.XOR<Prisma.ConversationUpdateWithoutDailySummariesInput, Prisma.ConversationUncheckedUpdateWithoutDailySummariesInput>
+  create: Prisma.XOR<Prisma.ConversationCreateWithoutDailySummariesInput, Prisma.ConversationUncheckedCreateWithoutDailySummariesInput>
+  where?: Prisma.ConversationWhereInput
+}
+
+export type ConversationUpdateToOneWithWhereWithoutDailySummariesInput = {
+  where?: Prisma.ConversationWhereInput
+  data: Prisma.XOR<Prisma.ConversationUpdateWithoutDailySummariesInput, Prisma.ConversationUncheckedUpdateWithoutDailySummariesInput>
+}
+
+export type ConversationUpdateWithoutDailySummariesInput = {
+  type?: Prisma.EnumConversationTypeFieldUpdateOperationsInput | $Enums.ConversationType
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdBy?: Prisma.UserUpdateOneWithoutCreatedConversationsNestedInput
+  participants?: Prisma.ConversationParticipantUpdateManyWithoutConversationNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutConversationNestedInput
+  callSessions?: Prisma.CallSessionUpdateManyWithoutConversationNestedInput
+}
+
+export type ConversationUncheckedUpdateWithoutDailySummariesInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.EnumConversationTypeFieldUpdateOperationsInput | $Enums.ConversationType
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdById?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  participants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutConversationNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutConversationNestedInput
+  callSessions?: Prisma.CallSessionUncheckedUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationCreateManyCreatedByInput = {
@@ -802,6 +903,7 @@ export type ConversationUpdateWithoutCreatedByInput = {
   participants?: Prisma.ConversationParticipantUpdateManyWithoutConversationNestedInput
   messages?: Prisma.MessageUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationUncheckedUpdateWithoutCreatedByInput = {
@@ -814,6 +916,7 @@ export type ConversationUncheckedUpdateWithoutCreatedByInput = {
   participants?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutConversationNestedInput
   messages?: Prisma.MessageUncheckedUpdateManyWithoutConversationNestedInput
   callSessions?: Prisma.CallSessionUncheckedUpdateManyWithoutConversationNestedInput
+  dailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutConversationNestedInput
 }
 
 export type ConversationUncheckedUpdateManyWithoutCreatedByInput = {
@@ -834,12 +937,14 @@ export type ConversationCountOutputType = {
   participants: number
   messages: number
   callSessions: number
+  dailySummaries: number
 }
 
 export type ConversationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   participants?: boolean | ConversationCountOutputTypeCountParticipantsArgs
   messages?: boolean | ConversationCountOutputTypeCountMessagesArgs
   callSessions?: boolean | ConversationCountOutputTypeCountCallSessionsArgs
+  dailySummaries?: boolean | ConversationCountOutputTypeCountDailySummariesArgs
 }
 
 /**
@@ -873,6 +978,13 @@ export type ConversationCountOutputTypeCountCallSessionsArgs<ExtArgs extends run
   where?: Prisma.CallSessionWhereInput
 }
 
+/**
+ * ConversationCountOutputType without action
+ */
+export type ConversationCountOutputTypeCountDailySummariesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupDailySummaryWhereInput
+}
+
 
 export type ConversationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -886,6 +998,7 @@ export type ConversationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   participants?: boolean | Prisma.Conversation$participantsArgs<ExtArgs>
   messages?: boolean | Prisma.Conversation$messagesArgs<ExtArgs>
   callSessions?: boolean | Prisma.Conversation$callSessionsArgs<ExtArgs>
+  dailySummaries?: boolean | Prisma.Conversation$dailySummariesArgs<ExtArgs>
   _count?: boolean | Prisma.ConversationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["conversation"]>
 
@@ -907,6 +1020,7 @@ export type ConversationInclude<ExtArgs extends runtime.Types.Extensions.Interna
   participants?: boolean | Prisma.Conversation$participantsArgs<ExtArgs>
   messages?: boolean | Prisma.Conversation$messagesArgs<ExtArgs>
   callSessions?: boolean | Prisma.Conversation$callSessionsArgs<ExtArgs>
+  dailySummaries?: boolean | Prisma.Conversation$dailySummariesArgs<ExtArgs>
   _count?: boolean | Prisma.ConversationCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -917,6 +1031,7 @@ export type $ConversationPayload<ExtArgs extends runtime.Types.Extensions.Intern
     participants: Prisma.$ConversationParticipantPayload<ExtArgs>[]
     messages: Prisma.$MessagePayload<ExtArgs>[]
     callSessions: Prisma.$CallSessionPayload<ExtArgs>[]
+    dailySummaries: Prisma.$GroupDailySummaryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1270,6 +1385,7 @@ export interface Prisma__ConversationClient<T, Null = never, ExtArgs extends run
   participants<T extends Prisma.Conversation$participantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Conversation$participantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   messages<T extends Prisma.Conversation$messagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Conversation$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   callSessions<T extends Prisma.Conversation$callSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Conversation$callSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CallSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  dailySummaries<T extends Prisma.Conversation$dailySummariesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Conversation$dailySummariesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupDailySummaryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1742,6 +1858,30 @@ export type Conversation$callSessionsArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.CallSessionScalarFieldEnum | Prisma.CallSessionScalarFieldEnum[]
+}
+
+/**
+ * Conversation.dailySummaries
+ */
+export type Conversation$dailySummariesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupDailySummary
+   */
+  select?: Prisma.GroupDailySummarySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupDailySummary
+   */
+  omit?: Prisma.GroupDailySummaryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupDailySummaryInclude<ExtArgs> | null
+  where?: Prisma.GroupDailySummaryWhereInput
+  orderBy?: Prisma.GroupDailySummaryOrderByWithRelationInput | Prisma.GroupDailySummaryOrderByWithRelationInput[]
+  cursor?: Prisma.GroupDailySummaryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupDailySummaryScalarFieldEnum | Prisma.GroupDailySummaryScalarFieldEnum[]
 }
 
 /**

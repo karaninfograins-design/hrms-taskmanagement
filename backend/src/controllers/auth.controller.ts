@@ -38,6 +38,7 @@ export const login = async (
           },
         },
         designation: true,
+        employeeProfile: { include: { department: true } },
       },
     });
 
@@ -79,6 +80,7 @@ export const login = async (
         phoneNumber: user.phoneNumber ?? null,
         role: user.role.name,
         designation: user.designation?.name ?? null,
+        employeeProfile: user.employeeProfile ?? null,
         permissions: user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name),
       },
     });
@@ -119,6 +121,7 @@ export const getMe = async (
           },
         },
         designation: true,
+        employeeProfile: { include: { department: true } },
       },
     });
 
@@ -135,6 +138,7 @@ export const getMe = async (
         phoneNumber: user.phoneNumber ?? null,
         role: user.role.name,
         designation: user.designation?.name ?? null,
+        employeeProfile: user.employeeProfile ?? null,
         permissions: user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name),
       },
     });
@@ -201,7 +205,7 @@ export const forgotPassword = async (
     });
 
     res.status(200).json({
-      message: `Password reset link has been dispatched to ${user.email}. Please check your Thunderbird / email inbox.`,
+      message: `Password reset link has been dispatched to ${user.email}. Please check your Thunderbird mail inbox.`,
       email: user.email,
       fallback: mailResult.fallback,
     });

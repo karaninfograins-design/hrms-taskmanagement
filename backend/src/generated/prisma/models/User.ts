@@ -290,6 +290,7 @@ export type UserWhereInput = {
   callParticipants?: Prisma.CallParticipantListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   createdHolidays?: Prisma.CompanyHolidayListRelationFilter
+  groupDailySummaries?: Prisma.GroupDailySummaryListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -329,6 +330,7 @@ export type UserOrderByWithRelationInput = {
   callParticipants?: Prisma.CallParticipantOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
   createdHolidays?: Prisma.CompanyHolidayOrderByRelationAggregateInput
+  groupDailySummaries?: Prisma.GroupDailySummaryOrderByRelationAggregateInput
   _relevance?: Prisma.UserOrderByRelevanceInput
 }
 
@@ -372,6 +374,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   callParticipants?: Prisma.CallParticipantListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   createdHolidays?: Prisma.CompanyHolidayListRelationFilter
+  groupDailySummaries?: Prisma.GroupDailySummaryListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -442,6 +445,7 @@ export type UserCreateInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -479,6 +483,7 @@ export type UserUncheckedCreateInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -515,6 +520,7 @@ export type UserUpdateInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -552,6 +558,7 @@ export type UserUncheckedUpdateInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -1109,6 +1116,20 @@ export type UserUpdateOneRequiredWithoutCreatedHolidaysNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCreatedHolidaysInput, Prisma.UserUpdateWithoutCreatedHolidaysInput>, Prisma.UserUncheckedUpdateWithoutCreatedHolidaysInput>
 }
 
+export type UserCreateNestedOneWithoutGroupDailySummariesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupDailySummariesInput, Prisma.UserUncheckedCreateWithoutGroupDailySummariesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupDailySummariesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutGroupDailySummariesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupDailySummariesInput, Prisma.UserUncheckedCreateWithoutGroupDailySummariesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupDailySummariesInput
+  upsert?: Prisma.UserUpsertWithoutGroupDailySummariesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutGroupDailySummariesInput, Prisma.UserUpdateWithoutGroupDailySummariesInput>, Prisma.UserUncheckedUpdateWithoutGroupDailySummariesInput>
+}
+
 export type UserCreateWithoutRoleInput = {
   name: string
   email: string
@@ -1142,6 +1163,7 @@ export type UserCreateWithoutRoleInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutRoleInput = {
@@ -1178,6 +1200,7 @@ export type UserUncheckedCreateWithoutRoleInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutRoleInput = {
@@ -1255,6 +1278,7 @@ export type UserCreateWithoutDesignationInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDesignationInput = {
@@ -1291,6 +1315,7 @@ export type UserUncheckedCreateWithoutDesignationInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDesignationInput = {
@@ -1352,6 +1377,7 @@ export type UserCreateWithoutEmployeeProfileInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutEmployeeProfileInput = {
@@ -1388,6 +1414,7 @@ export type UserUncheckedCreateWithoutEmployeeProfileInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutEmployeeProfileInput = {
@@ -1439,6 +1466,7 @@ export type UserUpdateWithoutEmployeeProfileInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmployeeProfileInput = {
@@ -1475,6 +1503,7 @@ export type UserUncheckedUpdateWithoutEmployeeProfileInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAttendancesInput = {
@@ -1510,6 +1539,7 @@ export type UserCreateWithoutAttendancesInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAttendancesInput = {
@@ -1546,6 +1576,7 @@ export type UserUncheckedCreateWithoutAttendancesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAttendancesInput = {
@@ -1597,6 +1628,7 @@ export type UserUpdateWithoutAttendancesInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAttendancesInput = {
@@ -1633,6 +1665,7 @@ export type UserUncheckedUpdateWithoutAttendancesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutLeaveBalancesInput = {
@@ -1668,6 +1701,7 @@ export type UserCreateWithoutLeaveBalancesInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutLeaveBalancesInput = {
@@ -1704,6 +1738,7 @@ export type UserUncheckedCreateWithoutLeaveBalancesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutLeaveBalancesInput = {
@@ -1755,6 +1790,7 @@ export type UserUpdateWithoutLeaveBalancesInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLeaveBalancesInput = {
@@ -1791,6 +1827,7 @@ export type UserUncheckedUpdateWithoutLeaveBalancesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutRequestedLeavesInput = {
@@ -1826,6 +1863,7 @@ export type UserCreateWithoutRequestedLeavesInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutRequestedLeavesInput = {
@@ -1862,6 +1900,7 @@ export type UserUncheckedCreateWithoutRequestedLeavesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutRequestedLeavesInput = {
@@ -1902,6 +1941,7 @@ export type UserCreateWithoutApprovedLeavesInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutApprovedLeavesInput = {
@@ -1938,6 +1978,7 @@ export type UserUncheckedCreateWithoutApprovedLeavesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutApprovedLeavesInput = {
@@ -1989,6 +2030,7 @@ export type UserUpdateWithoutRequestedLeavesInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRequestedLeavesInput = {
@@ -2025,6 +2067,7 @@ export type UserUncheckedUpdateWithoutRequestedLeavesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutApprovedLeavesInput = {
@@ -2071,6 +2114,7 @@ export type UserUpdateWithoutApprovedLeavesInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutApprovedLeavesInput = {
@@ -2107,6 +2151,7 @@ export type UserUncheckedUpdateWithoutApprovedLeavesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOrganizedMeetingsInput = {
@@ -2142,6 +2187,7 @@ export type UserCreateWithoutOrganizedMeetingsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOrganizedMeetingsInput = {
@@ -2178,6 +2224,7 @@ export type UserUncheckedCreateWithoutOrganizedMeetingsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOrganizedMeetingsInput = {
@@ -2229,6 +2276,7 @@ export type UserUpdateWithoutOrganizedMeetingsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrganizedMeetingsInput = {
@@ -2265,6 +2313,7 @@ export type UserUncheckedUpdateWithoutOrganizedMeetingsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutMeetingParticipantsInput = {
@@ -2300,6 +2349,7 @@ export type UserCreateWithoutMeetingParticipantsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMeetingParticipantsInput = {
@@ -2336,6 +2386,7 @@ export type UserUncheckedCreateWithoutMeetingParticipantsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMeetingParticipantsInput = {
@@ -2387,6 +2438,7 @@ export type UserUpdateWithoutMeetingParticipantsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMeetingParticipantsInput = {
@@ -2423,6 +2475,7 @@ export type UserUncheckedUpdateWithoutMeetingParticipantsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCreatedProjectsInput = {
@@ -2458,6 +2511,7 @@ export type UserCreateWithoutCreatedProjectsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCreatedProjectsInput = {
@@ -2494,6 +2548,7 @@ export type UserUncheckedCreateWithoutCreatedProjectsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCreatedProjectsInput = {
@@ -2545,6 +2600,7 @@ export type UserUpdateWithoutCreatedProjectsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
@@ -2581,6 +2637,7 @@ export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutProjectMembersInput = {
@@ -2616,6 +2673,7 @@ export type UserCreateWithoutProjectMembersInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutProjectMembersInput = {
@@ -2652,6 +2710,7 @@ export type UserUncheckedCreateWithoutProjectMembersInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutProjectMembersInput = {
@@ -2703,6 +2762,7 @@ export type UserUpdateWithoutProjectMembersInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutProjectMembersInput = {
@@ -2739,6 +2799,7 @@ export type UserUncheckedUpdateWithoutProjectMembersInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCreatedSprintsInput = {
@@ -2774,6 +2835,7 @@ export type UserCreateWithoutCreatedSprintsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCreatedSprintsInput = {
@@ -2810,6 +2872,7 @@ export type UserUncheckedCreateWithoutCreatedSprintsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCreatedSprintsInput = {
@@ -2861,6 +2924,7 @@ export type UserUpdateWithoutCreatedSprintsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedSprintsInput = {
@@ -2897,6 +2961,7 @@ export type UserUncheckedUpdateWithoutCreatedSprintsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAssignedWorkItemsInput = {
@@ -2932,6 +2997,7 @@ export type UserCreateWithoutAssignedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAssignedWorkItemsInput = {
@@ -2968,6 +3034,7 @@ export type UserUncheckedCreateWithoutAssignedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAssignedWorkItemsInput = {
@@ -3008,6 +3075,7 @@ export type UserCreateWithoutReportedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReportedWorkItemsInput = {
@@ -3044,6 +3112,7 @@ export type UserUncheckedCreateWithoutReportedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReportedWorkItemsInput = {
@@ -3084,6 +3153,7 @@ export type UserCreateWithoutCreatedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCreatedWorkItemsInput = {
@@ -3120,6 +3190,7 @@ export type UserUncheckedCreateWithoutCreatedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCreatedWorkItemsInput = {
@@ -3171,6 +3242,7 @@ export type UserUpdateWithoutAssignedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedWorkItemsInput = {
@@ -3207,6 +3279,7 @@ export type UserUncheckedUpdateWithoutAssignedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutReportedWorkItemsInput = {
@@ -3253,6 +3326,7 @@ export type UserUpdateWithoutReportedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReportedWorkItemsInput = {
@@ -3289,6 +3363,7 @@ export type UserUncheckedUpdateWithoutReportedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutCreatedWorkItemsInput = {
@@ -3335,6 +3410,7 @@ export type UserUpdateWithoutCreatedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedWorkItemsInput = {
@@ -3371,6 +3447,7 @@ export type UserUncheckedUpdateWithoutCreatedWorkItemsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAssignedWorkItemLinksInput = {
@@ -3406,6 +3483,7 @@ export type UserCreateWithoutAssignedWorkItemLinksInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAssignedWorkItemLinksInput = {
@@ -3442,6 +3520,7 @@ export type UserUncheckedCreateWithoutAssignedWorkItemLinksInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAssignedWorkItemLinksInput = {
@@ -3493,6 +3572,7 @@ export type UserUpdateWithoutAssignedWorkItemLinksInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedWorkItemLinksInput = {
@@ -3529,6 +3609,7 @@ export type UserUncheckedUpdateWithoutAssignedWorkItemLinksInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutWorkItemActivitiesInput = {
@@ -3564,6 +3645,7 @@ export type UserCreateWithoutWorkItemActivitiesInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutWorkItemActivitiesInput = {
@@ -3600,6 +3682,7 @@ export type UserUncheckedCreateWithoutWorkItemActivitiesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutWorkItemActivitiesInput = {
@@ -3651,6 +3734,7 @@ export type UserUpdateWithoutWorkItemActivitiesInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWorkItemActivitiesInput = {
@@ -3687,6 +3771,7 @@ export type UserUncheckedUpdateWithoutWorkItemActivitiesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -3722,6 +3807,7 @@ export type UserCreateWithoutCommentsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -3758,6 +3844,7 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
@@ -3798,6 +3885,7 @@ export type UserCreateWithoutDeletedCommentsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDeletedCommentsInput = {
@@ -3834,6 +3922,7 @@ export type UserUncheckedCreateWithoutDeletedCommentsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDeletedCommentsInput = {
@@ -3885,6 +3974,7 @@ export type UserUpdateWithoutCommentsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -3921,6 +4011,7 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutDeletedCommentsInput = {
@@ -3967,6 +4058,7 @@ export type UserUpdateWithoutDeletedCommentsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDeletedCommentsInput = {
@@ -4003,6 +4095,7 @@ export type UserUncheckedUpdateWithoutDeletedCommentsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCreatedConversationsInput = {
@@ -4038,6 +4131,7 @@ export type UserCreateWithoutCreatedConversationsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCreatedConversationsInput = {
@@ -4074,6 +4168,7 @@ export type UserUncheckedCreateWithoutCreatedConversationsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCreatedConversationsInput = {
@@ -4125,6 +4220,7 @@ export type UserUpdateWithoutCreatedConversationsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedConversationsInput = {
@@ -4161,6 +4257,7 @@ export type UserUncheckedUpdateWithoutCreatedConversationsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutConversationMembershipsInput = {
@@ -4196,6 +4293,7 @@ export type UserCreateWithoutConversationMembershipsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutConversationMembershipsInput = {
@@ -4232,6 +4330,7 @@ export type UserUncheckedCreateWithoutConversationMembershipsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutConversationMembershipsInput = {
@@ -4283,6 +4382,7 @@ export type UserUpdateWithoutConversationMembershipsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutConversationMembershipsInput = {
@@ -4319,6 +4419,7 @@ export type UserUncheckedUpdateWithoutConversationMembershipsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutSentMessagesInput = {
@@ -4354,6 +4455,7 @@ export type UserCreateWithoutSentMessagesInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSentMessagesInput = {
@@ -4390,6 +4492,7 @@ export type UserUncheckedCreateWithoutSentMessagesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSentMessagesInput = {
@@ -4441,6 +4544,7 @@ export type UserUpdateWithoutSentMessagesInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSentMessagesInput = {
@@ -4477,6 +4581,7 @@ export type UserUncheckedUpdateWithoutSentMessagesInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutHostedCallsInput = {
@@ -4512,6 +4617,7 @@ export type UserCreateWithoutHostedCallsInput = {
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutHostedCallsInput = {
@@ -4548,6 +4654,7 @@ export type UserUncheckedCreateWithoutHostedCallsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutHostedCallsInput = {
@@ -4599,6 +4706,7 @@ export type UserUpdateWithoutHostedCallsInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutHostedCallsInput = {
@@ -4635,6 +4743,7 @@ export type UserUncheckedUpdateWithoutHostedCallsInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCallParticipantsInput = {
@@ -4670,6 +4779,7 @@ export type UserCreateWithoutCallParticipantsInput = {
   hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCallParticipantsInput = {
@@ -4706,6 +4816,7 @@ export type UserUncheckedCreateWithoutCallParticipantsInput = {
   hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCallParticipantsInput = {
@@ -4757,6 +4868,7 @@ export type UserUpdateWithoutCallParticipantsInput = {
   hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCallParticipantsInput = {
@@ -4793,6 +4905,7 @@ export type UserUncheckedUpdateWithoutCallParticipantsInput = {
   hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutNotificationsInput = {
@@ -4828,6 +4941,7 @@ export type UserCreateWithoutNotificationsInput = {
   hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -4864,6 +4978,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -4915,6 +5030,7 @@ export type UserUpdateWithoutNotificationsInput = {
   hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -4951,6 +5067,7 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCreatedHolidaysInput = {
@@ -4986,6 +5103,7 @@ export type UserCreateWithoutCreatedHolidaysInput = {
   hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
   callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  groupDailySummaries?: Prisma.GroupDailySummaryCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCreatedHolidaysInput = {
@@ -5022,6 +5140,7 @@ export type UserUncheckedCreateWithoutCreatedHolidaysInput = {
   hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
   callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCreatedHolidaysInput = {
@@ -5073,6 +5192,7 @@ export type UserUpdateWithoutCreatedHolidaysInput = {
   hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedHolidaysInput = {
@@ -5109,6 +5229,169 @@ export type UserUncheckedUpdateWithoutCreatedHolidaysInput = {
   hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutGroupDailySummariesInput = {
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.RoleCreateNestedOneWithoutUsersInput
+  designation?: Prisma.DesignationCreateNestedOneWithoutUsersInput
+  employeeProfile?: Prisma.EmployeeProfileCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutGroupDailySummariesInput = {
+  id?: number
+  name: string
+  email: string
+  passwordHash: string
+  phoneNumber?: string | null
+  status?: $Enums.UserStatus
+  roleId: number
+  designationId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutAssigneeInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedCreateNestedManyWithoutUserInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutReporterInput
+  createdWorkItems?: Prisma.WorkItemUncheckedCreateNestedManyWithoutCreatedByInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  deletedComments?: Prisma.CommentUncheckedCreateNestedManyWithoutDeletedByInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatedByInput
+  projectMembers?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  createdSprints?: Prisma.SprintUncheckedCreateNestedManyWithoutCreatedByInput
+  attendances?: Prisma.AttendanceUncheckedCreateNestedManyWithoutUserInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedCreateNestedManyWithoutUserInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutUserInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  organizedMeetings?: Prisma.MeetingUncheckedCreateNestedManyWithoutOrganizerInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedCreateNestedManyWithoutUserInput
+  createdConversations?: Prisma.ConversationUncheckedCreateNestedManyWithoutCreatedByInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedCreateNestedManyWithoutUserInput
+  sentMessages?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  hostedCalls?: Prisma.CallSessionUncheckedCreateNestedManyWithoutHostInput
+  callParticipants?: Prisma.CallParticipantUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutGroupDailySummariesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupDailySummariesInput, Prisma.UserUncheckedCreateWithoutGroupDailySummariesInput>
+}
+
+export type UserUpsertWithoutGroupDailySummariesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutGroupDailySummariesInput, Prisma.UserUncheckedUpdateWithoutGroupDailySummariesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupDailySummariesInput, Prisma.UserUncheckedCreateWithoutGroupDailySummariesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutGroupDailySummariesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutGroupDailySummariesInput, Prisma.UserUncheckedUpdateWithoutGroupDailySummariesInput>
+}
+
+export type UserUpdateWithoutGroupDailySummariesInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.RoleUpdateOneRequiredWithoutUsersNestedInput
+  designation?: Prisma.DesignationUpdateOneWithoutUsersNestedInput
+  employeeProfile?: Prisma.EmployeeProfileUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutGroupDailySummariesInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  phoneNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  roleId?: Prisma.IntFieldUpdateOperationsInput | number
+  designationId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  employeeProfile?: Prisma.EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
+  assignedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutAssigneeNestedInput
+  assignedWorkItemLinks?: Prisma.WorkItemAssigneeUncheckedUpdateManyWithoutUserNestedInput
+  reportedWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutReporterNestedInput
+  createdWorkItems?: Prisma.WorkItemUncheckedUpdateManyWithoutCreatedByNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  deletedComments?: Prisma.CommentUncheckedUpdateManyWithoutDeletedByNestedInput
+  workItemActivities?: Prisma.WorkItemActivityUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatedByNestedInput
+  projectMembers?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  createdSprints?: Prisma.SprintUncheckedUpdateManyWithoutCreatedByNestedInput
+  attendances?: Prisma.AttendanceUncheckedUpdateManyWithoutUserNestedInput
+  leaveBalances?: Prisma.LeaveBalanceUncheckedUpdateManyWithoutUserNestedInput
+  requestedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutUserNestedInput
+  approvedLeaves?: Prisma.LeaveRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  organizedMeetings?: Prisma.MeetingUncheckedUpdateManyWithoutOrganizerNestedInput
+  meetingParticipants?: Prisma.MeetingParticipantUncheckedUpdateManyWithoutUserNestedInput
+  createdConversations?: Prisma.ConversationUncheckedUpdateManyWithoutCreatedByNestedInput
+  conversationMemberships?: Prisma.ConversationParticipantUncheckedUpdateManyWithoutUserNestedInput
+  sentMessages?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  hostedCalls?: Prisma.CallSessionUncheckedUpdateManyWithoutHostNestedInput
+  callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateManyRoleInput = {
@@ -5156,6 +5439,7 @@ export type UserUpdateWithoutRoleInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRoleInput = {
@@ -5192,6 +5476,7 @@ export type UserUncheckedUpdateWithoutRoleInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateManyWithoutRoleInput = {
@@ -5251,6 +5536,7 @@ export type UserUpdateWithoutDesignationInput = {
   callParticipants?: Prisma.CallParticipantUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDesignationInput = {
@@ -5287,6 +5573,7 @@ export type UserUncheckedUpdateWithoutDesignationInput = {
   callParticipants?: Prisma.CallParticipantUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   createdHolidays?: Prisma.CompanyHolidayUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupDailySummaries?: Prisma.GroupDailySummaryUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateManyWithoutDesignationInput = {
@@ -5330,6 +5617,7 @@ export type UserCountOutputType = {
   callParticipants: number
   notifications: number
   createdHolidays: number
+  groupDailySummaries: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5356,6 +5644,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   callParticipants?: boolean | UserCountOutputTypeCountCallParticipantsArgs
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
   createdHolidays?: boolean | UserCountOutputTypeCountCreatedHolidaysArgs
+  groupDailySummaries?: boolean | UserCountOutputTypeCountGroupDailySummariesArgs
 }
 
 /**
@@ -5529,6 +5818,13 @@ export type UserCountOutputTypeCountCreatedHolidaysArgs<ExtArgs extends runtime.
   where?: Prisma.CompanyHolidayWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountGroupDailySummariesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupDailySummaryWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -5567,6 +5863,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   callParticipants?: boolean | Prisma.User$callParticipantsArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   createdHolidays?: boolean | Prisma.User$createdHolidaysArgs<ExtArgs>
+  groupDailySummaries?: boolean | Prisma.User$groupDailySummariesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -5613,6 +5910,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   callParticipants?: boolean | Prisma.User$callParticipantsArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   createdHolidays?: boolean | Prisma.User$createdHolidaysArgs<ExtArgs>
+  groupDailySummaries?: boolean | Prisma.User$groupDailySummariesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -5645,6 +5943,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     callParticipants: Prisma.$CallParticipantPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
     createdHolidays: Prisma.$CompanyHolidayPayload<ExtArgs>[]
+    groupDailySummaries: Prisma.$GroupDailySummaryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -6023,6 +6322,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   callParticipants<T extends Prisma.User$callParticipantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$callParticipantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CallParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   createdHolidays<T extends Prisma.User$createdHolidaysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdHolidaysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyHolidayPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  groupDailySummaries<T extends Prisma.User$groupDailySummariesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupDailySummariesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupDailySummaryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -6997,6 +7297,30 @@ export type User$createdHolidaysArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.CompanyHolidayScalarFieldEnum | Prisma.CompanyHolidayScalarFieldEnum[]
+}
+
+/**
+ * User.groupDailySummaries
+ */
+export type User$groupDailySummariesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupDailySummary
+   */
+  select?: Prisma.GroupDailySummarySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupDailySummary
+   */
+  omit?: Prisma.GroupDailySummaryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupDailySummaryInclude<ExtArgs> | null
+  where?: Prisma.GroupDailySummaryWhereInput
+  orderBy?: Prisma.GroupDailySummaryOrderByWithRelationInput | Prisma.GroupDailySummaryOrderByWithRelationInput[]
+  cursor?: Prisma.GroupDailySummaryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupDailySummaryScalarFieldEnum | Prisma.GroupDailySummaryScalarFieldEnum[]
 }
 
 /**

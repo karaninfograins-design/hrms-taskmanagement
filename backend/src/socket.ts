@@ -42,6 +42,10 @@ export function setupSocketServer(httpServer: HttpServer) {
       origin: "*",
       methods: ["GET", "POST", "PUT", "DELETE"],
     },
+    transports: ["websocket", "polling"],
+    allowUpgrades: true,
+    pingTimeout: 30000,
+    pingInterval: 25000,
   });
   ioInstance = io;
 
@@ -52,13 +56,15 @@ export function setupSocketServer(httpServer: HttpServer) {
         socket.handshake.headers?.authorization?.replace("Bearer ", "");
 
       if (!token) {
+        console.warn(`[Socket.IO] Auth rejected: No token provided (${socket.id})`);
         return next(new Error("Authentication token required"));
       }
 
       const decoded = verifyToken(token);
       socket.userId = decoded.userId;
       next();
-    } catch (err) {
+    } catch (err: any) {
+      console.warn(`[Socket.IO] Auth rejected: ${err?.message || "Invalid token"} (${socket.id})`);
       next(new Error("Invalid authentication token"));
     }
   });
@@ -66,6 +72,10 @@ export function setupSocketServer(httpServer: HttpServer) {
   io.on("connection", async (socket: AuthenticatedSocket) => {
     const userId = socket.userId;
     if (!userId) return;
+
+    socket.on("error", (err) => {
+      console.error(`[Socket.IO] Socket error (${socket.id}):`, err);
+    });
 
     // Track online user sockets
     if (!onlineUsers.has(userId)) {
@@ -120,8 +130,7 @@ export function setupSocketServer(httpServer: HttpServer) {
     // Handle Real-time Message Reactions
     socket.on("message:react", async (data: { messageId: number; conversationId: number; emoji: string }) => {
       try {
-        const allowedEmojis = ["👍", "❤️", "😂", "🎉", "🙏"];
-        if (!data?.emoji || !allowedEmojis.includes(data.emoji)) return;
+        if (!data?.emoji || typeof data.emoji !== "string" || data.emoji.trim().length === 0 || data.emoji.length > 32) return;
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: { id: true, name: true },
@@ -268,6 +277,7 @@ export function setupSocketServer(httpServer: HttpServer) {
               conversationId: data.conversationId,
               conversationName,
               isGroupCall,
+              meetingId: (data as any).meetingId,
             });
           }
           acknowledge?.({ callSessionId: session.id });
@@ -519,6 +529,35 @@ export function setupSocketServer(httpServer: HttpServer) {
               where: { id: callSessionId },
               data: { status: "ENDED", endedAt: new Date() },
             });
+
+            // If this call was associated with a scheduled meeting, mark the meeting as COMPLETED
+            try {
+              let meetingToComplete = await prisma.meeting.findFirst({
+                where: { roomName: session.channelName },
+              });
+              if (!meetingToComplete && session.channelName.startsWith("meeting-")) {
+                const parsedId = Number(session.channelName.replace("meeting-", ""));
+                if (!isNaN(parsedId)) {
+                  meetingToComplete = await prisma.meeting.findUnique({
+                    where: { id: parsedId },
+                  });
+                }
+              }
+              if (meetingToComplete && meetingToComplete.status !== "CANCELLED") {
+                const updatedMeeting = await prisma.meeting.update({
+                  where: { id: meetingToComplete.id },
+                  data: { status: "COMPLETED" },
+                });
+                io.emit("meeting:updated", {
+                  meetingId: updatedMeeting.id,
+                  status: "COMPLETED",
+                  meeting: updatedMeeting,
+                });
+              }
+            } catch (err) {
+              console.error("Meeting complete on call:end error:", err);
+            }
+
             for (const participant of session.participants) {
               io.to(`user_${participant.userId}`).emit("call:ended", {
                 callSessionId,
@@ -541,6 +580,53 @@ export function setupSocketServer(httpServer: HttpServer) {
           }
         } catch (error) {
           console.error("Call end error:", error);
+        }
+      }
+    );
+
+    // Screen Share Signalling — broadcast to all other participants in the call session
+    socket.on(
+      "call:screen-share-started",
+      async ({ callSessionId }: { callSessionId: number }) => {
+        try {
+          const session = await prisma.callSession.findUnique({
+            where: { id: callSessionId },
+            include: { participants: true },
+          });
+          if (!session) return;
+          for (const participant of session.participants) {
+            if (participant.userId !== userId) {
+              io.to(`user_${participant.userId}`).emit("call:screen-share-started", {
+                callSessionId,
+                fromUserId: userId,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("screen-share-started error:", err);
+        }
+      }
+    );
+
+    socket.on(
+      "call:screen-share-stopped",
+      async ({ callSessionId }: { callSessionId: number }) => {
+        try {
+          const session = await prisma.callSession.findUnique({
+            where: { id: callSessionId },
+            include: { participants: true },
+          });
+          if (!session) return;
+          for (const participant of session.participants) {
+            if (participant.userId !== userId) {
+              io.to(`user_${participant.userId}`).emit("call:screen-share-stopped", {
+                callSessionId,
+                fromUserId: userId,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("screen-share-stopped error:", err);
         }
       }
     );
@@ -626,4 +712,23 @@ export function emitNotificationUpdate(userIds: number[]) {
   for (const userId of new Set(userIds)) {
     ioInstance.to(`user_${userId}`).emit("notification:new");
   }
+}
+
+export function emitUserUpdated(user: {
+  id: number;
+  name?: string;
+  email?: string;
+  phoneNumber?: string | null;
+  role?: string;
+  roleId?: number;
+  designation?: string | null;
+  designationId?: number | null;
+  employeeProfile?: any;
+  permissions?: string[];
+}) {
+  if (!ioInstance) return;
+  // Send to user's personal room so their active browser session updates in real-time
+  ioInstance.to(`user_${user.id}`).emit("user:updated", user);
+  // Broadcast to all connected clients (e.g., admin viewing employee lists, messenger, directory)
+  ioInstance.emit("employee:updated", user);
 }

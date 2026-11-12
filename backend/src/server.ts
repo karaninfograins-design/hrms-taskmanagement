@@ -19,6 +19,7 @@ import callsRoutes from "./modules/messenger/calls.routes.js";
 import holidayRoutes from "./modules/holiday/holiday.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import { notifyUpcomingSprintDeadlines } from "./controllers/notification.controller.js";
+import { cleanupExpiredGroupSummaries } from "./modules/messenger/group-summary.controller.js";
 import { setupSocketServer } from "./socket.js";
 
 import path from "path";
@@ -29,6 +30,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set("trust proxy", 1);
 const httpServer = http.createServer(app);
 
 const PORT = Number(process.env.PORT) || 5000;
@@ -50,7 +52,46 @@ app.use(
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use("/uploads", express.static(uploadsDir));
+app.use(
+  "/uploads",
+  express.static(uploadsDir, {
+    setHeaders: (res) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "*");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    },
+  })
+);
+
+// Dedicated secure file download endpoint that forces direct browser download
+app.get("/api/download", (req, res) => {
+  try {
+    const file = req.query.file as string;
+    if (!file) {
+      res.status(400).json({ message: "File name is required" });
+      return;
+    }
+
+    const safeFileName = path.basename(file);
+    const filePath = path.join(uploadsDir, safeFileName);
+
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ message: "File not found" });
+      return;
+    }
+
+    const cleanOriginalName = safeFileName.replace(/^\d+_/, "");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.download(filePath, cleanOriginalName);
+  } catch (err: any) {
+    console.error("Download error:", err);
+    res.status(500).json({ message: "Error downloading file", error: err.message });
+  }
+});
 
 app.get("/", (_req, res) => {
   res.json({
@@ -81,6 +122,12 @@ void notifyUpcomingSprintDeadlines();
 setInterval(() => {
   void notifyUpcomingSprintDeadlines();
 }, 30 * 60 * 1000);
+
+// Auto-clean group daily summaries older than 30 days
+void cleanupExpiredGroupSummaries();
+setInterval(() => {
+  void cleanupExpiredGroupSummaries();
+}, 24 * 60 * 60 * 1000);
 
 httpServer.listen(Number(PORT), HOST, () => {
   console.log(`HRMS Backend listening on ${HOST}:${PORT} [DB: ${process.env.DB_NAME}]`);

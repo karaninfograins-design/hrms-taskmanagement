@@ -157,3 +157,8 @@ export type Notification = Prisma.NotificationModel
  * 
  */
 export type CompanyHoliday = Prisma.CompanyHolidayModel
+/**
+ * Model GroupDailySummary
+ * 
+ */
+export type GroupDailySummary = Prisma.GroupDailySummaryModel

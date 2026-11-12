@@ -6,6 +6,7 @@ import { Briefcase, Plus, Search, Pencil, Trash2, CheckCircle2, XCircle, X, Laye
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { createPermission, deleteDesignation, deleteRole, getDesignations, getRoles, saveDesignation, saveRolePermissions, type Designation, type Permission, type Role } from "@/services/workspace.service";
+import { showConfirmDialog } from "@/lib/swal";
 import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -383,10 +384,14 @@ export function DesignationManager() {
                     <button
                       type="button"
                       onClick={async () => {
-                        if (
-                          session?.token &&
-                          confirm(`Are you sure you want to delete designation "${item.name}"?`)
-                        ) {
+                        if (!session?.token) return;
+                        const confirmed = await showConfirmDialog({
+                          title: "Delete Designation?",
+                          text: `Are you sure you want to delete designation "${item.name}"?`,
+                          confirmButtonText: "Yes, Delete",
+                          cancelButtonText: "Cancel",
+                        });
+                        if (confirmed) {
                           await deleteDesignation(item.id, session.token);
                           load();
                         }

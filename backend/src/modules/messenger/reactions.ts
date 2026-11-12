@@ -3,12 +3,20 @@ import fs from "fs";
 
 // Persistent reactions store
 // Format: { [messageId: string]: { [emoji: string]: Array<{ userId: number; userName: string }> } }
-const reactionsFilePath = path.join(process.cwd(), "uploads", "reactions.json");
+function getReactionsFilePath(): string {
+  const backendUploads = path.join(process.cwd(), "backend", "uploads");
+  if (fs.existsSync(backendUploads)) {
+    return path.join(backendUploads, "reactions.json");
+  }
+  const rootUploads = path.join(process.cwd(), "uploads");
+  return path.join(rootUploads, "reactions.json");
+}
 
 export function loadReactionsStore(): Record<string, Record<string, Array<{ userId: number; userName: string }>>> {
   try {
-    if (fs.existsSync(reactionsFilePath)) {
-      const data = fs.readFileSync(reactionsFilePath, "utf8");
+    const filePath = getReactionsFilePath();
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, "utf8");
       return JSON.parse(data);
     }
   } catch (err) {
@@ -19,11 +27,12 @@ export function loadReactionsStore(): Record<string, Record<string, Array<{ user
 
 export function saveReactionsStore(store: Record<string, Record<string, Array<{ userId: number; userName: string }>>>) {
   try {
-    const dir = path.dirname(reactionsFilePath);
+    const filePath = getReactionsFilePath();
+    const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(reactionsFilePath, JSON.stringify(store, null, 2), "utf8");
+    fs.writeFileSync(filePath, JSON.stringify(store, null, 2), "utf8");
   } catch (err) {
     console.error("Error saving reactions file:", err);
   }

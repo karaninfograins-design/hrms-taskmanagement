@@ -43,15 +43,15 @@ export const showInfoToast = (title: string) => {
   });
 };
 
-// Polished confirm dialog with brand styling
+// Polished confirm dialog with clean, modern, professional styling
 export const showConfirmDialog = async ({
   title = "Are you sure?",
   text = "You will not be able to recover this data.",
-  confirmButtonText = "Yes, delete",
+  confirmButtonText = "Yes, continue",
   cancelButtonText = "Cancel",
-  icon = "warning" as const,
-  confirmButtonColor = "#dc2626", // rose-600
-  cancelButtonColor = "#475569",  // slate-600
+  icon = "question" as const,
+  confirmButtonColor = "#ea580c", // dynamic orange, not bright neon red
+  cancelButtonColor = "#64748b",
 }: {
   title?: string;
   text?: string;
@@ -72,12 +72,17 @@ export const showConfirmDialog = async ({
     cancelButtonText,
     reverseButtons: true,
     focusCancel: true,
-    background: "#0f172a", // slate-900
-    color: "#f8fafc",      // slate-50
+    background: "#ffffff",
+    color: "#0f172a",
+    iconColor: icon === "warning" ? "#d97706" : icon === "error" ? "#e11d48" : icon === "success" ? "#059669" : "#ea580c",
     customClass: {
-      popup: "rounded-3xl border border-slate-800 shadow-2xl",
-      confirmButton: "px-5 py-2.5 rounded-xl font-bold text-xs shadow-md",
-      cancelButton: "px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-700",
+      popup: "!rounded-2xl !border !border-slate-200 !bg-white !p-6 !shadow-2xl !max-w-sm !font-sans",
+      title: "!text-base sm:!text-lg !font-bold !text-slate-900 !pt-2 !pb-0 tracking-tight",
+      htmlContainer: "!text-xs sm:!text-sm !font-medium !text-slate-500 !pt-1.5 !pb-2 leading-relaxed",
+      actions: "!flex !items-center !justify-center !gap-2.5 !pt-3 !mt-1 !w-full",
+      cancelButton: "!px-4 !py-2.5 !rounded-xl !border !border-slate-200 !bg-slate-100 hover:!bg-slate-200 !text-slate-700 !font-bold !text-xs !shadow-2xs transition-all cursor-pointer",
+      confirmButton: "!px-5 !py-2.5 !rounded-xl !font-bold !text-xs !text-white !shadow-xs transition-all cursor-pointer",
+      icon: "!border-2 scale-75 !my-2",
     },
   });
   return result.isConfirmed;
@@ -101,11 +106,15 @@ export const showNotification = ({
     icon,
     confirmButtonColor: "#ea580c", // orange-600
     confirmButtonText,
-    background: "#0f172a",
-    color: "#f8fafc",
+    background: "#ffffff",
+    color: "#0f172a",
+    iconColor: icon === "error" ? "#e11d48" : icon === "success" ? "#059669" : "#ea580c",
     customClass: {
-      popup: "rounded-3xl border border-slate-800 shadow-2xl",
-      confirmButton: "px-6 py-2.5 rounded-xl font-bold text-xs shadow-md",
+      popup: "!rounded-2xl !border !border-slate-200 !bg-white !p-6 !shadow-2xl !max-w-sm !font-sans",
+      title: "!text-base sm:!text-lg !font-bold !text-slate-900 !pt-2 !pb-0 tracking-tight",
+      htmlContainer: "!text-xs sm:!text-sm !font-medium !text-slate-500 !pt-1.5 !pb-2 leading-relaxed",
+      confirmButton: "!px-6 !py-2.5 !rounded-xl !font-bold !text-xs !text-white !shadow-xs transition-all cursor-pointer",
+      icon: "!border-2 scale-75 !my-2",
     },
   });
 };
@@ -131,16 +140,17 @@ export const showPromptDialog = async ({
     inputPlaceholder,
     showCancelButton: true,
     confirmButtonColor: "#ea580c",
-    cancelButtonColor: "#475569",
+    cancelButtonColor: "#64748b",
     confirmButtonText,
     cancelButtonText,
-    background: "#0f172a",
-    color: "#f8fafc",
+    background: "#ffffff",
+    color: "#0f172a",
     customClass: {
-      popup: "rounded-3xl border border-slate-800 shadow-2xl",
-      confirmButton: "px-6 py-2.5 rounded-xl font-bold text-xs shadow-md",
-      cancelButton: "px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-700",
-      input: "bg-slate-800 text-white border-slate-700 text-sm rounded-xl px-4 py-2",
+      popup: "!rounded-2xl !border !border-slate-200 !bg-white !p-6 !shadow-2xl !max-w-sm !font-sans",
+      title: "!text-base sm:!text-lg !font-bold !text-slate-900 !pt-2 !pb-0 tracking-tight",
+      input: "!bg-slate-50 !text-slate-900 !border !border-slate-200 !text-xs !rounded-xl !px-3.5 !py-2.5",
+      cancelButton: "!px-4 !py-2.5 !rounded-xl !border !border-slate-200 !bg-slate-100 hover:!bg-slate-200 !text-slate-700 !font-bold !text-xs !shadow-2xs transition-all cursor-pointer",
+      confirmButton: "!px-6 !py-2.5 !rounded-xl !font-bold !text-xs !text-white !shadow-xs transition-all cursor-pointer",
     },
   });
   if (result.isConfirmed && result.value) {

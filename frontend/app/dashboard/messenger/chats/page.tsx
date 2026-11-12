@@ -22,12 +22,21 @@ import {
   FileText,
   Image as ImageIcon,
   Download,
+  Loader2,
   ExternalLink,
   Send,
   Smile,
+  PhoneCall,
+  PhoneOff,
+  PhoneIncoming,
+  PhoneOutgoing,
+  PhoneMissed,
+  Clock,
+  Plus,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
+import { downloadFileDirectly, getCleanFileName, getFileBadgeInfo } from "@/lib/download";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -101,6 +110,18 @@ type Conversation = {
   }>;
 };
 
+type CallSession = {
+  id: number;
+  channelName: string;
+  type: "AUDIO" | "VIDEO";
+  status: "RINGING" | "ACTIVE" | "ENDED" | "MISSED" | "REJECTED";
+  host: { id: number; name: string; email: string };
+  participants: Array<{ user: { id: number; name: string; email?: string } }>;
+  createdAt: string;
+  startedAt?: string | null;
+  endedAt?: string | null;
+};
+
 function ChatsLoadingFallback() {
   const { session, logout } = useAuth();
   const router = useRouter();
@@ -150,13 +171,31 @@ function ChatsContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
 
+  // Messenger Tabs: Chats | Groups | Calls
+  const tabQuery = searchParams.get("tab");
+  const initialTab = tabQuery === "groups" ? "groups" : tabQuery === "calls" ? "calls" : "chats";
+  const [activeTab, setActiveTab] = useState<"chats" | "groups" | "calls">(initialTab);
+  const [callLogs, setCallLogs] = useState<CallSession[]>([]);
+  const [loadingCalls, setLoadingCalls] = useState<boolean>(false);
+
   // Attachments State
   const [attachmentUrl, setAttachmentUrl] = useState<string>("");
   const [attachmentFileName, setAttachmentFileName] = useState<string>("");
   const [attachmentType, setAttachmentType] = useState<"IMAGE" | "DOCUMENT" | "LINK">("IMAGE");
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState<boolean>(false);
+  const [downloadingFileUrl, setDownloadingFileUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTriggerDownload = async (url: string, suggestedName?: string) => {
+    if (downloadingFileUrl) return;
+    setDownloadingFileUrl(url);
+    try {
+      await downloadFileDirectly(url, suggestedName);
+    } finally {
+      setDownloadingFileUrl(null);
+    }
+  };
 
   // Group Modal State
   const [showGroupModal, setShowGroupModal] = useState<boolean>(false);
@@ -176,6 +215,12 @@ function ChatsContent() {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const attachmentMenuRef = useRef<HTMLDivElement>(null);
 
+  // Message Reaction Picker & Drag-and-Drop Attachment States
+  const [reactionPickerMsgId, setReactionPickerMsgId] = useState<number | null>(null);
+  const [showFullReactionPicker, setShowFullReactionPicker] = useState<boolean>(false);
+  const reactionPickerRef = useRef<HTMLDivElement>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
@@ -183,6 +228,10 @@ function ChatsContent() {
       }
       if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(e.target as Node)) {
         setShowAttachmentMenu(false);
+      }
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+        setReactionPickerMsgId(null);
+        setShowFullReactionPicker(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -236,6 +285,116 @@ function ChatsContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch call logs
+  const fetchCallLogs = async () => {
+    setLoadingCalls(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/calls`, {
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setCallLogs(data.calls || []);
+    } catch (err) {
+      console.warn("Could not fetch call logs:", err);
+    } finally {
+      setLoadingCalls(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "calls" && session?.token) {
+      fetchCallLogs();
+    }
+  }, [activeTab, session?.token]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "groups" || tabParam === "calls" || tabParam === "chats") {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  const handleDeleteCallLog = async (callId: number) => {
+    const confirmed = await showConfirmDialog({
+      title: "Delete Call Record?",
+      text: "Remove this call from your history?",
+      confirmButtonText: "Yes, delete",
+      icon: "warning",
+    });
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`${getApiUrl()}/api/calls/${callId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (res.ok) {
+        setCallLogs((prev) => prev.filter((c) => c.id !== callId));
+        showSuccessToast("Call record deleted");
+      }
+    } catch (err) {
+      showErrorToast("Failed to delete call record");
+    }
+  };
+
+  const handleClearAllCalls = async () => {
+    const confirmed = await showConfirmDialog({
+      title: "Clear Call History?",
+      text: "This will remove all call logs from your history.",
+      confirmButtonText: "Yes, clear all",
+      icon: "warning",
+    });
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`${getApiUrl()}/api/calls`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (res.ok) {
+        setCallLogs([]);
+        showSuccessToast("Call history cleared");
+      }
+    } catch (err) {
+      showErrorToast("Failed to clear call history");
+    }
+  };
+
+  const handleDirectCallEmployee = (targetUserId: number, targetName: string, callType: "AUDIO" | "VIDEO") => {
+    if (!socket) {
+      showErrorToast("Connection not ready. Please try again.");
+      return;
+    }
+    const channelName = `call-${Date.now()}`;
+    socket.emit(
+      "call:initiate",
+      {
+        targetUserId,
+        type: callType,
+        channelName,
+      },
+      (result: { callSessionId?: number; error?: string }) => {
+        if (!result?.callSessionId) {
+          showNotification({
+            title: "Call Failed",
+            text: result?.error || "Could not start call",
+            icon: "error",
+          });
+          return;
+        }
+        const params = new URLSearchParams({
+          activeChannel: channelName,
+          target: String(targetUserId),
+          targetName,
+          callSessionId: String(result.callSessionId),
+          type: callType,
+        });
+        router.push(`/dashboard/messenger/calls?${params.toString()}`);
+      }
+    );
   };
 
   useEffect(() => {
@@ -571,6 +730,60 @@ function ChatsContent() {
     }
   };
 
+  // Drag & drop handlers for chat message attachments
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDraggingOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      uploadFile(files[0]);
+    }
+  };
+
+  // Helper to render message content with clickable links
+  const renderFormattedContent = (content: string, isMe: boolean) => {
+    if (!content) return null;
+    const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s]|www\.[^\s<]+[^<.,:;"')\]\s])/gi;
+    const parts = content.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        const href = part.startsWith("http://") || part.startsWith("https://") ? part : `https://${part}`;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`underline underline-offset-2 break-all font-semibold transition-all hover:opacity-85 inline-flex items-center gap-0.5 ${isMe ? "text-amber-200 hover:text-white" : "text-orange-600 hover:text-orange-700"
+              }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>{part}</span>
+            <ExternalLink size={11} className="inline-block shrink-0 opacity-80 ml-0.5" />
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   // Reusable File Upload helper (supports file picker, drag & drop, and direct clipboard image paste)
   const uploadFile = async (file: File) => {
     setIsUploadingAttachment(true);
@@ -864,19 +1077,10 @@ function ChatsContent() {
       })
     );
 
-    // Real-time socket broadcast
-    if (socket) {
-      socket.emit("message:react", {
-        messageId,
-        conversationId: activeConv.id,
-        emoji,
-      });
-    }
-
-    // Persist via REST API
+    // Persist via REST API (which updates database/file storage and broadcasts to all conversation members)
     try {
       const token = getAuthToken();
-      await fetch(`${getApiUrl()}/api/messenger/messages/${messageId}/react`, {
+      const res = await fetch(`${getApiUrl()}/api/messenger/messages/${messageId}/react`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -884,6 +1088,16 @@ function ChatsContent() {
         },
         body: JSON.stringify({ emoji }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reactions) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, reactions: data.reactions } : m
+            )
+          );
+        }
+      }
     } catch (err) {
       console.error("Failed to persist reaction:", err);
     }
@@ -994,6 +1208,17 @@ function ChatsContent() {
     return emp.name.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q);
   });
 
+  const directConversations = filteredConversations.filter((c) => c.type === "DIRECT");
+  const groupConversations = filteredConversations.filter((c) => c.type === "GROUP");
+  const filteredCallLogs = callLogs.filter((call) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const hostMatch = call.host?.name?.toLowerCase().includes(q) || call.host?.email?.toLowerCase().includes(q);
+    const participantMatch = call.participants?.some((p) => p.user?.name?.toLowerCase().includes(q));
+    const typeMatch = call.type?.toLowerCase().includes(q);
+    return hostMatch || participantMatch || typeMatch;
+  });
+
   return (
     <main className="app-shell bg-slate-50 min-h-screen">
       <Navbar user={session.user} onSignOut={handleSignOut} />
@@ -1008,38 +1233,121 @@ function ChatsContent() {
             className={`w-full lg:w-80 xl:w-96 border-r border-slate-200/80 bg-white flex flex-col h-full shadow-xs transition-all ${activeConv ? "hidden lg:flex" : "flex"
               }`}
           >
-            {/* Sidebar Top Controls: Header + "+ New Group" Button */}
-            <div className="space-y-3 border-b border-orange-100 bg-gradient-to-r from-orange-50/80 via-white to-white p-4">
+            {/* Sidebar Top Controls: Header + Tabs + Search */}
+            <div className="space-y-3 border-b border-slate-200/80 bg-white p-3.5 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">Team communication</span>
-                  <h2 className="mt-0.5 text-lg font-black leading-tight text-slate-900">Messages &amp; Team</h2>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Workspace</span>
+                  <h2 className="mt-0.5 text-base font-bold leading-tight text-slate-900">
+                    {activeTab === "chats" ? "Direct Messages" : activeTab === "groups" ? "Team Groups" : "Call History"}
+                  </h2>
                 </div>
 
-                {/* Prominent "+ New Group" Button */}
+                {/* Context Action Button */}
+                {activeTab === "groups" && (
+                  <button
+                    onClick={handleOpenCreateGroupModal}
+                    className="flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs transition cursor-pointer"
+                  >
+                    + New Group
+                  </button>
+                )}
+                {activeTab === "calls" && callLogs.length > 0 && (
+                  <button
+                    onClick={handleClearAllCalls}
+                    className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-700 active:scale-95 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
+                    title="Clear Call History"
+                  >
+                    <Trash2 size={12} />
+                    <span>Clear</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Segmented Tab Navigation: Chats | Groups | Calls */}
+              <div className="grid grid-cols-3 gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/70 shadow-2xs">
                 <button
-                  onClick={handleOpenCreateGroupModal}
-                  className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600"
+                  type="button"
+                  onClick={() => setActiveTab("chats")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer select-none active:scale-[0.98] ${activeTab === "chats"
+                    ? "bg-[#ea580c] hover:bg-[#c2410c] text-white shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-2xs"
+                    }`}
                 >
-                  + New Group
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
+                  <span>Chats</span>
+                  {directConversations.length > 0 && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none transition-colors ${activeTab === "chats" ? "bg-white/20 text-white" : "bg-slate-200/90 text-slate-700"
+                        }`}
+                    >
+                      {directConversations.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("groups")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer select-none active:scale-[0.98] ${activeTab === "groups"
+                    ? "bg-[#ea580c] hover:bg-[#c2410c] text-white shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-2xs"
+                    }`}
+                >
+                  <Users className="w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
+                  <span>Groups</span>
+                  {groupConversations.length > 0 && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none transition-colors ${activeTab === "groups" ? "bg-white/20 text-white" : "bg-slate-200/90 text-slate-700"
+                        }`}
+                    >
+                      {groupConversations.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("calls")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer select-none active:scale-[0.98] ${activeTab === "calls"
+                    ? "bg-[#ea580c] hover:bg-[#c2410c] text-white shadow-xs font-extrabold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-2xs"
+                    }`}
+                >
+                  <Phone className="w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
+                  <span>Calls</span>
+                  {callLogs.length > 0 && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none transition-colors ${activeTab === "calls" ? "bg-white/20 text-white" : "bg-slate-200/90 text-slate-700"
+                        }`}
+                    >
+                      {callLogs.length}
+                    </span>
+                  )}
                 </button>
               </div>
 
-              {/* Working Contact & Chat Search Bar */}
+              {/* Working Search Bar */}
               <div className="relative flex items-center">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                 <input
                   type="text"
-                  placeholder="Search contacts or groups..."
+                  placeholder={
+                    activeTab === "chats"
+                      ? "Search direct chats & contacts..."
+                      : activeTab === "groups"
+                        ? "Search group channels..."
+                        : "Search call records..."
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ paddingLeft: "40px" }}
-                  className="w-full h-10 !pl-10 pr-8 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-slate-900 font-medium placeholder-slate-400"
+                  className="w-full h-9.5 !pl-10 pr-8 text-xs bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 text-slate-900 font-medium placeholder-slate-400 transition-all shadow-2xs"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer transition-colors"
                   >
                     ✕
                   </button>
@@ -1047,25 +1355,22 @@ function ChatsContent() {
               </div>
             </div>
 
-            {/* Conversation & Contact Directory List */}
+            {/* Conversation, Group & Call Logs List */}
             <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
               {loading ? (
                 <div className="p-6 text-center text-xs text-slate-400 animate-pulse font-medium">
                   Loading workspace messaging...
                 </div>
-              ) : (
+              ) : activeTab === "chats" ? (
                 <>
-                  {/* Active Conversations (Direct & Group) */}
-                  {filteredConversations.length > 0 && (
+                  {/* Active Direct Chats */}
+                  {directConversations.length > 0 && (
                     <div className="p-2 space-y-1">
-                      <p className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Active Chats & Groups ({filteredConversations.length})
+                      <p className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Direct Chats ({directConversations.length})
                       </p>
-                      {filteredConversations.map((conv) => {
-                        const isGrp = conv.type === "GROUP";
-                        const partner = !isGrp
-                          ? conv.participants.find((p) => p.userId !== currentUserId)?.user
-                          : null;
+                      {directConversations.map((conv) => {
+                        const partner = conv.participants.find((p) => p.userId !== currentUserId)?.user;
                         const isOnline = partner ? onlineUserIds.includes(partner.id) : false;
                         const isSelected = activeConv?.id === conv.id;
 
@@ -1073,41 +1378,25 @@ function ChatsContent() {
                           <div
                             key={conv.id}
                             onClick={() => setActiveConv(conv)}
-                            className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
+                            className={`p-2.5 sm:p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
                               ? "bg-orange-50 border border-orange-200/80 shadow-xs"
                               : "hover:bg-slate-50"
                               }`}
                           >
                             <div className="flex items-center gap-3 overflow-hidden">
                               <div className="relative flex-shrink-0">
-                                <div
-                                  className={`w-10 h-10 rounded-2xl font-black text-xs flex items-center justify-center shadow-xs ${isGrp
-                                    ? "bg-slate-900 text-orange-400"
-                                    : "bg-slate-800 text-white"
-                                    }`}
-                                >
-                                  {isGrp
-                                    ? <Users size={16} />
-                                    : partner?.name.charAt(0).toUpperCase() || "E"}
+                                <div className="w-10 h-10 rounded-2xl font-black text-xs flex items-center justify-center shadow-xs bg-slate-800 text-white">
+                                  {partner?.name.charAt(0).toUpperCase() || "E"}
                                 </div>
-                                {!isGrp && (
-                                  <span
-                                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isOnline ? "bg-emerald-500" : "bg-slate-300"
-                                      }`}
-                                  />
-                                )}
+                                <span
+                                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isOnline ? "bg-emerald-500" : "bg-slate-300"
+                                    }`}
+                                />
                               </div>
                               <div className="truncate">
-                                <div className="flex items-center gap-1.5">
-                                  <p className="text-xs font-black text-slate-900 truncate">
-                                    {isGrp ? conv.name : partner?.name || "Employee"}
-                                  </p>
-                                  {isGrp && (
-                                    <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-bold">
-                                      {conv.participants.length} members
-                                    </span>
-                                  )}
-                                </div>
+                                <p className="text-xs font-black text-slate-900 truncate">
+                                  {partner?.name || "Employee"}
+                                </p>
                                 <p className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">
                                   {conv.lastMessage
                                     ? conv.lastMessage.content || "Attachment sent"
@@ -1130,9 +1419,7 @@ function ChatsContent() {
                                 className="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
                                 title="Delete chat"
                               >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
+                                <Trash2 size={13} />
                               </button>
                             </div>
                           </div>
@@ -1141,7 +1428,7 @@ function ChatsContent() {
                     </div>
                   )}
 
-                  {/* Contact Directory (Auto-listed for all Users/Admins) */}
+                  {/* Contact Directory */}
                   <div className="p-2 space-y-1">
                     <p className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                       Contact Directory ({availableEmployees.length})
@@ -1181,25 +1468,210 @@ function ChatsContent() {
                     })}
                   </div>
                 </>
+              ) : activeTab === "groups" ? (
+                /* Group Channels Tab */
+                <div className="p-2 space-y-1">
+                  <p className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Team Groups ({groupConversations.length})
+                  </p>
+                  {groupConversations.length > 0 ? (
+                    groupConversations.map((conv) => {
+                      const isSelected = activeConv?.id === conv.id;
+                      return (
+                        <div
+                          key={conv.id}
+                          onClick={() => setActiveConv(conv)}
+                          className={`p-2.5 sm:p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
+                            ? "bg-orange-50 border border-orange-200/80 shadow-xs"
+                            : "hover:bg-slate-50"
+                            }`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="relative flex-shrink-0">
+                              <div className="w-10 h-10 rounded-2xl font-black text-xs flex items-center justify-center shadow-xs bg-slate-900 text-orange-400">
+                                <Users size={18} />
+                              </div>
+                            </div>
+                            <div className="truncate">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-black text-slate-900 truncate">
+                                  {conv.name || "Team Group"}
+                                </p>
+                                <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-bold">
+                                  {conv.participants.length} members
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">
+                                {conv.lastMessage
+                                  ? conv.lastMessage.content || "Attachment sent"
+                                  : "No messages yet"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {conv.unreadCount ? (
+                              <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-xs">
+                                {conv.unreadCount}
+                              </span>
+                            ) : null}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteConversation(conv.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
+                              title="Delete group"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-6 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 border border-orange-200/60 flex items-center justify-center mx-auto text-xl">
+                        👥
+                      </div>
+                      <p className="text-xs font-bold text-slate-700">No Groups Found</p>
+                      <p className="text-[11px] text-slate-500">
+                        Create team channels to collaborate together.
+                      </p>
+                      <button
+                        onClick={handleOpenCreateGroupModal}
+                        className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                      >
+                        + Create First Group
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Calls Tab */
+                <div className="p-2 space-y-1">
+                  <p className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Call Logs ({filteredCallLogs.length})
+                  </p>
+                  {loadingCalls ? (
+                    <div className="p-6 text-center text-xs text-slate-400 animate-pulse font-medium">
+                      Loading call logs...
+                    </div>
+                  ) : filteredCallLogs.length > 0 ? (
+                    filteredCallLogs.map((call) => {
+                      const isCaller = call.host.id === currentUserId;
+                      const otherPerson = isCaller
+                        ? call.participants[0]?.user || { id: 0, name: "Participant" }
+                        : call.host;
+                      const isMissed = call.status === "MISSED" || call.status === "REJECTED";
+
+                      return (
+                        <div
+                          key={call.id}
+                          className="p-2.5 sm:p-3 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-between group border border-transparent hover:border-slate-200/60"
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 ${call.type === "VIDEO"
+                              ? "bg-orange-500/10 text-orange-600 border border-orange-500/20"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                              }`}>
+                              {call.type === "VIDEO" ? <Video size={16} /> : <Phone size={15} />}
+                            </div>
+                            <div className="truncate min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-black text-slate-900 truncate">
+                                  {otherPerson.name}
+                                </p>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold shrink-0 ${isMissed
+                                  ? "bg-rose-50 text-rose-600 border border-rose-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  }`}>
+                                  {call.status}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 truncate mt-0.5 flex items-center gap-1">
+                                <span>{isCaller ? "↗ Outgoing" : "↙ Incoming"}</span>
+                                <span>•</span>
+                                <span>{new Date(call.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Quick-dial Audio Call */}
+                            <button
+                              onClick={() => handleDirectCallEmployee(otherPerson.id, otherPerson.name, "AUDIO")}
+                              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
+                              title={`Voice Call ${otherPerson.name}`}
+                            >
+                              <Phone size={13} />
+                            </button>
+                            {/* Quick-dial Video Call */}
+                            <button
+                              onClick={() => handleDirectCallEmployee(otherPerson.id, otherPerson.name, "VIDEO")}
+                              className="p-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all cursor-pointer shadow-2xs"
+                              title={`Video Call ${otherPerson.name}`}
+                            >
+                              <Video size={13} />
+                            </button>
+                            {/* Delete Call Log */}
+                            <button
+                              onClick={() => handleDeleteCallLog(call.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-100 text-rose-600 rounded-xl transition-all cursor-pointer"
+                              title="Delete log"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-6 text-center space-y-2">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center mx-auto text-xl">
+                        📞
+                      </div>
+                      <p className="text-xs font-bold text-slate-700">No Call History</p>
+                      <p className="text-[11px] text-slate-500">
+                        Your calls and meetings will appear here.
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
 
           {/* Active Chat Window */}
           <div
-            className={`flex-1 min-w-0 bg-slate-50/50 flex-col h-full transition-all ${activeConv ? "flex" : "hidden lg:flex"
+            className={`flex-1 min-w-0 bg-slate-50/50 flex-col h-full transition-all relative ${activeConv ? "flex" : "hidden lg:flex"
               }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
             {activeConv ? (
               <>
+                {/* Drag & Drop Visual Overlay */}
+                {isDraggingOver && (
+                  <div className="absolute inset-0 z-50 bg-orange-500/10 backdrop-blur-xs border-2 border-dashed border-orange-500 rounded-none flex flex-col items-center justify-center pointer-events-none transition-all">
+                    <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center gap-3 border border-orange-200">
+                      <div className="w-14 h-14 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center animate-bounce">
+                        <Paperclip size={28} />
+                      </div>
+                      <p className="text-base font-bold text-slate-800">Drop your file here</p>
+                      <p className="text-xs text-slate-500 font-medium">Upload images or documents </p>
+                    </div>
+                  </div>
+                )}
                 {/* Chat Header with PROMINENT BACK BUTTON */}
-                <div className="flex h-16 flex-shrink-0 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200/80 bg-white px-3 sm:px-6 shadow-sm">
+                <div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-3 sm:px-6 shadow-2xs">
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => setActiveConv(null)}
                       aria-label="Back to conversations"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 lg:hidden"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 lg:hidden cursor-pointer"
                     >
                       <ArrowLeft size={16} />
                     </button>
@@ -1250,40 +1722,37 @@ function ChatsContent() {
                     {!isDirect && (
                       <button
                         onClick={() => handleOpenManageMembersModal(activeConv)}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                        className="h-8.5 w-8.5 flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
                         title="Manage group members"
                         aria-label="Manage group members"
                       >
-                        <Settings2 size={16} strokeWidth={2} />
+                        <Settings2 size={15} strokeWidth={2} />
                       </button>
                     )}
                     <button
                       onClick={() => handleInitiateCall("AUDIO")}
-                      className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-600 hover:text-orange-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                      className="h-8.5 px-3 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
                       title="Audio call"
                     >
                       <Phone size={13} strokeWidth={2} />
-
                     </button>
                     <button
                       onClick={() => handleInitiateCall("VIDEO")}
-                      className="px-2.5 sm:px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs"
+                      className="h-8.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
                       title="Video call"
                     >
                       <Video size={13} strokeWidth={2} />
-
                     </button>
                     <button
                       onClick={() => handleDeleteConversation(activeConv.id)}
-                      className="px-2.5 sm:px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl text-xs font-semibold transition-all border border-rose-200 flex items-center gap-1.5 cursor-pointer"
+                      className="h-8.5 px-2.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-semibold transition-all border border-slate-200/80 hover:border-rose-200 flex items-center gap-1.5 cursor-pointer"
                       title={isDirect ? "Delete chat conversation" : "Delete group conversation"}
                     >
                       <Trash2 size={13} strokeWidth={2} />
-
                     </button>
                     <button
                       onClick={() => setActiveConv(null)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-all border border-slate-200/60"
+                      className="h-8.5 w-8.5 flex items-center justify-center hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all border border-slate-200/80 cursor-pointer"
                       title="Close"
                     >
                       <X size={15} strokeWidth={2} />
@@ -1309,7 +1778,7 @@ function ChatsContent() {
                     return (
                       <div
                         key={m.id}
-                        className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                        className={`flex flex-col relative ${isMe ? "items-end" : "items-start"}`}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] font-bold text-slate-400">
@@ -1317,11 +1786,64 @@ function ChatsContent() {
                           </span>
                         </div>
                         <div
-                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] overflow-hidden ${isMe
+                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] ${isMe
                             ? "bg-orange-50/90 border border-orange-200/90 text-slate-900 font-medium rounded-br-xs"
                             : "bg-white text-slate-800 border border-slate-200/90 font-medium rounded-bl-xs"
                             }`}
                         >
+                          {/* Smiley / Reaction Popover */}
+                          {reactionPickerMsgId === m.id && (
+                            <div
+                              ref={reactionPickerRef}
+                              className="absolute -top-11 right-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {!showFullReactionPicker ? (
+                                <>
+                                  {["😊", "😍", "🔥", "🙌", "👏", "🚀", "💡", "💯", "😢", "😮", "✨"].map((emoji) => {
+                                    const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => {
+                                          handleReact(m.id, emoji);
+                                          setReactionPickerMsgId(null);
+                                        }}
+                                        className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-transform hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
+                                          }`}
+                                        title={`React with ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowFullReactionPicker(true)}
+                                    className="w-7 h-7 rounded-lg text-xs flex items-center justify-center text-slate-500 hover:text-orange-600 hover:bg-orange-50 font-bold transition-all cursor-pointer border border-slate-200/80 ml-0.5"
+                                    title="All smileys and emojis"
+                                  >
+                                    <Plus size={13} />
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="p-0">
+                                  <EmojiPicker
+                                    onEmojiClick={(emojiData) => {
+                                      handleReact(m.id, emojiData.emoji);
+                                      setReactionPickerMsgId(null);
+                                      setShowFullReactionPicker(false);
+                                    }}
+                                    autoFocusSearch={true}
+                                    width={280}
+                                    height={320}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {/* Reply Quote */}
                           {m.replyTo && (
                             <div className="mb-2 p-2 rounded-xl bg-slate-800/20 border-l-2 border-orange-500 text-[11px] italic">
@@ -1330,67 +1852,102 @@ function ChatsContent() {
                             </div>
                           )}
 
-                          {/* Attachment Display with Hover Download Action */}
-                          {m.attachmentUrl && !isDeleted && (
-                            <div className="my-2 relative group/att overflow-hidden rounded-2xl border border-slate-200/40 shadow-xs">
-                              {m.attachmentType === "IMAGE" ? (
-                                <div className="relative">
-                                  <img
-                                    src={m.attachmentUrl}
-                                    alt="Attachment"
-                                    className="max-w-xs max-h-60 rounded-2xl object-cover"
-                                  />
-                                  <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-xs">
-                                    <a
-                                      href={m.attachmentUrl}
-                                      download="attached-image"
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="px-3.5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition-all"
-                                    >
-                                      <Download size={14} strokeWidth={2.5} />
-                                      <span>Download Image</span>
-                                    </a>
+                          {/* Attachment Display with Direct Download Action */}
+                          {m.attachmentUrl && !isDeleted && (() => {
+                            const cleanDocName = getCleanFileName(m.attachmentUrl, "Document");
+                            const badgeInfo = getFileBadgeInfo(cleanDocName, m.attachmentType);
+                            const isThisDownloading = downloadingFileUrl === m.attachmentUrl;
+
+                            return (
+                              <div className="my-2 relative group/att overflow-hidden rounded-xl">
+                                {m.attachmentType === "IMAGE" ? (
+                                  <div className="relative rounded-xl overflow-hidden border border-slate-200/80 shadow-2xs">
+                                    <img
+                                      src={m.attachmentUrl}
+                                      alt="Attachment"
+                                      className="max-w-xs max-h-60 rounded-xl object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-xs">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTriggerDownload(m.attachmentUrl!, getCleanFileName(m.attachmentUrl, "image.jpg"))}
+                                        disabled={isThisDownloading}
+                                        className="px-3.5 py-2 bg-slate-900/90 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95 border border-white/20 disabled:opacity-75"
+                                      >
+                                        {isThisDownloading ? <Loader2 size={13} className="animate-spin text-white" /> : <Download size={13} strokeWidth={2.2} />}
+                                        <span>{isThisDownloading ? "Downloading..." : "Download Image"}</span>
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-orange-300 text-xs font-bold flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2 truncate">
-                                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-orange-400 shrink-0 border border-slate-700">
-                                      {m.attachmentType === "LINK" ? <Link2 size={15} strokeWidth={2.2} /> : <FileText size={15} strokeWidth={2.2} />}
-                                    </span>
-                                    <span className="truncate max-w-[180px]">
-                                      {m.attachmentUrl.length > 40
-                                        ? m.attachmentUrl.slice(0, 35) + "..."
-                                        : m.attachmentUrl}
-                                    </span>
-                                  </div>
-                                  <a
-                                    href={m.attachmentUrl}
-                                    download="attached-file"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[11px] font-black transition-all flex items-center gap-1.5 flex-shrink-0 shadow-xs cursor-pointer"
+                                ) : (
+                                  <div
+                                    className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center justify-between gap-3 shadow-2xs ${isMe
+                                      ? "bg-white/95 border-orange-200/80 hover:border-orange-300"
+                                      : "bg-slate-50/95 border-slate-200/90 hover:border-slate-300 hover:bg-slate-100/70"
+                                      }`}
                                   >
+                                    {/* Icon & File Details */}
+                                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                      <span
+                                        className={`flex h-9 w-9 items-center justify-center rounded-lg border shadow-2xs shrink-0 ${badgeInfo.colorClass}`}
+                                      >
+                                        {m.attachmentType === "LINK" ? (
+                                          <Link2 size={16} strokeWidth={2.2} />
+                                        ) : (
+                                          <FileText size={16} strokeWidth={2.2} />
+                                        )}
+                                      </span>
+                                      <div className="flex flex-col min-w-0">
+                                        <span
+                                          className="text-xs font-bold text-slate-800 hover:text-slate-950 truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[300px] leading-snug"
+                                          title={cleanDocName}
+                                        >
+                                          {cleanDocName}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-semibold tracking-wide uppercase leading-none mt-0.5">
+                                          {badgeInfo.label}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Button */}
                                     {m.attachmentType === "LINK" ? (
-                                      <>
-                                        <ExternalLink size={12} strokeWidth={2.5} />
+                                      <a
+                                        href={m.attachmentUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer active:scale-95"
+                                      >
+                                        <ExternalLink size={12} strokeWidth={2} />
                                         <span>Open</span>
-                                      </>
+                                      </a>
                                     ) : (
-                                      <>
-                                        <Download size={12} strokeWidth={2.5} />
-                                        <span>Download</span>
-                                      </>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTriggerDownload(m.attachmentUrl!, cleanDocName)}
+                                        disabled={isThisDownloading}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 border disabled:opacity-60 ${isMe
+                                          ? "bg-slate-900 hover:bg-slate-800 text-white border-slate-900"
+                                          : "bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200/90"
+                                          }`}
+                                        title="Download directly to your PC"
+                                      >
+                                        {isThisDownloading ? (
+                                          <Loader2 size={12} className="animate-spin" />
+                                        ) : (
+                                          <Download size={12} strokeWidth={2.2} />
+                                        )}
+                                        <span className="font-semibold">{isThisDownloading ? "Saving..." : "Download"}</span>
+                                      </button>
                                     )}
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           <div className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text ${isDeleted ? "italic opacity-60" : ""}`}>
-                            {m.content}
+                            {renderFormattedContent(m.content, isMe)}
                           </div>
 
                           <div className="mt-1 flex items-center justify-end gap-1.5 text-[10px] opacity-75 font-medium">
@@ -1427,15 +1984,27 @@ function ChatsContent() {
                                       key={emoji}
                                       type="button"
                                       onClick={() => handleReact(m.id, emoji)}
-                                      className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
-                                        userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
-                                      }`}
+                                      className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
+                                        }`}
                                       title={`React with ${emoji}`}
                                     >
                                       {emoji}
                                     </button>
                                   );
                                 })}
+                                {/* Add Smiley / Custom Reaction Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id);
+                                    setShowFullReactionPicker(false);
+                                  }}
+                                  className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-110 cursor-pointer ${reactionPickerMsgId === m.id ? "bg-orange-100 text-orange-600" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                                    }`}
+                                  title="Add smiley or reaction"
+                                >
+                                  <Smile size={13} />
+                                </button>
                               </div>
 
                               {/* Reply */}
@@ -1509,11 +2078,10 @@ function ChatsContent() {
                                   type="button"
                                   onClick={() => handleReact(m.id, emoji)}
                                   title={tooltipText}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
-                                    userReacted
-                                      ? "bg-orange-50 border-orange-300 text-orange-700"
-                                      : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                                  }`}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${userReacted
+                                    ? "bg-orange-50 border-orange-300 text-orange-700"
+                                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                                    }`}
                                 >
                                   <span>{emoji}</span>
                                   <span className="text-[10px] text-slate-500">{users.length}</span>
@@ -1557,32 +2125,32 @@ function ChatsContent() {
 
                   {/* Uploading Progress Indicator */}
                   {isUploadingAttachment && (
-                    <div className="inline-flex items-center gap-2 bg-slate-900 text-slate-200 px-3 py-1.5 rounded-xl text-xs border border-slate-700 animate-pulse shadow-md">
-                      <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="font-semibold text-[11px]">Uploading pasted image...</span>
+                    <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl text-xs border border-slate-200 animate-pulse shadow-2xs">
+                      <div className="w-3.5 h-3.5 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="font-semibold text-[11px]">Uploading attachment...</span>
                     </div>
                   )}
 
                   {/* Compact Smart Icon / Thumbnail Chip Preview */}
                   {attachmentUrl && !isUploadingAttachment && (
-                    <div className="inline-flex items-center gap-2.5 bg-slate-900 text-white pl-2 pr-3 py-1.5 rounded-2xl text-xs shadow-md border border-slate-700 animate-fade-in">
+                    <div className="inline-flex items-center gap-2.5 bg-slate-50 text-slate-800 pl-2 pr-3 py-1.5 rounded-xl text-xs shadow-2xs border border-slate-200 animate-fade-in">
                       {attachmentType === "IMAGE" ? (
                         <img
                           src={attachmentUrl}
                           alt="Pasted Attachment"
-                          className="w-7 h-7 object-cover rounded-lg border border-slate-700 shadow-xs shrink-0"
+                          className="w-7 h-7 object-cover rounded-lg border border-slate-200 shadow-2xs shrink-0"
                         />
                       ) : (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-800 text-orange-400 shrink-0 border border-slate-700">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-slate-700 shrink-0 border border-slate-200 shadow-2xs">
                           {attachmentType === "LINK" ? <Link2 size={13} strokeWidth={2.2} /> : <FileText size={13} strokeWidth={2.2} />}
                         </span>
                       )}
                       <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-[11px] max-w-[170px] truncate leading-tight">
+                        <span className="font-bold text-[11px] max-w-[170px] truncate leading-tight text-slate-800">
                           {attachmentFileName || "Attached File"}
                         </span>
                         {attachmentType === "IMAGE" && (
-                          <span className="text-[9px] text-emerald-400 font-semibold leading-tight">
+                          <span className="text-[9px] text-emerald-600 font-semibold leading-tight">
                             Image ready to send
                           </span>
                         )}
@@ -1593,7 +2161,7 @@ function ChatsContent() {
                           setAttachmentUrl("");
                           setAttachmentFileName("");
                         }}
-                        className="w-5 h-5 rounded-full bg-slate-800 hover:bg-rose-500 text-white font-black text-[10px] flex items-center justify-center transition-colors ml-1 shadow-xs cursor-pointer shrink-0"
+                        className="w-5 h-5 rounded-full bg-slate-200 hover:bg-rose-500 text-slate-600 hover:text-white font-black text-[10px] flex items-center justify-center transition-colors ml-1 shadow-2xs cursor-pointer shrink-0"
                         title="Remove attachment"
                       >
                         ✕
@@ -1715,12 +2283,11 @@ function ChatsContent() {
                         setShowEmojiPicker(!showEmojiPicker);
                         setShowAttachmentMenu(false);
                       }}
-                      className={`w-10 h-10 flex items-center justify-center text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-colors cursor-pointer shrink-0 ${
-                        showEmojiPicker ? "bg-orange-50 text-orange-600 ring-2 ring-orange-500/30" : ""
-                      }`}
+                      className={`w-10 h-10 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0 ${showEmojiPicker ? "bg-slate-100 text-slate-900 ring-2 ring-slate-300" : ""
+                        }`}
                       title="Insert Emoji"
                     >
-                      <Smile size={23} strokeWidth={2.2} />
+                      <Smile size={21} strokeWidth={2} />
                     </button>
 
                     {/* Send Button (Solid Orange Circle with Paper Plane) */}
@@ -1735,12 +2302,217 @@ function ChatsContent() {
                   </form>
                 </div>
               </>
+            ) : activeTab === "calls" ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 bg-white">
+                {/* Call History Header */}
+                <div className="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-slate-100 shrink-0">
+                  <div>
+                    <h2 className="text-base font-black text-slate-900">Call History</h2>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      {callLogs.length > 0 ? `${callLogs.length} call${callLogs.length !== 1 ? "s" : ""} recorded` : "No calls yet"}
+                    </p>
+                  </div>
+                  {callLogs.length > 0 && (
+                    <button
+                      onClick={handleClearAllCalls}
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 active:scale-95 px-3 py-1.5 text-xs font-semibold transition cursor-pointer shadow-2xs"
+                      title="Clear all call logs"
+                    >
+                      <Trash2 size={13} />
+                      <span>Clear All</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Call Log List */}
+                <div className="flex-1 overflow-y-auto">
+                  {loadingCalls ? (
+                    <div className="flex flex-col items-center justify-center h-48 gap-3">
+                      <div className="w-8 h-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+                      <p className="text-xs text-slate-400 font-medium animate-pulse">Loading call history…</p>
+                    </div>
+                  ) : filteredCallLogs.length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {filteredCallLogs.map((call) => {
+                        const isCaller = call.host.id === currentUserId;
+                        const otherPerson = isCaller
+                          ? call.participants[0]?.user || { id: 0, name: "Participant" }
+                          : call.host;
+                        const isMissed = call.status === "MISSED" || call.status === "REJECTED";
+                        const callDate = new Date(call.createdAt);
+                        const today = new Date();
+                        const isToday = callDate.toDateString() === today.toDateString();
+                        const displayDate = isToday
+                          ? callDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                          : callDate.toLocaleDateString([], { month: "short", day: "numeric" });
+
+                        return (
+                          <div
+                            key={call.id}
+                            className="flex items-center justify-between gap-3 px-5 sm:px-7 py-3.5 hover:bg-slate-50/70 transition-colors group"
+                          >
+                            {/* Icon */}
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${call.type === "VIDEO"
+                              ? "bg-orange-50 text-orange-600 border border-orange-200/60"
+                              : isMissed
+                                ? "bg-slate-100 text-slate-400 border border-slate-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                              }`}>
+                              {call.type === "VIDEO" ? <Video size={16} /> : <Phone size={15} />}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={`text-sm font-bold truncate ${isMissed ? "text-slate-400" : "text-slate-900"}`}>
+                                  {otherPerson.name}
+                                </p>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0 ${isMissed
+                                  ? "bg-slate-100 text-slate-500"
+                                  : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                  {call.status}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                {isCaller ? (
+                                  <PhoneOutgoing size={11} className="text-slate-400 shrink-0" />
+                                ) : isMissed ? (
+                                  <PhoneMissed size={11} className="text-slate-400 shrink-0" />
+                                ) : (
+                                  <PhoneIncoming size={11} className="text-slate-400 shrink-0" />
+                                )}
+                                <span>{isCaller ? "Outgoing" : "Incoming"}</span>
+                                <span className="text-slate-300">•</span>
+                                <span>{call.type === "VIDEO" ? "Video" : "Voice"}</span>
+                                <span className="text-slate-300">•</span>
+                                <span>{displayDate}</span>
+                              </p>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => handleDirectCallEmployee(otherPerson.id, otherPerson.name, "AUDIO")}
+                                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all cursor-pointer"
+                                title={`Voice call ${otherPerson.name}`}
+                              >
+                                <Phone size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDirectCallEmployee(otherPerson.id, otherPerson.name, "VIDEO")}
+                                className="p-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all cursor-pointer"
+                                title={`Video call ${otherPerson.name}`}
+                              >
+                                <Video size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCallLog(call.id)}
+                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-all cursor-pointer"
+                                title="Remove log"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-8">
+                      <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                        <PhoneCall size={28} className="text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-700">No Call History</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Your voice and video calls will appear here.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : activeTab === "groups" ? (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900">Team Groups</h2>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                      Collaborate across departments, project channels, and teams
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenCreateGroupModal}
+                    className="self-start sm:self-auto px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Plus size={15} />
+                    <span>Create New Group</span>
+                  </button>
+                </div>
+
+                {groupConversations.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                    {groupConversations.map((grp) => (
+                      <div
+                        key={grp.id}
+                        onClick={() => setActiveConv(grp)}
+                        className="p-4 bg-white hover:bg-orange-50/30 rounded-2xl border border-slate-200/80 hover:border-orange-200 transition-all cursor-pointer shadow-2xs flex flex-col justify-between space-y-3 group"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-2xl bg-slate-900 text-orange-400 flex items-center justify-center font-black shadow-xs shrink-0">
+                              <Users size={19} />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="text-xs font-black text-slate-900 group-hover:text-orange-950 truncate">
+                                {grp.name}
+                              </h3>
+                              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                                {grp.participants.length} members
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate line-clamp-1">
+                          {grp.lastMessage?.content || "No group messages yet"}
+                        </p>
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-orange-600 font-bold">
+                          <span>Open Group Chat</span>
+                          <span>→</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center space-y-4 max-w-md mx-auto shadow-2xs">
+                    <div className="w-16 h-16 rounded-2xl bg-orange-50 text-orange-500 border border-orange-200/60 flex items-center justify-center mx-auto text-2xl">
+                      👥
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">No Groups Created Yet</h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Bring your team members together by setting up your first project or department channel.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleOpenCreateGroupModal}
+                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
+                    >
+                      + Create Group Channel
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-4xl mb-4 shadow-xs">
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
+                <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-4xl shadow-xs">
                   💬
                 </div>
-                <h3 className="text-base font-black text-slate-800">Select Contact for messaging</h3>
+                <h3 className="text-base font-black text-slate-800">Select a Conversation</h3>
+                <p className="text-xs text-slate-500 max-w-xs">
+                  Choose a colleague from the left panel to start messaging, share files, and place calls.
+                </p>
               </div>
             )}
           </div>

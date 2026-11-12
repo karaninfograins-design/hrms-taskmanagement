@@ -26,6 +26,7 @@ import {
   type Role,
   type Designation,
 } from "@/services/employee.service";
+import { getSocket } from "@/lib/socket";
 
 type FilterState = {
   search: string;
@@ -215,6 +216,22 @@ export default function EmployeesPage() {
     }
   }, [session?.token, filters, debouncedSearch]);
 
+  // Listen for real-time employee profile updates
+  useEffect(() => {
+    if (!session?.token) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleEmployeeUpdated = () => {
+      refreshEmployees();
+    };
+
+    socket.on("employee:updated", handleEmployeeUpdated);
+    return () => {
+      socket.off("employee:updated", handleEmployeeUpdated);
+    };
+  }, [session?.token, refreshEmployees]);
+
   useEffect(() => {
     if (!isLoading && !session) {
       router.replace("/");
@@ -291,14 +308,14 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleSignOut = () => {
+    logout();
+    router.replace("/");
+  };
+
   if (isLoading || !session) {
     return <main className="route-loading">Loading employees...</main>;
   }
-
-  const handleSignOut = useCallback(() => {
-    logout();
-    router.replace("/");
-  }, [logout, router]);
 
   return (
     <main className="app-shell">

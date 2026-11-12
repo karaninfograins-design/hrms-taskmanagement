@@ -5,6 +5,15 @@ export interface ApiOptions extends RequestInit {
   body?: any;
 }
 
+/** Thrown when the server responds with HTTP 401 Unauthorized */
+export class UnauthorizedError extends Error {
+  status = 401;
+  constructor(message: string) {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
 export async function apiRequest<T>(
   path: string,
   options: ApiOptions = {},
@@ -57,6 +66,10 @@ export async function apiRequest<T>(
         : typeof data?.error === "string"
           ? data.error
           : `Request failed with status ${response.status}`;
+
+    if (response.status === 401) {
+      throw new UnauthorizedError(message);
+    }
     throw new Error(message);
   }
 

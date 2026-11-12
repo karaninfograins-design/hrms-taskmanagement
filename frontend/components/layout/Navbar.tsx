@@ -16,6 +16,7 @@ import {
   Phone,
   Video,
   Clock,
+  LogOut,
   Calendar,
   Settings,
   ShieldCheck,
@@ -32,6 +33,10 @@ import {
   clearAllNotifications,
   type AppNotification,
 } from "@/services/notification.service";
+import { UnauthorizedError } from "@/services/api";
+import { playRingtone } from "@/lib/ringtone";
+import { buildApiUrl } from "@/lib/api-config";
+import { showSuccessToast, showErrorToast, showConfirmDialog } from "@/lib/swal";
 
 type NavbarProps = {
   user?: User | null;
@@ -85,13 +90,21 @@ const SIDEBAR_SEARCH_PAGES: NavigationTarget[] = [
 
 export function Navbar({ user, onSignOut }: NavbarProps) {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, logout } = useAuth();
   const { socket } = useSocket();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  // Track if the token has been confirmed expired so we stop polling immediately
+  const tokenExpiredRef = useRef(false);
+
+  // Reset the expired flag whenever the session token changes (new login)
+  useEffect(() => {
+    tokenExpiredRef.current = false;
+  }, [session?.token]);
 
   // Search Bar State
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,19 +119,156 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   const notifRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifs = useCallback(async () => {
-    if (!session?.token) return;
+    if (!session?.token || tokenExpiredRef.current) return;
     setLoadingNotifs(true);
-    const res = await getNotifications(session.token);
-    setNotifications(res.notifications || []);
-    setUnreadCount(res.unreadCount || 0);
-    setLoadingNotifs(false);
-  }, [session?.token]);
+    try {
+      const res = await getNotifications(session.token);
+      setNotifications(res.notifications || []);
+      setUnreadCount(res.unreadCount || 0);
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        // Token expired — stop polling and log out
+        tokenExpiredRef.current = true;
+        console.warn("[Navbar] Session expired, logging out.");
+        logout();
+        router.replace("/");
+      }
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, [session?.token, logout, router]);
 
   useEffect(() => {
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 20000); // Polling every 20 seconds
+    const interval = setInterval(fetchNotifs, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, [fetchNotifs]);
+
+  // Attendance & Clock In / Out State
+  const [todayAttendance, setTodayAttendance] = useState<{
+    id: number;
+    date: string;
+    checkIn: string | null;
+    checkOut: string | null;
+    status: string;
+    workingHours: number;
+  } | null>(null);
+  const [clockActionLoading, setClockActionLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const fetchTodayAttendance = useCallback(async () => {
+    if (!session?.token || tokenExpiredRef.current) return;
+    try {
+      const res = await fetch(buildApiUrl("/api/attendance/today"), {
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTodayAttendance(data.attendance || null);
+      }
+    } catch {
+      // Non-blocking for navbar
+    }
+  }, [session?.token]);
+
+  useEffect(() => {
+    fetchTodayAttendance();
+    const handleAttendanceChange = () => fetchTodayAttendance();
+    window.addEventListener("hrms-attendance-change", handleAttendanceChange);
+    return () => {
+      window.removeEventListener("hrms-attendance-change", handleAttendanceChange);
+    };
+  }, [fetchTodayAttendance]);
+
+  // Live timer tick when clocked in and not clocked out
+  useEffect(() => {
+    if (!todayAttendance?.checkIn || todayAttendance?.checkOut) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const checkInMs = new Date(todayAttendance.checkIn).getTime();
+    const updateElapsed = () => {
+      const diffSecs = Math.max(0, Math.floor((Date.now() - checkInMs) / 1000));
+      setElapsedSeconds(diffSecs);
+    };
+
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
+    return () => clearInterval(timer);
+  }, [todayAttendance?.checkIn, todayAttendance?.checkOut]);
+
+  const formatElapsed = (totalSecs: number) => {
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+  };
+
+  const handleClockIn = async () => {
+    if (!session?.token || clockActionLoading) return;
+    const confirmed = await showConfirmDialog({
+      title: "Clock In?",
+      text: "Are you sure you want to clock in and start your shift?",
+      confirmButtonText: "Yes, Clock In",
+      cancelButtonText: "Cancel",
+      icon: "question",
+      confirmButtonColor: "#f97316",
+    });
+    if (!confirmed) return;
+
+    setClockActionLoading(true);
+    try {
+      const res = await fetch(buildApiUrl("/api/attendance/check-in"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to clock in");
+      }
+      showSuccessToast("Clocked in successfully!");
+      await fetchTodayAttendance();
+      window.dispatchEvent(new Event("hrms-attendance-change"));
+    } catch (err: any) {
+      showErrorToast(err.message || "Failed to clock in");
+    } finally {
+      setClockActionLoading(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!session?.token || clockActionLoading) return;
+    const confirmed = await showConfirmDialog({
+      title: "Clock Out?",
+      text: "Are you sure you want to clock out and end your shift?",
+      confirmButtonText: "Yes, Clock Out",
+      cancelButtonText: "Cancel",
+      icon: "question",
+      confirmButtonColor: "#ea580c",
+    });
+    if (!confirmed) return;
+
+    setClockActionLoading(true);
+    try {
+      const res = await fetch(buildApiUrl("/api/attendance/check-out"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to clock out");
+      }
+      showSuccessToast("Clocked out successfully!");
+      await fetchTodayAttendance();
+      window.dispatchEvent(new Event("hrms-attendance-change"));
+    } catch (err: any) {
+      showErrorToast(err.message || "Failed to clock out");
+    } finally {
+      setClockActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -133,6 +283,9 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
       conversationName?: string | null;
       isGroupCall?: boolean;
     }) => {
+      try {
+        playRingtone();
+      } catch { }
       if (window.location.pathname.startsWith("/dashboard/messenger/calls")) return;
       const params = new URLSearchParams({
         incomingCall: "true",
@@ -327,33 +480,24 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
         <Link
           href="/dashboard"
-          className="flex items-center gap-2.5 group transition-all active:scale-[0.98] select-none"
+          className="flex items-center gap-2 sm:gap-3 group transition-all active:scale-[0.98] select-none"
           aria-label="Infograins HRMS dashboard"
         >
-          {/* <div className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-orange-50/80 border border-orange-200/90 shadow-2xs group-hover:border-orange-300 group-hover:shadow-xs transition-all overflow-hidden p-1 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <img
-              src="/icon.png"
-              alt="Infograins Logo"
-              className="h-full w-full object-contain"
+              src="/logo-infograins.webp"
+              alt="Infograins Software Solutions"
+              className="h-7 sm:h-8 w-auto object-contain"
               loading="eager"
             />
-          </div> */}
-
-          <div className="group flex min-w-0 items-center gap-2 whitespace-nowrap">
-            <span className="flex shrink-0 items-center gap-1.5 rounded-md outline-none">
-              <span className="text-[15px] font-extrabold tracking-[-0.045em] text-slate-800 transition-colors duration-200 group-hover:text-orange-600 sm:text-base">
-                Infograins
-              </span>
-            </span>
-
             {/* Product identifier */}
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-orange-200/80 bg-orange-50 px-2 py-1 text-[9px] font-extrabold uppercase leading-none tracking-[0.045em] text-orange-700 transition-all duration-200 hover:border-orange-300 hover:bg-orange-100 sm:text-[10px]">
-              <span className="relative flex h-1.5 w-1.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-40" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
-              </span>
-              <span>HRMS &amp; Task Management</span>
-            </span>
+            {/* <span className="hidden md:inline-flex items-center gap-1.5 rounded-md border border-orange-200/80 bg-orange-50 px-2 py-1 text-[9px] font-extrabold uppercase leading-none tracking-[0.045em] text-orange-700 transition-all duration-200 hover:border-orange-300 hover:bg-orange-100 sm:text-[10px]">
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-40" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
+                </span>
+                <span>HRMS &amp; Task Management</span>
+              </span> */}
           </div>
         </Link>
       </div>
@@ -514,6 +658,64 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         >
           <Search className="w-5 h-5 text-slate-700" />
         </button>
+
+        {/* Clock In / Clock Out Attendance Tracker Widget */}
+        {session?.user && (
+          <div className="flex items-center shrink-0">
+            {!todayAttendance?.checkIn ? (
+              <button
+                type="button"
+                onClick={handleClockIn}
+                disabled={clockActionLoading}
+                title="Clock in for today's shift"
+                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-[11px] sm:text-xs border border-slate-700/80 shadow-xs hover:border-slate-600 transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                <div className="relative flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-400 transition-colors" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+                <span className="tracking-tight">Clock In</span>
+              </button>
+            ) : !todayAttendance?.checkOut ? (
+              <div className="inline-flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1 rounded-xl bg-slate-900 border border-slate-700/90 text-white shadow-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
+                  </span>
+                  <span className="hidden md:inline text-[9px] font-black uppercase tracking-widest text-slate-400 select-none">
+                    SHIFT
+                  </span>
+                </div>
+                <span className="font-mono font-black text-xs sm:text-[13px] text-emerald-400 tracking-wider tabular-nums select-none">
+                  {formatElapsed(elapsedSeconds)}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleClockOut}
+                  disabled={clockActionLoading}
+                  title="Click to Clock Out and end shift"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium text-[10px] sm:text-[11px] shadow-xs hover:shadow-sm transition-all duration-150 active:scale-95 cursor-pointer shrink-0"
+                >
+                  <LogOut className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
+                  <span className="hidden sm:inline">Clock Out</span>
+                  <span className="sm:hidden">Out</span>
+                </button>
+              </div>
+            ) : (
+              <div
+                title={`Shift completed: ${todayAttendance.workingHours.toFixed(2)} hrs worked today`}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-[11px] sm:text-xs font-bold shadow-xs select-none"
+              >
+                <span className="text-emerald-400 font-black">✓</span>
+                <span className="font-mono font-extrabold text-white tabular-nums">
+                  {todayAttendance.workingHours.toFixed(1)}h
+                </span>
+                <span className="text-slate-400 font-medium text-[10px] hidden sm:inline">worked</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Notification Bell Dropdown */}
         <div className="relative" ref={notifRef}>

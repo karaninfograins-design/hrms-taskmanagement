@@ -8,7 +8,7 @@ export function CompanyLogo({ className = "" }: CompanyLogoProps) {
       <div className="relative px-1 py-1 rounded-xl bg-gradient-to-r from-slate-50 via-orange-50/50 to-slate-50 border border-slate-200/80 shadow-sm hover:border-orange-300 transition-all flex items-center h-11">
         <Image
           className="company-logo rounded-md object-contain"
-          src="/infograin_logo.jpg"
+          src="/logo-infograins.webp"
           alt="Infograins HRMS"
           width={401}
           height={117}

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { updateProfile, changePassword } from "@/services/user.service";
+import { getEmployeeById } from "@/services/employee.service";
+import { getSocket } from "@/lib/socket";
 import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
 import type { User } from "@/types/auth";
@@ -30,6 +32,21 @@ type PasswordFormData = {
   newPassword: string;
   confirmPassword: string;
 };
+
+function formatDob(rawDob: unknown): string {
+  if (!rawDob) return "";
+  try {
+    if (typeof rawDob === "string") {
+      return rawDob.split("T")[0];
+    }
+    if (rawDob instanceof Date) {
+      return rawDob.toISOString().split("T")[0];
+    }
+    return String(rawDob).split("T")[0];
+  } catch {
+    return "";
+  }
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -93,6 +110,47 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchLiveProfile = useCallback(async () => {
+    if (!session?.token || !session?.user?.id) return;
+    try {
+      const { employee: emp } = await getEmployeeById(session.user.id, session.token);
+      if (emp) {
+        const prof = emp.employeeProfile;
+        const desigName = (emp.designation as any)?.name || (typeof emp.designation === "string" ? emp.designation : "") || "";
+        const roleName = (emp.role as any)?.name || (typeof emp.role === "string" ? emp.role : "") || "";
+
+        setProfileData((prev) => ({
+          ...prev,
+          name: emp.name || prev.name,
+          email: emp.email || prev.email,
+          designation: desigName || prev.designation,
+          phoneNumber: emp.phoneNumber || prev.phoneNumber,
+          employeeCode: prof?.employeeCode || prev.employeeCode || `EMP-${emp.id}`,
+          dob: formatDob(prof?.dob) || prev.dob,
+          gender: prof?.gender || prev.gender,
+          address: prof?.address || prev.address,
+          workLocation: prof?.workLocation || prev.workLocation || "OFFICE",
+          employmentType: prof?.employmentType || prev.employmentType || "FULL_TIME",
+        }));
+
+        saveSession({
+          ...session,
+          user: {
+            ...session.user,
+            name: emp.name || session.user.name,
+            email: emp.email || session.user.email,
+            phoneNumber: emp.phoneNumber || session.user.phoneNumber,
+            designation: desigName || session.user.designation,
+            role: roleName || session.user.role,
+            employeeProfile: prof,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch live profile data:", err);
+    }
+  }, [session?.token, session?.user?.id, saveSession]);
+
   useEffect(() => {
     if (!isLoading && !session) {
       router.replace("/");
@@ -105,7 +163,7 @@ export default function ProfilePage() {
         designation: session.user.designation || "",
         phoneNumber: session.user.phoneNumber || "",
         employeeCode: prof?.employeeCode || `EMP-${session.user.id}`,
-        dob: prof?.dob ? prof.dob.split("T")[0] : "",
+        dob: formatDob(prof?.dob),
         gender: prof?.gender || "",
         address: prof?.address || "",
         workLocation: prof?.workLocation || "OFFICE",
@@ -113,8 +171,29 @@ export default function ProfilePage() {
       });
 
       fetchProfileLeaveData();
+      fetchLiveProfile();
     }
-  }, [isLoading, router, session]);
+  }, [isLoading, router, session?.token, session?.user?.id, fetchLiveProfile]);
+
+  // Real-time socket listener so if admin or another tab updates profile, this page updates instantly
+  useEffect(() => {
+    if (!session?.token || !session?.user?.id) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleUpdate = (data: any) => {
+      if (data?.id === session.user.id) {
+        fetchLiveProfile();
+      }
+    };
+
+    socket.on("user:updated", handleUpdate);
+    socket.on("employee:updated", handleUpdate);
+    return () => {
+      socket.off("user:updated", handleUpdate);
+      socket.off("employee:updated", handleUpdate);
+    };
+  }, [session?.token, session?.user?.id, fetchLiveProfile]);
 
   const handleProfileInputChange = (field: keyof ProfileFormData, value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
@@ -159,7 +238,22 @@ export default function ProfilePage() {
           ...session,
           user: { ...session.user, ...result.user },
         });
+        const prof = (result.user as any).employeeProfile;
+        setProfileData((prev) => ({
+          ...prev,
+          name: result.user.name || prev.name,
+          email: result.user.email || prev.email,
+          designation: result.user.designation || prev.designation,
+          phoneNumber: result.user.phoneNumber || prev.phoneNumber,
+          employeeCode: prof?.employeeCode || prev.employeeCode,
+          dob: formatDob(prof?.dob) || prev.dob,
+          gender: prof?.gender || prev.gender,
+          address: prof?.address || prev.address,
+          workLocation: prof?.workLocation || prev.workLocation,
+          employmentType: prof?.employmentType || prev.employmentType,
+        }));
         setSuccess("Profile information updated successfully!");
+        fetchLiveProfile();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
@@ -322,7 +416,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Sidebar Info Card */}
             <div className="space-y-6">
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+              {/* <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Account Summary</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -342,7 +436,7 @@ export default function ProfilePage() {
                     <span className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">#{session.user.id || 1}</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* Leave Status & Balances Card */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">

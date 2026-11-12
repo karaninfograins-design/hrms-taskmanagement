@@ -195,6 +195,7 @@ model User {
   callParticipants        CallParticipant[]
   notifications           Notification[]
   createdHolidays         CompanyHoliday[]          @relation("HolidayCreator")
+  groupDailySummaries     GroupDailySummary[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -548,6 +549,7 @@ model Conversation {
   participants ConversationParticipant[]
   messages     Message[]
   callSessions CallSession[]
+  dailySummaries GroupDailySummary[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -662,3 +664,21 @@ model CompanyHoliday {
   @@index([createdById])
   @@index([date])
 }
+
+model GroupDailySummary {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  userId         Int
+  date           String       @db.VarChar(10) // "YYYY-MM-DD"
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId, date])
+  @@index([conversationId, date])
+  @@index([createdAt])
+}
+

@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, UnauthorizedError } from "./api";
 
 export interface AppNotification {
   id: number;
@@ -16,10 +16,18 @@ export interface GetNotificationsResponse {
   unreadCount: number;
 }
 
+/**
+ * Fetches notifications. Throws `UnauthorizedError` if the token is expired/invalid
+ * so the caller (Navbar) can stop polling and log the user out.
+ */
 export async function getNotifications(token: string): Promise<GetNotificationsResponse> {
   try {
     return await apiRequest<GetNotificationsResponse>("/api/notifications", { token });
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      // Re-throw so Navbar can detect 401 and stop polling
+      throw error;
+    }
     console.error("Failed to fetch notifications:", error);
     return { notifications: [], unreadCount: 0 };
   }

@@ -424,7 +424,8 @@ export const ModelName = {
   CallSession: 'CallSession',
   CallParticipant: 'CallParticipant',
   Notification: 'Notification',
-  CompanyHoliday: 'CompanyHoliday'
+  CompanyHoliday: 'CompanyHoliday',
+  GroupDailySummary: 'GroupDailySummary'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -440,7 +441,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "role" | "permission" | "rolePermission" | "designation" | "department" | "user" | "employeeProfile" | "attendance" | "leaveType" | "leaveBalance" | "leaveRequest" | "meeting" | "meetingParticipant" | "hRSetting" | "project" | "projectMember" | "sprint" | "workItem" | "workItemAssignee" | "workItemActivity" | "comment" | "conversation" | "conversationParticipant" | "message" | "callSession" | "callParticipant" | "notification" | "companyHoliday"
+    modelProps: "role" | "permission" | "rolePermission" | "designation" | "department" | "user" | "employeeProfile" | "attendance" | "leaveType" | "leaveBalance" | "leaveRequest" | "meeting" | "meetingParticipant" | "hRSetting" | "project" | "projectMember" | "sprint" | "workItem" | "workItemAssignee" | "workItemActivity" | "comment" | "conversation" | "conversationParticipant" | "message" | "callSession" | "callParticipant" | "notification" | "companyHoliday" | "groupDailySummary"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2292,6 +2293,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    GroupDailySummary: {
+      payload: Prisma.$GroupDailySummaryPayload<ExtArgs>
+      fields: Prisma.GroupDailySummaryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GroupDailySummaryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GroupDailySummaryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>
+        }
+        findFirst: {
+          args: Prisma.GroupDailySummaryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GroupDailySummaryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>
+        }
+        findMany: {
+          args: Prisma.GroupDailySummaryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>[]
+        }
+        create: {
+          args: Prisma.GroupDailySummaryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>
+        }
+        createMany: {
+          args: Prisma.GroupDailySummaryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.GroupDailySummaryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>
+        }
+        update: {
+          args: Prisma.GroupDailySummaryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>
+        }
+        deleteMany: {
+          args: Prisma.GroupDailySummaryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GroupDailySummaryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.GroupDailySummaryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupDailySummaryPayload>
+        }
+        aggregate: {
+          args: Prisma.GroupDailySummaryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGroupDailySummary>
+        }
+        groupBy: {
+          args: Prisma.GroupDailySummaryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroupDailySummaryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GroupDailySummaryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroupDailySummaryCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2730,6 +2797,19 @@ export const CompanyHolidayScalarFieldEnum = {
 export type CompanyHolidayScalarFieldEnum = (typeof CompanyHolidayScalarFieldEnum)[keyof typeof CompanyHolidayScalarFieldEnum]
 
 
+export const GroupDailySummaryScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  userId: 'userId',
+  date: 'date',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GroupDailySummaryScalarFieldEnum = (typeof GroupDailySummaryScalarFieldEnum)[keyof typeof GroupDailySummaryScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2945,6 +3025,14 @@ export const CompanyHolidayOrderByRelevanceFieldEnum = {
 } as const
 
 export type CompanyHolidayOrderByRelevanceFieldEnum = (typeof CompanyHolidayOrderByRelevanceFieldEnum)[keyof typeof CompanyHolidayOrderByRelevanceFieldEnum]
+
+
+export const GroupDailySummaryOrderByRelevanceFieldEnum = {
+  date: 'date',
+  content: 'content'
+} as const
+
+export type GroupDailySummaryOrderByRelevanceFieldEnum = (typeof GroupDailySummaryOrderByRelevanceFieldEnum)[keyof typeof GroupDailySummaryOrderByRelevanceFieldEnum]
 
 
 
@@ -3271,6 +3359,7 @@ export type GlobalOmitConfig = {
   callParticipant?: Prisma.CallParticipantOmit
   notification?: Prisma.NotificationOmit
   companyHoliday?: Prisma.CompanyHolidayOmit
+  groupDailySummary?: Prisma.GroupDailySummaryOmit
 }
 
 /* Types for Logging */

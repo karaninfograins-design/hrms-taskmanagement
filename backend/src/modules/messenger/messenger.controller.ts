@@ -549,8 +549,7 @@ export const reactToMessage = async (req: Request, res: Response): Promise<void>
     const messageId = Number(req.params.id);
     const { emoji } = req.body;
 
-    const allowedEmojis = ["👍", "❤️", "😂", "🎉", "🙏"];
-    if (!emoji || !allowedEmojis.includes(emoji)) {
+    if (!emoji || typeof emoji !== "string" || emoji.trim().length === 0 || emoji.length > 32) {
       res.status(400).json({ message: "Invalid or unsupported reaction emoji" });
       return;
     }
@@ -621,7 +620,8 @@ export const uploadAttachment = async (req: Request, res: Response): Promise<voi
 
     const publicApiUrl = process.env.PUBLIC_API_URL?.trim().replace(/\/+$/, "");
     const requestHost = req.get("host");
-    const baseUrl = publicApiUrl || (requestHost ? `${req.protocol}://${requestHost}` : null);
+    const forwardedProto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
+    const baseUrl = publicApiUrl || (requestHost ? `${forwardedProto}://${requestHost}` : null);
     if (!baseUrl) {
       res.status(500).json({ message: "Public API URL is not configured" });
       return;

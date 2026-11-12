@@ -22,7 +22,7 @@ export const generateToken = (userId: number): string => {
     { userId },
     JWT_SECRET,
     {
-      expiresIn: "1d",
+      expiresIn: "7d",
     }
   );
 };

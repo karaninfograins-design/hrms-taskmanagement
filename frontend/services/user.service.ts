@@ -11,6 +11,17 @@ export type ProfileResponse = {
   message: string;
 };
 
+export async function getUserProfile(
+  userId: number | undefined,
+  token: string
+): Promise<{ user: User }> {
+  return apiRequest<{ user: User }>(`/api/users/${userId || "me"}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export async function updateProfile(
   userId: number | undefined,
   updateData: UpdateProfileData,
