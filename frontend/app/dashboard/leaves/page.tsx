@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
 import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
+import { showConfirmDialog, showSuccessToast, showErrorToast } from "@/lib/swal";
 
 type LeaveType = {
   id: number;
@@ -170,7 +171,13 @@ export default function LeavesPage() {
   };
 
   const handleCancelRequest = async (requestId: number) => {
-    if (!window.confirm("Are you sure you want to cancel this leave request?")) {
+    const confirmed = await showConfirmDialog({
+      title: "Cancel Leave Request?",
+      text: "Are you sure you want to cancel this leave request?",
+      confirmButtonText: "Yes, Cancel",
+      icon: "question",
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -595,7 +602,7 @@ export default function LeavesPage() {
                                           type="button"
                                           disabled={isSubmittingAction}
                                           onClick={() => handleAction(req.id, "APPROVED")}
-                                          className="h-8 px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                          className="h-8.5 px-3.5 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-sm rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                                           title="Approve this leave request"
                                         >
                                           <Check className="w-3.5 h-3.5 text-white" />
@@ -608,7 +615,7 @@ export default function LeavesPage() {
                                             setRejectionModalId(req.id);
                                             setRejectionReasonInput("");
                                           }}
-                                          className="h-8 px-2.5 bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-slate-200 hover:border-rose-200 active:scale-95 font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                          className="h-8.5 px-3 bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-slate-200 hover:border-rose-200 active:scale-95 font-bold text-sm rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                                           title="Reject this leave request"
                                         >
                                           <X className="w-3.5 h-3.5 text-rose-600" />
@@ -992,7 +999,7 @@ export default function LeavesPage() {
                                 setRejectionReasonInput("");
                                 setViewingLeave(null);
                               }}
-                              className="px-4 py-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                              className="px-4.5 py-2.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                             >
                               ✕ Reject Request
                             </button>
@@ -1003,7 +1010,7 @@ export default function LeavesPage() {
                                 await handleAction(viewingLeave.id, "APPROVED");
                                 setViewingLeave(null);
                               }}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                             >
                               ✓ Approve Request
                             </button>
@@ -1019,7 +1026,7 @@ export default function LeavesPage() {
                               await handleCancelRequest(viewingLeave.id);
                               setViewingLeave(null);
                             }}
-                            className="px-4 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                            className="px-4.5 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                           >
                             Cancel Application
                           </button>

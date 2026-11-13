@@ -35,3 +35,6 @@ meeting_test_results.json
 group_call_and_meeting_results.json
 list_old_users.ts
 test-reset-flow.ts
+src/test-project-flow.ts
+test_meeting_voice_suite.ts
+scripts/remove-legacy-superadmin.ts

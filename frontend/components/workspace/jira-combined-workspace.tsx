@@ -6,7 +6,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/workspace/management-pages";
 import { useAuth } from "@/hooks/use-auth";
 import { showConfirmDialog } from "@/lib/swal";
-import { Search } from "lucide-react";
+import { Search, Plus, ArrowLeft, RefreshCw, Eye, Trash2, FolderGit2, X, Calendar, Users } from "lucide-react";
 import {
   addWorkItemComment,
   createWorkItem,
@@ -282,6 +282,8 @@ export function ProjectSprintPage({ mode }: Props) {
   const [form, setForm] = useState<Record<string, string>>({
     type: "WEEKLY",
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
 
   const refresh = useCallback((page: number = 1) => {
     if (!session?.token) return;
@@ -391,210 +393,310 @@ export function ProjectSprintPage({ mode }: Props) {
 
   return (
     <DashboardShell>
-      <div className="welcome">
-        <p className="eyebrow">WORK MANAGEMENT</p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#ea580c]">
+            WORK MANAGEMENT
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+            {isProjects ? "Projects" : "Sprints"}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            {isProjects
+              ? "Oversee organizational projects, milestones, assigned teams, and delivery timelines."
+              : "Track active sprint cadences, delivery commitments, and iteration goals."}
+          </p>
+        </div>
 
-        <h1>
-          {isProjects ? "Projects" : "Sprints"}
-        </h1>
+        <div className="flex items-center gap-2.5">
+          {!showForm && (
+            <button
+              type="button"
+              className="h-9 px-4 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              onClick={() => setShowForm(true)}
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              <span>Create {isProjects ? "Project" : "Sprint"}</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      <button
-        className="primary-button workspace-add-button mb-4 w-full sm:w-auto"
-        onClick={() => setShowForm(!showForm)}
-      >
-        + Create {isProjects ? "project" : "sprint"}
-      </button>
-
       {showForm && (
-        <form
-          className="enhanced-sprint-form"
-          onSubmit={create}
+        <div
+          className="p-5 sm:p-7 rounded-2xl border shadow-sm mb-6 animate-in fade-in zoom-in-95 duration-200"
+          style={{
+            background: "linear-gradient(180deg, #ffffff 0%, #fff7ed 100%)",
+            borderColor: "var(--orange-border, #fdba74)",
+          }}
         >
-          <label>
-            {isProjects ? "Project Name" : "Sprint Name"}
+          <div className="flex items-center justify-between pb-4 mb-5 border-b border-orange-200/60">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">
+                Create New {isProjects ? "Project" : "Sprint"}
+              </h3>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                {isProjects
+                  ? "Configure your project title, status, duration, and core objectives."
+                  : "Configure sprint name, project association, cadence, and timelines."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-orange-100/50 flex items-center justify-center transition cursor-pointer"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
 
-            <input
-              placeholder={`Enter ${isProjects ? "project" : "sprint"
-                } title`}
-              value={form.name || ""}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  name: event.target.value,
-                })
-              }
-              required
-            />
-          </label>
-
-          {!isProjects && (
+          <form
+            className="enhanced-sprint-form"
+            onSubmit={create}
+            style={{ margin: 0, padding: 0, border: "none", background: "transparent", boxShadow: "none" }}
+          >
             <label>
-              Associated Project
+              {isProjects ? "Project Name" : "Sprint Name"}
 
-              <select
-                value={form.projectId || ""}
+              <input
+                placeholder={`Enter ${isProjects ? "project" : "sprint"
+                  } title`}
+                value={form.name || ""}
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    projectId: event.target.value,
+                    name: event.target.value,
                   })
                 }
                 required
-              >
-                <option value="">
-                  Select a project
-                </option>
-
-                {projects.map((project) => (
-                  <option
-                    key={String(project.id)}
-                    value={String(project.id)}
-                  >
-                    {String(project.name)}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
-          )}
 
-          <label>
-            {isProjects
-              ? "Project Status"
-              : "Iteration Cadence"}
+            {!isProjects && (
+              <label>
+                Associated Project
 
-            <select
-              value={form.type || "WEEKLY"}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  type: event.target.value,
-                })
-              }
-            >
-              {isProjects ? (
-                <>
-                  <option value="ACTIVE">
-                    Active
+                <select
+                  value={form.projectId || ""}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      projectId: event.target.value,
+                    })
+                  }
+                  required
+                >
+                  <option value="">
+                    Select a project
                   </option>
 
-                  <option value="INACTIVE">
-                    Inactive
-                  </option>
-                </>
-              ) : (
-                <>
-                  <option value="WEEKLY">Weekly (7 Days)</option>
-                  <option value="FORTNIGHTLY">Fortnightly (15 Days)</option>
-                  <option value="MONTHLY">Monthly (30 Days)</option>
-                  <option value="MANUAL">Custom Schedule (Manual Dates)</option>
-                </>
-              )}
-            </select>
-          </label>
+                  {projects.map((project) => (
+                    <option
+                      key={String(project.id)}
+                      value={String(project.id)}
+                    >
+                      {String(project.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
-          {!isProjects && (
             <label>
-              Parent Epic / Key (Optional)
-              <input
-                placeholder="Epic Key or Title (e.g. EPIC-12)"
-                value={form.epicId || ""}
+              {isProjects
+                ? "Project Status"
+                : "Iteration Cadence"}
+
+              <select
+                value={form.type || "WEEKLY"}
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    epicId: event.target.value,
+                    type: event.target.value,
+                  })
+                }
+              >
+                {isProjects ? (
+                  <>
+                    <option value="ACTIVE">
+                      Active
+                    </option>
+
+                    <option value="INACTIVE">
+                      Inactive
+                    </option>
+                  </>
+                ) : (
+                  <>
+                    <option value="WEEKLY">Weekly (7 Days)</option>
+                    <option value="FORTNIGHTLY">Fortnightly (15 Days)</option>
+                    <option value="MONTHLY">Monthly (30 Days)</option>
+                    <option value="MANUAL">Custom Schedule (Manual Dates)</option>
+                  </>
+                )}
+              </select>
+            </label>
+
+            {!isProjects && (
+              <label>
+                Parent Epic / Key (Optional)
+                <input
+                  placeholder="Epic Key or Title (e.g. EPIC-12)"
+                  value={form.epicId || ""}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      epicId: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            )}
+
+            <label>
+              Start Date {(!isProjects && form.type !== "MANUAL") ? "(Optional)" : isProjects ? "(Optional)" : ""}
+              <input
+                type="date"
+                value={form.startDate || ""}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    startDate: event.target.value,
+                  })
+                }
+                required={!isProjects && form.type === "MANUAL"}
+              />
+            </label>
+
+            <label>
+              {isProjects ? "Deadline / End Date (Optional)" : `End Date ${form.type !== "MANUAL" ? "(Optional)" : ""}`}
+              <input
+                type="date"
+                value={form.endDate || ""}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    endDate: event.target.value,
+                  })
+                }
+                required={!isProjects && form.type === "MANUAL"}
+              />
+            </label>
+
+            <label style={{ gridColumn: "1 / -1" }}>
+              Description & Objectives
+
+              <textarea
+                placeholder="Brief summary or goals..."
+                value={form.description || ""}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    description:
+                      event.target.value,
                   })
                 }
               />
             </label>
-          )}
 
-          <label>
-            Start Date {(!isProjects && form.type !== "MANUAL") ? "(Optional)" : isProjects ? "(Optional)" : ""}
+            <div className="enhanced-sprint-form-actions" style={{ borderTop: "1px solid rgba(253, 186, 116, 0.45)", paddingTop: "14px" }}>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer"
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+              >
+                Save {isProjects ? "Project" : "Sprint"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Search and Filters Bar */}
+      {isProjects && (
+        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs mb-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-full sm:max-w-md">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
             <input
-              type="date"
-              value={form.startDate || ""}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  startDate: event.target.value,
-                })
-              }
-              required={!isProjects && form.type === "MANUAL"}
+              type="text"
+              placeholder="Search projects by title, key, owner..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: "38px" }}
+              className="w-full h-9 !pl-10 pr-8 text-xs bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-orange-500 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-orange-500/10 text-slate-900 font-medium placeholder:text-slate-400"
             />
-          </label>
-
-          <label>
-            {isProjects ? "Deadline / End Date (Optional)" : `End Date ${form.type !== "MANUAL" ? "(Optional)" : ""}`}
-            <input
-              type="date"
-              value={form.endDate || ""}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  endDate: event.target.value,
-                })
-              }
-              required={!isProjects && form.type === "MANUAL"}
-            />
-          </label>
-
-          <label style={{ gridColumn: "1 / -1" }}>
-            Description & Objectives
-
-            <textarea
-              placeholder="Brief summary or goals..."
-              value={form.description || ""}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  description:
-                    event.target.value,
-                })
-              }
-            />
-          </label>
-
-          <div className="enhanced-sprint-form-actions">
-            <button
-              type="button"
-              className="sprint-btn"
-              onClick={() => setShowForm(false)}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="sprint-btn sprint-btn-primary"
-            >
-              Save {isProjects ? "Project" : "Sprint"}
-            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
           </div>
-        </form>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto justify-end">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("ALL")}
+                className={`flex-1 sm:flex-none text-center px-3 py-1 rounded-lg transition-all cursor-pointer ${statusFilter === "ALL" ? "bg-white text-slate-900 shadow-2xs" : "hover:text-slate-900"
+                  }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("ACTIVE")}
+                className={`flex-1 sm:flex-none text-center px-3 py-1 rounded-lg transition-all cursor-pointer ${statusFilter === "ACTIVE" ? "bg-white text-emerald-700 shadow-2xs" : "hover:text-slate-900"
+                  }`}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("INACTIVE")}
+                className={`flex-1 sm:flex-none text-center px-3 py-1 rounded-lg transition-all cursor-pointer ${statusFilter === "INACTIVE" ? "bg-white text-slate-900 shadow-2xs" : "hover:text-slate-900"
+                  }`}
+              >
+                Inactive
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {isProjects ? (
-        <div className="workspace-list-card">
-          <div className="workspace-table-scroll hidden md:block">
-            <table className="workspace-table project-table">
+        <div className="workspace-list-card bg-white border border-slate-200/90 rounded-2xl shadow-2xs overflow-hidden">
+          <div className="workspace-table-scroll hidden md:block overflow-x-auto scrollbar-none no-scrollbar">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr>
-                  <th>Key</th>
-                  <th>Project</th>
-                  <th>Status</th>
-                  <th>Created By</th>
-                  <th>Owner</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Actions</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4">Key</th>
+                  <th className="py-3.5 px-4">Project</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Created By</th>
+                  <th className="py-3.5 px-4">Owner</th>
+                  <th className="py-3.5 px-4">Start</th>
+                  <th className="py-3.5 px-4">End</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {(() => {
                   const isEmployeeRole = session?.user?.role === "EMPLOYEE";
-                  const displayItems = isEmployeeRole
+                  const roleFiltered = isEmployeeRole
                     ? items.filter((item: any) => {
                       const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
                       const isAssigned = Array.isArray(item.assignedUserIds) && item.assignedUserIds.includes(session?.user?.id);
@@ -603,49 +705,87 @@ export function ProjectSprintPage({ mode }: Props) {
                     })
                     : items;
 
+                  const displayItems = roleFiltered.filter((item: any) => {
+                    if (statusFilter === "ACTIVE" && String(item.status || "").toUpperCase() !== "ACTIVE") {
+                      return false;
+                    }
+                    if (
+                      statusFilter === "INACTIVE" &&
+                      ["ACTIVE"].includes(String(item.status || "").toUpperCase())
+                    ) {
+                      return false;
+                    }
+                    if (searchQuery.trim()) {
+                      const q = searchQuery.toLowerCase();
+                      const name = String(item.name || "").toLowerCase();
+                      const key = String(item.key || "").toLowerCase();
+                      const owner = String((item as any).createdBy?.name || item.owner || "").toLowerCase();
+                      const desc = String(item.description || "").toLowerCase();
+                      return name.includes(q) || key.includes(q) || owner.includes(q) || desc.includes(q);
+                    }
+                    return true;
+                  });
+
                   if (displayItems.length === 0) {
                     return (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--muted, #64748b)" }}>
-                          {isEmployeeRole ? "You are not assigned to any projects yet." : "No projects found."}
+                        <td colSpan={8} className="text-center py-10 text-slate-400 font-medium text-xs">
+                          {isEmployeeRole
+                            ? "You are not assigned to any projects yet."
+                            : searchQuery.trim() || statusFilter !== "ALL"
+                              ? "No projects match your filter criteria."
+                              : "No projects found."}
                         </td>
                       </tr>
                     );
                   }
 
                   return displayItems.map((item) => (
-                    <tr key={String(item.id)}>
-                      <td>
-                        <strong>
+                    <tr key={String(item.id)} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono font-bold text-xs text-orange-700 bg-orange-50 border border-orange-200/80 px-2 py-0.5 rounded-lg">
                           {String(item.key || "PRJ")}
-                        </strong>
+                        </span>
                       </td>
 
-                      <td>
-                        <strong>
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        <span
+                          className="hover:text-orange-600 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/dashboard/projects/${item.id}`)}
+                        >
                           {String(item.name)}
-                        </strong>
-                      </td>
-
-                      <td>
-                        <span className="jira-status">
-                          {String(item.status)}
                         </span>
                       </td>
 
-                      <td>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-                          <span>👤</span> {(item as any).createdBy?.name || item.owner || "Admin"}
+                      <td className="py-3.5 px-4">
+                        {String(item.status).toUpperCase() === "ACTIVE" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            {String(item.status)}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-100/80 px-2.5 py-1 rounded-lg">
+                          <span className="w-4 h-4 rounded-full bg-slate-300 text-slate-700 text-[10px] font-extrabold flex items-center justify-center">
+                            {((item as any).createdBy?.name || item.owner || "A").charAt(0).toUpperCase()}
+                          </span>
+                          {(item as any).createdBy?.name || item.owner || "Admin"}
                         </span>
                       </td>
 
-                      <td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">
                         {String(
                           item.owner || "Not assigned",
                         )}
                       </td>
 
-                      <td>
+                      <td className="py-3.5 px-4 text-slate-600">
                         {item.startDate
                           ? new Date(
                             String(item.startDate),
@@ -653,7 +793,7 @@ export function ProjectSprintPage({ mode }: Props) {
                           : "Not set"}
                       </td>
 
-                      <td>
+                      <td className="py-3.5 px-4 text-slate-600">
                         {item.endDate
                           ? new Date(
                             String(item.endDate),
@@ -661,38 +801,37 @@ export function ProjectSprintPage({ mode }: Props) {
                           : "Not set"}
                       </td>
 
-                      <td className="sprint-action-group">
-                        <button
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-extrabold text-[11px] transition-all cursor-pointer shadow-2xs"
-                          onClick={() =>
-                            router.push(
-                              `/dashboard/projects/${item.id}`,
-                            )
-                          }
-                          title="View Project Details"
-                        >
-                          <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          <span>View</span>
-                        </button>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer active:scale-95"
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/projects/${item.id}`,
+                              )
+                            }
+                            title="View Project Details"
+                          >
+                            <Eye size={13} className="text-slate-500" />
+                            <span>View</span>
+                          </button>
 
-                        <button
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 bg-white hover:bg-rose-50 text-rose-600 font-extrabold text-[11px] transition-all cursor-pointer shadow-2xs"
-                          onClick={() =>
-                            removeProject(
-                              Number(item.id),
-                              String(item.name),
-                            )
-                          }
-                          title="Delete Project"
-                        >
-                          <svg className="w-3.5 h-3.5 text-rose-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          <span>Delete</span>
-                        </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 font-bold text-xs shadow-2xs transition-all cursor-pointer active:scale-95"
+                            onClick={() =>
+                              removeProject(
+                                Number(item.id),
+                                String(item.name),
+                              )
+                            }
+                            title="Delete Project"
+                          >
+                            <Trash2 size={13} className="text-rose-500" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ));
@@ -702,10 +841,10 @@ export function ProjectSprintPage({ mode }: Props) {
           </div>
 
           {/* Mobile Project Cards */}
-          <div className="md:hidden divide-y divide-slate-100 p-2 sm:p-4">
+          <div className="md:hidden divide-y divide-slate-100 p-3 sm:p-4">
             {(() => {
               const isEmployeeRole = session?.user?.role === "EMPLOYEE";
-              const displayItems = isEmployeeRole
+              const roleFiltered = isEmployeeRole
                 ? items.filter((item: any) => {
                   const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
                   const isAssigned = Array.isArray(item.assignedUserIds) && item.assignedUserIds.includes(session?.user?.id);
@@ -714,52 +853,80 @@ export function ProjectSprintPage({ mode }: Props) {
                 })
                 : items;
 
+              const displayItems = roleFiltered.filter((item: any) => {
+                if (statusFilter === "ACTIVE" && String(item.status || "").toUpperCase() !== "ACTIVE") {
+                  return false;
+                }
+                if (statusFilter === "INACTIVE" && ["ACTIVE"].includes(String(item.status || "").toUpperCase())) {
+                  return false;
+                }
+                if (searchQuery.trim()) {
+                  const q = searchQuery.toLowerCase();
+                  const name = String(item.name || "").toLowerCase();
+                  const key = String(item.key || "").toLowerCase();
+                  const owner = String((item as any).createdBy?.name || item.owner || "").toLowerCase();
+                  const desc = String(item.description || "").toLowerCase();
+                  return name.includes(q) || key.includes(q) || owner.includes(q) || desc.includes(q);
+                }
+                return true;
+              });
+
               if (displayItems.length === 0) {
                 return (
-                  <div className="text-center py-6 text-sm text-slate-500">
+                  <div className="text-center py-6 text-sm text-slate-500 font-medium">
                     {isEmployeeRole ? "You are not assigned to any projects yet." : "No projects found."}
                   </div>
                 );
               }
 
               return displayItems.map((item) => (
-                <div key={String(item.id)} className="py-3 space-y-2.5">
+                <div key={String(item.id)} className="py-3.5 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-mono font-bold text-orange-700 bg-orange-50 border border-orange-200/80 px-2 py-0.5 rounded-md">
                         {String(item.key || "PRJ")}
                       </span>
-                      <h4 className="font-bold text-slate-900 text-sm mt-1 truncate">
+                      <h4
+                        className="font-bold text-slate-900 text-sm mt-1 truncate hover:text-orange-600 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/dashboard/projects/${item.id}`)}
+                      >
                         {String(item.name)}
                       </h4>
                     </div>
-                    <span className="jira-status shrink-0 text-xs">
-                      {String(item.status)}
-                    </span>
+                    {String(item.status).toUpperCase() === "ACTIVE" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                        {String(item.status)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Created By</span>
-                      <span className="font-medium text-slate-700 truncate block">
+                      <span className="font-semibold text-slate-700 truncate block">
                         {(item as any).createdBy?.name || item.owner || "Admin"}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Owner</span>
-                      <span className="font-medium text-slate-700 truncate block">
+                      <span className="font-semibold text-slate-700 truncate block">
                         {String(item.owner || "Not assigned")}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Start Date</span>
-                      <span className="font-medium text-slate-700">
+                      <span className="font-semibold text-slate-700">
                         {item.startDate ? new Date(String(item.startDate)).toLocaleDateString() : "Not set"}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">End Date</span>
-                      <span className="font-medium text-slate-700">
+                      <span className="font-semibold text-slate-700">
                         {item.endDate ? new Date(String(item.endDate)).toLocaleDateString() : "Not set"}
                       </span>
                     </div>
@@ -767,24 +934,21 @@ export function ProjectSprintPage({ mode }: Props) {
 
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                     <button
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs"
+                      type="button"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer active:scale-95"
                       onClick={() => router.push(`/dashboard/projects/${item.id}`)}
                       title="View Project Details"
                     >
-                      <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                      <Eye size={13} className="text-slate-500" />
                       <span>View</span>
                     </button>
                     <button
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-white hover:bg-rose-50 text-rose-600 font-bold text-xs shadow-2xs"
+                      type="button"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 font-bold text-xs shadow-2xs transition-all cursor-pointer active:scale-95"
                       onClick={() => removeProject(Number(item.id), String(item.name))}
                       title="Delete Project"
                     >
-                      <svg className="w-3.5 h-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <Trash2 size={13} className="text-rose-500" />
                       <span>Delete</span>
                     </button>
                   </div>
@@ -794,18 +958,19 @@ export function ProjectSprintPage({ mode }: Props) {
           </div>
 
           {pagination.totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 p-3 bg-white rounded-lg border border-slate-200">
-              <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left order-2 sm:order-1">
-                Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} items)
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-slate-50/50 border-t border-slate-200/80">
+              <span className="text-xs text-slate-500 text-center sm:text-left">
+                Showing page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total)
               </span>
-              <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => pagination.page > 1 && refresh(pagination.page - 1)}
                   disabled={pagination.page <= 1}
-                  className={`px-3 py-1.5 rounded-md border text-xs sm:text-sm font-semibold transition-colors ${
-                    pagination.page <= 1 ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${pagination.page <= 1
+                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs active:scale-95"
+                    }`}
                 >
                   Previous
                 </button>
@@ -813,9 +978,10 @@ export function ProjectSprintPage({ mode }: Props) {
                   type="button"
                   onClick={() => pagination.page < pagination.totalPages && refresh(pagination.page + 1)}
                   disabled={pagination.page >= pagination.totalPages}
-                  className={`px-3 py-1.5 rounded-md border text-xs sm:text-sm font-semibold transition-colors ${
-                    pagination.page >= pagination.totalPages ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${pagination.page >= pagination.totalPages
+                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs active:scale-95"
+                    }`}
                 >
                   Next
                 </button>
@@ -1435,31 +1601,36 @@ export function ProjectDetailsPage() {
 
   return (
     <DashboardShell>
-      {/* Breadcrumb Navigation */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", color: "#64748b", marginBottom: "12px", fontWeight: 600 }}>
+      {/* Top Header: Breadcrumbs & Back Button on Right */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2 border-b border-slate-100">
+        <div className="flex items-center flex-wrap gap-2 text-xs font-semibold text-slate-500">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/projects")}
+            className="text-orange-600 hover:text-orange-700 font-bold cursor-pointer transition-colors"
+          >
+            Projects
+          </button>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-900 font-bold truncate max-w-[280px]">
+            {project?.name || "Project"} ({project?.key || `PRJ-${project?.id || ""}`})
+          </span>
+          <span className="text-slate-300">/</span>
+          <span className="text-orange-600 font-bold capitalize">
+            {activeTab}
+          </span>
+        </div>
+
+        {/* Back to Projects Button on the Right Side */}
         <button
           type="button"
           onClick={() => router.push("/dashboard/projects")}
-          style={{ background: "none", border: "none", color: "#ea580c", padding: 0, cursor: "pointer", fontWeight: 700 }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer active:scale-95 self-start sm:self-auto shrink-0"
         >
-          Projects
+          <ArrowLeft size={13} className="text-slate-500" />
+          <span>Back to Projects</span>
         </button>
-        <span>/</span>
-        <span style={{ color: "#0f172a", fontWeight: 700 }}>
-          {project?.name || "Project"} ({project?.key || `PRJ-${project?.id || ""}`})
-        </span>
-        <span>/</span>
-        <span style={{ color: "#ea580c", textTransform: "capitalize", fontWeight: 700 }}>
-          {activeTab}
-        </span>
       </div>
-
-      <button
-        className="inline-flex items-center gap-1.5 px-2.5 py-2 mb-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition-all cursor-pointer"
-        onClick={() => router.push("/dashboard/projects")}
-      >
-        ← Back to project
-      </button>
 
       {error ? (
         <p className="error-message">{error}</p>
@@ -1468,55 +1639,128 @@ export function ProjectDetailsPage() {
       ) : (
         <>
           {/* Project Header */}
-          <div className="welcome" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-            <div>
-              <p className="eyebrow">PROJECT WORKSPACE</p>
-              <h1>{project.name}</h1>
-              <p>{project.description || "No project description."}</p>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ea580c] bg-orange-50 border border-orange-200/70 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                  <FolderGit2 size={11} className="text-[#ea580c]" />
+                  PROJECT WORKSPACE
+                </span>
+                {project?.key && (
+                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-md">
+                    {project.key}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                {project.name}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 max-w-3xl leading-relaxed">
+                {project.description || "No project description provided."}
+              </p>
             </div>
 
-            <div className="sprint-action-group" style={{ marginTop: "8px" }}>
+            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
               <button
                 type="button"
-                className="sprint-btn"
-                style={{ backgroundColor: "#8b5cf6", color: "#fff", borderColor: "#7c3aed" }}
+                className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                 onClick={() => {
                   setShowCreateEpic(!showCreateEpic);
                   setShowCreateWorkItem(false);
                   setShowCreateSprint(false);
                 }}
               >
-                + Create Epic
+                <Plus size={15} strokeWidth={2.5} />
+                <span>Create Epic</span>
               </button>
             </div>
           </div>
 
-          {/* Project Summary Pills */}
-          <div className="project-detail-summary">
-            <span>
-              <strong>Status</strong>
-              <span className="jira-status">{project.status}</span>
-            </span>
-            <span>
-              <strong>Reporter / Owner</strong>
-              {project.createdBy.name}
-            </span>
-            <span>
-              <strong>Timeline</strong>
-              {formatDate(project.startDate)} - {formatDate(project.endDate)}
-            </span>
-            <span>
-              <strong>Sprints</strong>
-              {project.sprints.length} total
-            </span>
-            <span>
-              <strong>Work Items</strong>
-              {project.workItems.length} items
-            </span>
-            <span>
-              <strong>Team</strong>
-              {project.members.length} members
-            </span>
+          {/* Project Summary Strip (Executive Modern Card) */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs p-4 sm:p-5 mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+            {/* Status */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Status
+              </span>
+              <div>
+                {String(project.status).toUpperCase() === "ACTIVE" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Active
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                    {String(project.status)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Reporter / Owner */}
+            <div className="flex flex-col gap-1.5 pt-3 sm:pt-0 sm:pl-5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Reporter / Owner
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                  {project.createdBy?.name?.charAt(0).toUpperCase() || "A"}
+                </span>
+                <span className="font-bold text-slate-800 text-xs truncate max-w-[120px]">
+                  {project.createdBy?.name || "Admin"}
+                </span>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="flex flex-col gap-1.5 pt-3 sm:pt-0 sm:pl-5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Timeline
+              </span>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                <Calendar size={13} className="text-slate-400 shrink-0" />
+                <span className="truncate">
+                  {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                </span>
+              </div>
+            </div>
+
+            {/* Sprints */}
+            <div className="flex flex-col gap-1.5 pt-3 sm:pt-0 sm:pl-5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Sprints
+              </span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <span className="w-5 h-5 rounded-md bg-orange-50 text-orange-600 font-black text-[10px] flex items-center justify-center border border-orange-200/80 shrink-0">
+                  {project.sprints.length}
+                </span>
+                <span>{project.sprints.length === 1 ? "1 Sprint" : `${project.sprints.length} Sprints`}</span>
+              </div>
+            </div>
+
+            {/* Work Items */}
+            <div className="flex flex-col gap-1.5 pt-3 sm:pt-0 sm:pl-5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Work Items
+              </span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 font-black text-[10px] flex items-center justify-center border border-blue-200/80 shrink-0">
+                  {project.workItems.length}
+                </span>
+                <span>{project.workItems.length === 1 ? "1 Item" : `${project.workItems.length} Items`}</span>
+              </div>
+            </div>
+
+            {/* Team Members */}
+            <div className="flex flex-col gap-1.5 pt-3 sm:pt-0 sm:pl-5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                Team
+              </span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <Users size={13} className="text-slate-400 shrink-0" />
+                <span>{project.members.length === 1 ? "1 Member" : `${project.members.length} Members`}</span>
+              </div>
+            </div>
           </div>
 
           {/* Navigation Tabs Bar */}

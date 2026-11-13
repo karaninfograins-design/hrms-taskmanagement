@@ -25,6 +25,7 @@ import {
   UserCheck,
   Settings,
   User as UserIcon,
+  CheckSquare,
 } from "lucide-react";
 
 type SidebarProps = {
@@ -182,6 +183,7 @@ const workspaceNavigation: { title: string; items: NavigationItem[] } = {
   title: "Work Management",
   items: [
     { label: "Projects", href: "/dashboard/projects", icon: FolderGit2 },
+    { label: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   ]
 };
 
@@ -189,7 +191,6 @@ const peopleNavigation: { title: string; items: NavigationItem[] } = {
   title: "People",
   items: [
     { label: "Employees", href: "/dashboard/employees", icon: Users },
-    { label: "Designations", href: "/dashboard/designations", icon: Briefcase },
   ]
 };
 
@@ -299,9 +300,7 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
     (item) => item.href !== "/dashboard/hr-settings" || isAdminUser
   );
 
-  const peopleItems = peopleNavigation.items.filter(
-    (item) => item.href !== "/dashboard/designations" || isAdminUser
-  );
+  const peopleItems = peopleNavigation.items;
 
   const personalItems = personalNavigation.items.filter(
     (item) => item.href !== "/dashboard/settings" || isAdminUser

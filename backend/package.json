@@ -10,7 +10,8 @@
     "start": "tsx src/server.ts",
     "tunnel": "node ../start-tunnel.cjs",
     "db:migrate": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "cleanup:legacy-users": "tsx scripts/remove-legacy-superadmin.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -17,6 +17,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
+import { showConfirmDialog, showSuccessToast, showErrorToast } from "@/lib/swal";
 
 type Holiday = {
   id: number;
@@ -139,7 +140,13 @@ export default function CompanyCalendarPage() {
       alert("Only HR, Admins, and Super Admins can delete company holidays.");
       return;
     }
-    if (!confirm("Are you sure you want to delete this company holiday?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Event?",
+      text: "Are you sure you want to delete this company holiday?",
+      confirmButtonText: "Yes, Delete",
+      icon: "warning",
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(buildApiUrl(`/api/holidays/${id}`), {
         method: "DELETE",

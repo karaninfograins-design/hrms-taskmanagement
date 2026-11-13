@@ -7,6 +7,8 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
+import { showConfirmDialog, showSuccessToast, showErrorToast } from "@/lib/swal";
+import { DesignationManager } from "@/components/workspace/management-pages";
 
 type HRSetting = {
   id: number;
@@ -105,6 +107,7 @@ export default function HRSettingsPage() {
     { key: "WORK_LOCATION", label: "Work Locations" },
     { key: "SHIFT_TYPE", label: "Shift Schedules" },
     { key: "LEAVE_CATEGORY", label: "Leave Categories" },
+    { key: "DESIGNATIONS_MGMT", label: "Designations & Job Titles" },
     { key: "LEAVE_TYPES_MGMT", label: "System Leave Types (Comp Off & Rules)" },
     { key: "EMP_LEAVE_BALANCES", label: "Employee Leave Balances Editor" },
   ];
@@ -196,6 +199,8 @@ export default function HRSettingsPage() {
         fetchLeaveTypes();
       } else if (activeCategory === "EMP_LEAVE_BALANCES") {
         fetchEmployeeBalances();
+      } else if (activeCategory === "DESIGNATIONS_MGMT") {
+        // Managed by embedded DesignationManager
       } else {
         fetchSettings();
       }
@@ -230,9 +235,10 @@ export default function HRSettingsPage() {
 
       setNewKey("");
       setNewValue("");
+      showSuccessToast("Setting option added successfully");
       fetchSettings();
     } catch (err: any) {
-      alert(err.message || "Error creating setting");
+      showErrorToast(err.message || "Error creating setting");
     } finally {
       setSubmitting(false);
     }
@@ -263,15 +269,22 @@ export default function HRSettingsPage() {
       }
 
       setEditingSetting(null);
+      showSuccessToast("Setting option updated successfully");
       fetchSettings();
     } catch (err: any) {
-      alert(err.message || "Error updating setting");
+      showErrorToast(err.message || "Error updating setting");
     }
   };
 
   // Handle HR Setting Option Delete
   const handleDeleteSetting = async (id: number, valName: string) => {
-    if (!confirm(`Are you sure you want to delete "${valName}"?`)) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete Option?",
+      text: `Are you sure you want to delete "${valName}"?`,
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
 
     try {
       const token = getAuthToken();
@@ -285,9 +298,10 @@ export default function HRSettingsPage() {
         throw new Error(errData.message || "Failed to delete setting");
       }
 
+      showSuccessToast(`"${valName}" deleted successfully`);
       fetchSettings();
     } catch (err: any) {
-      alert(err.message || "Error deleting setting");
+      showErrorToast(err.message || "Error deleting setting");
     }
   };
 
@@ -320,9 +334,10 @@ export default function HRSettingsPage() {
       setNewLTName("");
       setNewLTDays("12");
       setNewLTDesc("");
+      showSuccessToast("Leave type created successfully");
       fetchLeaveTypes();
     } catch (err: any) {
-      alert(err.message || "Error creating leave type");
+      showErrorToast(err.message || "Error creating leave type");
     } finally {
       setSubmittingLT(false);
     }
@@ -354,15 +369,22 @@ export default function HRSettingsPage() {
       }
 
       setEditingLT(null);
+      showSuccessToast("Leave type updated successfully");
       fetchLeaveTypes();
     } catch (err: any) {
-      alert(err.message || "Error updating leave type");
+      showErrorToast(err.message || "Error updating leave type");
     }
   };
 
   // Handle Delete Leave Type
   const handleDeleteLeaveType = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to deactivate leave type "${name}"?`)) return;
+    const confirmed = await showConfirmDialog({
+      title: "Deactivate Leave Type?",
+      text: `Are you sure you want to deactivate leave type "${name}"?`,
+      confirmButtonText: "Yes, Deactivate",
+      cancelButtonText: "Cancel",
+    });
+    if (!confirmed) return;
 
     try {
       const token = getAuthToken();
@@ -376,9 +398,10 @@ export default function HRSettingsPage() {
         throw new Error(errData.message || "Failed to delete leave type");
       }
 
+      showSuccessToast(`Leave type "${name}" deactivated`);
       fetchLeaveTypes();
     } catch (err: any) {
-      alert(err.message || "Error deleting leave type");
+      showErrorToast(err.message || "Error deleting leave type");
     }
   };
 
@@ -405,11 +428,11 @@ export default function HRSettingsPage() {
         throw new Error(errData.message || "Failed to update balance");
       }
 
-      alert("Employee leave balance updated successfully!");
+      showSuccessToast("Employee leave balance updated successfully!");
       setEditingBalanceId(null);
       fetchEmployeeBalances();
     } catch (err: any) {
-      alert(err.message || "Error updating balance");
+      showErrorToast(err.message || "Error updating balance");
     } finally {
       setUpdatingBalance(false);
     }
@@ -486,10 +509,10 @@ export default function HRSettingsPage() {
                           value: String(val),
                         }),
                       });
-                      alert(`Monthly Paid Leave Allowance updated to ${val} days/month (${val * 12} days/year)!`);
+                      showSuccessToast(`Monthly Paid Leave Allowance updated to ${val} days/month (${val * 12} days/year)!`);
                       fetchSettings();
                     } catch (err: any) {
-                      alert(err.message || "Failed to update criteria");
+                      showErrorToast(err.message || "Failed to update criteria");
                     }
                   }}
                   className="px-3 py-1.5 rounded-lg bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer"
@@ -517,7 +540,7 @@ export default function HRSettingsPage() {
           </div>
 
           {/* TAB 1,2,3,4: DYNAMIC OPTIONS (Employment Types, Work Locations, Shift Schedules, Leave Categories) */}
-          {!["LEAVE_TYPES_MGMT", "EMP_LEAVE_BALANCES"].includes(activeCategory) && (
+          {!["LEAVE_TYPES_MGMT", "EMP_LEAVE_BALANCES", "DESIGNATIONS_MGMT"].includes(activeCategory) && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Add New Setting Option Form */}
               <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
@@ -629,6 +652,11 @@ export default function HRSettingsPage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* TAB: DESIGNATIONS & JOB TITLES */}
+          {activeCategory === "DESIGNATIONS_MGMT" && (
+            <DesignationManager embedded />
           )}
 
           {/* TAB 5: SYSTEM LEAVE TYPES MANAGEMENT (Comp Off, Casual, Sick, Earned, Unpaid) */}

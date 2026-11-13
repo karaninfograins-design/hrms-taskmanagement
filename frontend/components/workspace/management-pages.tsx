@@ -16,7 +16,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return <main className="app-shell"><Navbar user={session.user} onSignOut={signOut} /><div className="dashboard-frame"><Sidebar user={session.user} canCreateAdmins={session.user.role === "SUPER_ADMIN"} onSignOut={signOut} /><section className="dashboard-content">{children}</section></div></main>;
 }
 
-export function DesignationManager() {
+export function DesignationManager({ embedded = false }: { embedded?: boolean } = {}) {
   const { session } = useAuth();
   const [items, setItems] = useState<Designation[]>([]);
   const [form, setForm] = useState<Partial<Designation>>({ status: true });
@@ -98,10 +98,9 @@ export function DesignationManager() {
   const activeCount = items.filter((item) => item.status).length;
   const inactiveCount = items.filter((item) => !item.status).length;
 
-  return (
-    <DashboardShell>
-      <div className="space-y-6">
-        {/* Modern Enterprise Header */}
+  const bodyContent = (
+    <div className="space-y-6">
+      {!embedded && (
         <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#172554] via-[#1e3a6f] to-slate-900 px-5 py-6 text-white shadow-md sm:px-7">
           <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10" />
           <div className="pointer-events-none absolute -right-2 -top-14 h-52 w-52 rounded-full border border-white/10" />
@@ -124,6 +123,7 @@ export function DesignationManager() {
             </div>
           </div>
         </header>
+      )}
 
         {/* Stat Overview Cards */}
         {/* < div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -451,6 +451,15 @@ export function DesignationManager() {
           )}
         </div>
       </div>
+    );
+
+  if (embedded) {
+    return bodyContent;
+  }
+
+  return (
+    <DashboardShell>
+      {bodyContent}
     </DashboardShell>
   );
 }

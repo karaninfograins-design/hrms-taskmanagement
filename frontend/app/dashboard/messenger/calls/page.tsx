@@ -315,6 +315,83 @@ async function requestLocalMedia(
   };
 }
 
+// Global persistent audio bridge for all remote participants in meetings / group calls
+// Ensures all participants can hear everyone continuously, even when in dock, thumbnails, or minimized
+function SingleParticipantAudio({
+  participant,
+  isSpeakerOn,
+  onAudioBlocked,
+}: {
+  participant: RemoteParticipant;
+  isSpeakerOn: boolean;
+  onAudioBlocked?: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !participant.stream) return;
+    if (el.srcObject !== participant.stream) {
+      el.srcObject = participant.stream;
+    }
+    el.muted = false;
+    el.volume = isSpeakerOn ? 1.0 : 0.65;
+    el.play().catch((err) => {
+      if (err.name !== "AbortError") {
+        console.warn(`[WebRTC Audio] Autoplay blocked for user ${participant.userId}:`, err);
+        onAudioBlocked?.();
+      }
+    });
+
+    const handleTrack = () => {
+      if (el && participant.stream) {
+        if (el.srcObject !== participant.stream) {
+          el.srcObject = participant.stream;
+        }
+        el.muted = false;
+        el.play().catch(console.warn);
+      }
+    };
+
+    participant.stream.addEventListener("addtrack", handleTrack);
+    return () => {
+      participant.stream?.removeEventListener("addtrack", handleTrack);
+    };
+  }, [participant.stream, isSpeakerOn, onAudioBlocked, participant.userId]);
+
+  return (
+    <audio
+      ref={audioRef}
+      data-participant-id={participant.userId}
+      autoPlay
+      playsInline
+      style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
+    />
+  );
+}
+
+function RemoteAudioBridge({
+  participants,
+  isSpeakerOn,
+  onAudioBlocked,
+}: {
+  participants: RemoteParticipant[];
+  isSpeakerOn: boolean;
+  onAudioBlocked?: () => void;
+}) {
+  return (
+    <div className="sr-only pointer-events-none select-none" aria-hidden="true">
+      {participants.map((p) => (
+        <SingleParticipantAudio
+          key={p.userId}
+          participant={p}
+          isSpeakerOn={isSpeakerOn}
+          onAudioBlocked={onAudioBlocked}
+        />
+      ))}
+    </div>
+  );
+}
 
 function RemoteParticipantMedia({
   participant,
@@ -367,8 +444,7 @@ function RemoteParticipantMedia({
   }, [participant.stream, shouldShowVideo]);
 
   useEffect(() => {
-    if (isThumbnail) return;
-    if (audioRef.current) {
+    if (audioRef.current && participant.stream) {
       if (audioRef.current.srcObject !== participant.stream) {
         audioRef.current.srcObject = participant.stream;
       }
@@ -381,14 +457,13 @@ function RemoteParticipantMedia({
         }
       });
     }
-  }, [participant.stream, isSpeakerOn, onAudioBlocked, isThumbnail]);
+  }, [participant.stream, isSpeakerOn, onAudioBlocked]);
 
   if (!shouldShowVideo) {
     return (
       <div
-        className={`flex min-h-40 flex-col items-center justify-center rounded-2xl border bg-slate-900 p-4 cursor-pointer select-none transition-all relative ${
-          isFocused ? "border-orange-500 ring-2 ring-orange-500/30" : "border-slate-800 hover:border-slate-700"
-        }`}
+        className={`flex min-h-40 flex-col items-center justify-center rounded-2xl border bg-slate-900 p-4 cursor-pointer select-none transition-all relative ${isFocused ? "border-orange-500 ring-2 ring-orange-500/30" : "border-slate-800 hover:border-slate-700"
+          }`}
         onClick={() => {
           onFocus?.();
           if (audioRef.current) {
@@ -446,9 +521,8 @@ function RemoteParticipantMedia({
   return (
     <div
       onClick={onFocus}
-      className={`relative h-full min-h-44 overflow-hidden rounded-2xl border bg-slate-950 flex items-center justify-center cursor-pointer transition-all ${
-        isFocused ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-800 hover:border-slate-700"
-      }`}
+      className={`relative h-full min-h-44 overflow-hidden rounded-2xl border bg-slate-950 flex items-center justify-center cursor-pointer transition-all ${isFocused ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-800 hover:border-slate-700"
+        }`}
       title="Click to expand this presentation/video to Full View"
     >
       {!isThumbnail && (
@@ -775,13 +849,23 @@ function CallsContent() {
     if (!remoteStream) return;
 
     // Always play audio through the dedicated hidden <audio> element
-    if (remoteAudioRef.current) {
+    if (remoteAudioRef.current && remoteStream.getAudioTracks().length > 0) {
       if (remoteAudioRef.current.srcObject !== remoteStream) {
         remoteAudioRef.current.srcObject = remoteStream;
       }
-      remoteAudioRef.current.play().catch((err) => {
-        console.warn("Remote audio autoplay blocked, waiting for user gesture:", err);
-      });
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
+      remoteAudioRef.current
+        .play()
+        .then(() => {
+          setIsAudioBlocked(false);
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.warn("Remote audio autoplay blocked, waiting for user gesture:", err);
+            setIsAudioBlocked(true);
+          }
+        });
     }
 
     // Also wire video element for VIDEO or screen sharing calls
@@ -876,6 +960,7 @@ function CallsContent() {
         type,
         peerUserId: Number(targetId),
       });
+      playCallerTune();
       void initiateWebRTC(Number(targetId), true, type).catch((error: unknown) => {
         console.error("Error setting up WebRTC media:", error);
         if (callSessionId) socket?.emit("call:end", { callSessionId });
@@ -1175,6 +1260,8 @@ function CallsContent() {
           setFocusedParticipantId(fromUserId);
           setIsCallMaximized(true);
         }
+        setFocusedParticipantId(fromUserId);
+        setIsCallMaximized(true);
       } else {
         setRemoteStream(freshStream);
         setIsCallMaximized(true);
@@ -1262,6 +1349,11 @@ function CallsContent() {
         localMediaPromiseRef.current = null;
       }
     }
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
+    }
     if (localVideoRef.current && type === "VIDEO") {
       localVideoRef.current.srcObject = localStreamRef.current;
     }
@@ -1299,6 +1391,9 @@ function CallsContent() {
       } catch (e) {
         console.warn("addTransceiver video error:", e);
       }
+      localStreamRef.current?.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
       localStreamRef.current?.getTracks().forEach((track) => {
         pc.addTrack(track, localStreamRef.current!);
       });
@@ -1399,9 +1494,9 @@ function CallsContent() {
       }
     }
 
-    // Set audio track enabled status according to mic availability
+    // Ensure all audio tracks are enabled so caller's voice is clearly transmitted!
     stream.getAudioTracks().forEach((track) => {
-      track.enabled = !hasNoMic;
+      track.enabled = true;
     });
 
     if (localVideoRef.current && type === "VIDEO") {
@@ -1418,24 +1513,29 @@ function CallsContent() {
     }
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-    pc.ontrack = (event) => {
-      console.log("[WebRTC P2P] ontrack received:", event.track.kind, event.streams);
-      const incomingStream = (event.streams && event.streams[0])
-        ? event.streams[0]
-        : new MediaStream([event.track]);
-
-      // Unmute all remote audio tracks
-      incomingStream.getAudioTracks().forEach((track) => {
+    const syncRemoteTracks = () => {
+      // Build a consolidated stream with all live tracks (audio + video)
+      const freshStream = new MediaStream();
+      pc.getReceivers().forEach((receiver) => {
+        if (receiver.track && receiver.track.readyState !== "ended") {
+          freshStream.addTrack(receiver.track);
+        }
+      });
+      freshStream.getAudioTracks().forEach((track) => {
         track.enabled = true;
       });
-      setRemoteStream(incomingStream);
-      if (incomingStream.getVideoTracks().some((t) => t.readyState === "live")) {
+
+      setRemoteStream(freshStream);
+
+      if (freshStream.getVideoTracks().some((t) => t.readyState === "live")) {
         setIsCallMaximized(true);
       }
 
-      // Immediately wire audio element so speaker/headphones output without delay
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = incomingStream;
+      // Wire audio element if audio tracks are present
+      if (remoteAudioRef.current && freshStream.getAudioTracks().length > 0) {
+        if (remoteAudioRef.current.srcObject !== freshStream) {
+          remoteAudioRef.current.srcObject = freshStream;
+        }
         remoteAudioRef.current.muted = false;
         remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
         remoteAudioRef.current
@@ -1444,10 +1544,19 @@ function CallsContent() {
             setIsAudioBlocked(false);
           })
           .catch((err) => {
-            console.warn("[WebRTC] Autoplay pending interaction:", err);
-            setIsAudioBlocked(true);
+            if (err.name !== "AbortError") {
+              console.warn("[WebRTC] Autoplay pending interaction:", err);
+              setIsAudioBlocked(true);
+            }
           });
       }
+    };
+
+    pc.ontrack = (event) => {
+      console.log("[WebRTC P2P] ontrack received:", event.track.kind);
+      syncRemoteTracks();
+      event.track.onunmute = syncRemoteTracks;
+      event.track.onmute = syncRemoteTracks;
     };
 
     pc.onicecandidate = (event) => {
@@ -1865,6 +1974,9 @@ function CallsContent() {
             void renegotiate1to1(activeCallRef.current.peerUserId, peerConnectionRef.current);
           }
         }
+        if (activeCallRef.current?.peerUserId) {
+          void renegotiate1to1(activeCallRef.current.peerUserId, peerConnectionRef.current);
+        }
       }
 
       // Replace video track across all group peer connections using robust transceiver sender lookup
@@ -1876,6 +1988,7 @@ function CallsContent() {
           pc.addTrack(screenTrack, localStreamRef.current);
           void renegotiateGroupPeer(targetUserId, pc);
         }
+        void renegotiateGroupPeer(targetUserId, pc);
       }
 
       // Update local stream and preview
@@ -1948,13 +2061,17 @@ function CallsContent() {
         if (sender) {
           await sender.replaceTrack(restoreTrack || null).catch(console.warn);
         }
+        if (activeCallRef.current?.peerUserId) {
+          void renegotiate1to1(activeCallRef.current.peerUserId, peerConnectionRef.current);
+        }
       }
 
-      groupPeerConnectionsRef.current.forEach((pc) => {
+      groupPeerConnectionsRef.current.forEach((pc, targetUserId) => {
         const sender = getVideoSender(pc);
         if (sender) {
           sender.replaceTrack(restoreTrack || null).catch(console.warn);
         }
+        void renegotiateGroupPeer(targetUserId, pc);
       });
 
       if (localVideoRef.current) {
@@ -1965,7 +2082,7 @@ function CallsContent() {
     originalCameraTrackRef.current = null;
   };
 
-  // Unblock browser autoplay audio on user interaction or tap
+  // Automatically unblock browser autoplay audio silently on user interaction
   const unblockAudio = async () => {
     setIsAudioBlocked(false);
     if (remoteAudioRef.current) {
@@ -1974,16 +2091,35 @@ function CallsContent() {
         remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.65;
         await remoteAudioRef.current.play();
       } catch (err) {
-        console.warn("[WebRTC] unblockAudio error:", err);
+        // Silent fallback
       }
     }
-    const participantAudios = document.querySelectorAll<HTMLAudioElement>("audio[data-participant-audio]");
+    const participantAudios = document.querySelectorAll<HTMLAudioElement>(
+      "audio[data-participant-audio], audio[data-participant-id]"
+    );
     participantAudios.forEach((audioEl) => {
       audioEl.muted = false;
       audioEl.volume = isSpeakerOn ? 1.0 : 0.65;
-      audioEl.play().catch(console.warn);
+      audioEl.play().catch(() => null);
     });
   };
+
+  // Auto-listen for interaction during active call to ensure direct audio connection
+  useEffect(() => {
+    if (!activeCall) return;
+    const onUserInteraction = () => {
+      void unblockAudio();
+    };
+    window.addEventListener("click", onUserInteraction, { passive: true });
+    window.addEventListener("touchstart", onUserInteraction, { passive: true });
+    window.addEventListener("pointerdown", onUserInteraction, { passive: true });
+    void unblockAudio();
+    return () => {
+      window.removeEventListener("click", onUserInteraction);
+      window.removeEventListener("touchstart", onUserInteraction);
+      window.removeEventListener("pointerdown", onUserInteraction);
+    };
+  }, [activeCall]);
 
   // Speaker / Loudspeaker Toggle (Hands-free vs Ear/Headset)
   const toggleSpeaker = async () => {
@@ -2377,6 +2513,13 @@ function CallsContent() {
             style={{ position: "fixed", width: "1px", height: "1px", opacity: 0.01, pointerEvents: "none" }}
           />
 
+          {/* Always-mounted persistent audio bridge for all group and meeting participants */}
+          <RemoteAudioBridge
+            participants={remoteParticipants}
+            isSpeakerOn={isSpeakerOn}
+            onAudioBlocked={() => setIsAudioBlocked(true)}
+          />
+
           {/* Active WebRTC Call Screen Overlay */}
           {activeCall && (
             <div
@@ -2386,8 +2529,8 @@ function CallsContent() {
             >
 
               <div className={`bg-slate-900 text-white shadow-2xl border border-slate-700/60 flex flex-col overflow-hidden transition-all duration-200 ${isCallMaximized
-                  ? "fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none p-2 sm:p-4 z-50 bg-slate-950 flex flex-col"
-                  : "h-[88vh] sm:h-[92vh] max-w-6xl w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 flex flex-col"
+                ? "fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none p-2 sm:p-4 z-50 bg-slate-950 flex flex-col"
+                : "h-[88vh] sm:h-[92vh] max-w-6xl w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 flex flex-col"
                 }`}
                 style={{ boxShadow: "0 0 60px rgba(239,68,68,0.15), 0 25px 50px rgba(0,0,0,0.8)" }}
               >
@@ -2455,32 +2598,6 @@ function CallsContent() {
                     </button>
                   </div>
                 </div>
-
-                {/* Autoplay blocked alert banner */}
-                {isAudioBlocked && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      unblockAudio();
-                    }}
-                    className="mb-3 p-3 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 rounded-xl flex items-center justify-between gap-3 text-white shadow-lg animate-pulse cursor-pointer transition-all"
-                  >
-                    <div className="flex items-center gap-2 text-xs font-bold">
-                      <Volume2 className="w-5 h-5 shrink-0" />
-                      <span>Audio playback paused by browser. Tap here to unmute and hear voice!</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        unblockAudio();
-                      }}
-                      className="px-3 py-1.5 bg-white text-orange-700 font-extrabold rounded-lg text-xs hover:bg-orange-50 transition-all shrink-0 cursor-pointer shadow-sm"
-                    >
-                      Tap to Unmute
-                    </button>
-                  </div>
-                )}
 
                 {/* Listen-Only Notification Banner */}
                 {hasNoMic && (
@@ -2580,9 +2697,8 @@ function CallsContent() {
                               {/* Local Preview in Dock */}
                               <div
                                 onClick={() => setFocusedParticipantId(effectiveFocusId === "local" ? null : "local")}
-                                className={`h-24 w-36 sm:h-28 sm:w-44 bg-slate-950 border-2 rounded-xl overflow-hidden shrink-0 relative cursor-pointer transition-all ${
-                                  effectiveFocusId === "local" ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-700 hover:border-slate-500"
-                                }`}
+                                className={`h-24 w-36 sm:h-28 sm:w-44 bg-slate-950 border-2 rounded-xl overflow-hidden shrink-0 relative cursor-pointer transition-all ${effectiveFocusId === "local" ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-700 hover:border-slate-500"
+                                  }`}
                                 title="Click to view your camera/screen on Main Stage"
                               >
                                 <video
@@ -2604,9 +2720,8 @@ function CallsContent() {
                                   <div
                                     key={participant.userId}
                                     onClick={() => setFocusedParticipantId(effectiveFocusId === participant.userId ? null : participant.userId)}
-                                    className={`h-24 w-36 sm:h-28 sm:w-44 bg-slate-950 border-2 rounded-xl overflow-hidden shrink-0 relative cursor-pointer transition-all ${
-                                      effectiveFocusId === participant.userId ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-700 hover:border-slate-500"
-                                    }`}
+                                    className={`h-24 w-36 sm:h-28 sm:w-44 bg-slate-950 border-2 rounded-xl overflow-hidden shrink-0 relative cursor-pointer transition-all ${effectiveFocusId === participant.userId ? "border-orange-500 ring-2 ring-orange-500/40" : "border-slate-700 hover:border-slate-500"
+                                      }`}
                                     title="Click to view on Main Stage in Full View"
                                   >
                                     <RemoteParticipantMedia
@@ -2842,24 +2957,24 @@ function CallsContent() {
                     activeCall.channelName?.startsWith("room-") ||
                     activeCall.targetName?.toLowerCase().includes("meeting")
                   ) && (
-                    <button
-                      onClick={toggleScreenShare}
-                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg cursor-pointer ${isScreenSharing
+                      <button
+                        onClick={toggleScreenShare}
+                        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold flex flex-col items-center justify-center gap-0.5 transition-all shadow-lg cursor-pointer ${isScreenSharing
                           ? "bg-slate-700 border-2 border-slate-400 text-slate-100 hover:bg-slate-600"
                           : "bg-slate-800 border-2 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-500"
-                        }`}
-                      title={isScreenSharing ? "Stop Sharing Screen" : "Share Your Screen"}
-                    >
-                      {isScreenSharing ? (
-                        <ScreenShareOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-100" />
-                      ) : (
-                        <ScreenShare className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
-                      )}
-                      <span className="text-[8px] font-bold">
-                        {isScreenSharing ? "Stop Share" : "Share"}
-                      </span>
-                    </button>
-                  )}
+                          }`}
+                        title={isScreenSharing ? "Stop Sharing Screen" : "Share Your Screen"}
+                      >
+                        {isScreenSharing ? (
+                          <ScreenShareOff className="w-4 h-4 sm:w-5 sm:h-5 text-slate-100" />
+                        ) : (
+                          <ScreenShare className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
+                        )}
+                        <span className="text-[8px] font-bold">
+                          {isScreenSharing ? "Stop Share" : "Share"}
+                        </span>
+                      </button>
+                    )}
 
                   {/* Speaker / Loudspeaker Mode Toggle */}
                   <button

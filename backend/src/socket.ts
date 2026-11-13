@@ -24,13 +24,12 @@ async function canSignalCallParticipant(
       participants: {
         where: {
           userId: { in: [senderUserId, targetUserId] },
-          status: { in: ["ACCEPTED", "INVITED"] },
         },
-        select: { userId: true },
+        select: { userId: true, status: true },
       },
     },
   });
-  if (!session || (session.status !== "ACTIVE" && session.status !== "RINGING")) return false;
+  if (!session || session.status === "ENDED" || session.status === "REJECTED") return false;
   const participants = session.participants;
   return participants.some((participant) => participant.userId === senderUserId) &&
     participants.some((participant) => participant.userId === targetUserId);
@@ -452,18 +451,42 @@ export function setupSocketServer(httpServer: HttpServer) {
       try {
         const session = await prisma.callSession.findUnique({
           where: { id: callSessionId },
-          include: { participants: { select: { userId: true, status: true } } },
+          include: { participants: true },
         });
-        if (
-          !session ||
-          !session.participants.some(
-            (participant) => participant.userId === userId && participant.status === "ACCEPTED"
-          )
-        ) return;
+        if (!session || session.status === "ENDED" || session.status === "REJECTED") return;
 
-        const participantIds = session.participants
-          .filter((participant) => participant.status === "ACCEPTED")
-          .map((participant) => participant.userId);
+        // Ensure session is active once someone joins
+        if (session.status === "RINGING") {
+          await prisma.callSession.update({
+            where: { id: callSessionId },
+            data: { status: "ACTIVE", startedAt: session.startedAt || new Date() },
+          }).catch(() => null);
+        }
+
+        // Upsert participant to ACCEPTED status so WebRTC signaling is immediately unlocked
+        const existingParticipant = session.participants.find((p) => p.userId === userId);
+        if (!existingParticipant) {
+          await prisma.callParticipant.create({
+            data: {
+              callSessionId,
+              userId,
+              status: "ACCEPTED",
+              joinedAt: new Date(),
+            },
+          }).catch(() => null);
+        } else if (existingParticipant.status !== "ACCEPTED") {
+          await prisma.callParticipant.update({
+            where: { callSessionId_userId: { callSessionId, userId } },
+            data: { status: "ACCEPTED", joinedAt: new Date() },
+          }).catch(() => null);
+        }
+
+        const acceptedParticipants = await prisma.callParticipant.findMany({
+          where: { callSessionId, status: "ACCEPTED" },
+          select: { userId: true },
+        });
+        const participantIds = acceptedParticipants.map((participant) => participant.userId);
+
         for (const participantId of participantIds) {
           io.to(`user_${participantId}`).emit("call:participant-joined", {
             callSessionId,

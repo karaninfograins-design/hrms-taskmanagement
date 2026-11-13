@@ -243,3 +243,44 @@ export const saveRolePermissions = (id: number, permissionIds: number[], token: 
 export const createPermission = (name: string, description: string, token: string) => apiRequest<{ permission: Permission }>("/api/workspace/permissions", { method: "POST", headers: auth(token), body: JSON.stringify({ name, description }) });
 export const createWorkspaceItem = (resource: "projects" | "sprints", data: Record<string, string>, token: string) => apiRequest(`/api/workspace/${resource}`, { method: "POST", headers: auth(token), body: JSON.stringify(data) });
 export const updateSprintStatus = (id: number, status: "ACTIVE" | "COMPLETED" | "CANCELLED", token: string) => apiRequest(`/api/workspace/sprints/${id}/status`, { method: "PATCH", headers: auth(token), body: JSON.stringify({ status }) });
+
+export type TaskWorkItem = {
+  id: string;
+  numericId?: number;
+  key: string;
+  title: string;
+  description?: string | null;
+  type: string;
+  status: string;
+  priority: string;
+  project: string;
+  projectId: number;
+  parentTitle?: string | null;
+  assigneeId?: number | null;
+  assignees?: Array<{ id: number; name?: string; email?: string }>;
+  assignee: string;
+  assigneeObj?: { id: number; name: string; email: string } | null;
+  createdBy?: string;
+  startDate?: string | null;
+  dueDate?: string | null;
+  storyPoints?: string | null;
+  updatedAt: string;
+  rawUpdatedAt?: string | null;
+};
+
+export function getAllWorkItems(token: string, params?: {
+  projectId?: string | number;
+  employeeId?: string | number;
+  status?: string;
+  search?: string;
+  limit?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params?.projectId && params.projectId !== "ALL") q.append("projectId", String(params.projectId));
+  if (params?.employeeId && params.employeeId !== "ALL") q.append("employeeId", String(params.employeeId));
+  if (params?.status && params.status !== "ALL") q.append("status", params.status);
+  if (params?.search) q.append("search", params.search);
+  if (params?.limit) q.append("limit", String(params.limit));
+  const qs = q.toString();
+  return apiRequest<{ items: TaskWorkItem[] }>(`/api/workspace/work-items${qs ? `?${qs}` : ""}`, { headers: auth(token) });
+}

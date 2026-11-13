@@ -33,6 +33,9 @@ import {
   PhoneMissed,
   Clock,
   Plus,
+  Sun,
+  Moon,
+  MoreVertical,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
@@ -178,6 +181,28 @@ function ChatsContent() {
   const [callLogs, setCallLogs] = useState<CallSession[]>([]);
   const [loadingCalls, setLoadingCalls] = useState<boolean>(false);
 
+  // Chat Theme Option (Light / Dark)
+  const [chatTheme, setChatTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("hrms_chat_theme");
+      if (saved === "dark" || saved === "light") {
+        setChatTheme(saved);
+      }
+    } catch { }
+  }, []);
+
+  const toggleChatTheme = () => {
+    setChatTheme((prev) => {
+      const next = prev === "light" ? "dark" : "light";
+      try {
+        localStorage.setItem("hrms_chat_theme", next);
+      } catch { }
+      return next;
+    });
+  };
+
   // Attachments State
   const [attachmentUrl, setAttachmentUrl] = useState<string>("");
   const [attachmentFileName, setAttachmentFileName] = useState<string>("");
@@ -221,8 +246,12 @@ function ChatsContent() {
   const reactionPickerRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
 
+  // Mobile Chat Header More Options Menu
+  const [showMobileChatMenu, setShowMobileChatMenu] = useState<boolean>(false);
+  const mobileChatMenuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
       }
@@ -233,9 +262,16 @@ function ChatsContent() {
         setReactionPickerMsgId(null);
         setShowFullReactionPicker(false);
       }
+      if (mobileChatMenuRef.current && !mobileChatMenuRef.current.contains(e.target as Node)) {
+        setShowMobileChatMenu(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   const handleSignOut = () => {
@@ -765,18 +801,26 @@ function ChatsContent() {
     return parts.map((part, index) => {
       if (part.match(urlRegex)) {
         const href = part.startsWith("http://") || part.startsWith("https://") ? part : `https://${part}`;
+        const isDark = chatTheme === "dark";
+        const linkStyle = isDark
+          ? isMe
+            ? "text-white underline underline-offset-3 font-bold hover:text-amber-200 bg-white/15 px-1.5 py-0.5 rounded border border-white/25"
+            : "text-sky-300 underline underline-offset-3 font-bold hover:text-sky-200 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-800/80"
+          : isMe
+            ? "text-blue-700 underline underline-offset-3 font-bold hover:text-blue-900 bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200/90 shadow-2xs"
+            : "text-blue-600 underline underline-offset-3 font-bold hover:text-blue-800 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200/80 shadow-2xs";
+
         return (
           <a
             key={index}
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`underline underline-offset-2 break-all font-semibold transition-all hover:opacity-85 inline-flex items-center gap-0.5 ${isMe ? "text-amber-200 hover:text-white" : "text-orange-600 hover:text-orange-700"
-              }`}
+            className={`break-all transition-all inline-flex items-center gap-1 my-0.5 ${linkStyle}`}
             onClick={(e) => e.stopPropagation()}
           >
             <span>{part}</span>
-            <ExternalLink size={11} className="inline-block shrink-0 opacity-80 ml-0.5" />
+            <ExternalLink size={12} className="inline-block shrink-0 opacity-80" />
           </a>
         );
       }
@@ -1664,21 +1708,21 @@ function ChatsContent() {
                     </div>
                   </div>
                 )}
-                {/* Chat Header with PROMINENT BACK BUTTON */}
-                <div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200/80 bg-white px-3 sm:px-6 shadow-2xs">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {/* Chat Header with Responsive Mobile 3-Dots Menu */}
+                <div className={`flex h-16 flex-shrink-0 items-center justify-between border-b px-2.5 sm:px-6 shadow-2xs transition-colors relative ${chatTheme === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200/80 text-slate-900"}`}>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
                     <button
                       type="button"
                       onClick={() => setActiveConv(null)}
                       aria-label="Back to conversations"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 lg:hidden cursor-pointer"
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition lg:hidden cursor-pointer ${chatTheme === "dark" ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200 text-slate-500 hover:bg-slate-100"}`}
                     >
                       <ArrowLeft size={16} />
                     </button>
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                      <div className="relative shrink-0">
                         <div
-                          className={`w-10 h-10 rounded-2xl font-black text-sm flex items-center justify-center ${!isDirect
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl font-black text-sm flex items-center justify-center ${!isDirect
                             ? "bg-slate-900 text-orange-400"
                             : "bg-slate-800 text-white"
                             }`}
@@ -1689,16 +1733,16 @@ function ChatsContent() {
                         </div>
                         {isDirect && (
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isPartnerOnline ? "bg-emerald-500" : "bg-slate-300"
+                            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 border-white ${isPartnerOnline ? "bg-emerald-500" : "bg-slate-300"
                               }`}
                           />
                         )}
                       </div>
-                      <div className="min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-xs md:max-w-md">
-                        <h3 className="text-sm font-black text-slate-900 truncate">
+                      <div className="min-w-0 flex-1">
+                        <h3 className={`text-sm font-black truncate ${chatTheme === "dark" ? "text-white" : "text-slate-900"}`}>
                           {!isDirect ? activeConv.name : partnerUser?.name}
                         </h3>
-                        <p className="text-[11px] text-slate-500 font-medium truncate">
+                        <p className={`text-[11px] font-medium truncate ${chatTheme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                           {!isDirect ? (
                             <span>
                               Created by {activeConv.createdBy?.name || "Admin"}
@@ -1717,12 +1761,26 @@ function ChatsContent() {
                     </div>
                   </div>
 
-                  {/* WebRTC Call Triggers & Group Member Management */}
-                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                  {/* Desktop WebRTC Call Triggers & Management (sm:flex) */}
+                  <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                    {/* Chat Theme Toggle (Light / Dark) */}
+                    <button
+                      type="button"
+                      onClick={toggleChatTheme}
+                      className={`h-8.5 px-2.5 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer shadow-2xs ${chatTheme === "dark"
+                        ? "bg-slate-800 text-amber-300 border-slate-700 hover:bg-slate-700 hover:text-amber-200"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                        }`}
+                      title={chatTheme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
+                    >
+                      {chatTheme === "dark" ? <Sun size={14} className="text-amber-400" /> : <Moon size={14} className="text-slate-600" />}
+                      <span className="hidden sm:inline text-[11px] font-bold">{chatTheme === "dark" ? "Light" : "Dark"}</span>
+                    </button>
+
                     {!isDirect && (
                       <button
                         onClick={() => handleOpenManageMembersModal(activeConv)}
-                        className="h-8.5 w-8.5 flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                        className={`h-8.5 w-8.5 flex items-center justify-center rounded-lg border transition-all cursor-pointer ${chatTheme === "dark" ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white" : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}
                         title="Manage group members"
                         aria-label="Manage group members"
                       >
@@ -1731,7 +1789,7 @@ function ChatsContent() {
                     )}
                     <button
                       onClick={() => handleInitiateCall("AUDIO")}
-                      className="h-8.5 px-3 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                      className={`h-8.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${chatTheme === "dark" ? "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700" : "bg-slate-100 hover:bg-slate-200/80 text-slate-700"}`}
                       title="Audio call"
                     >
                       <Phone size={13} strokeWidth={2} />
@@ -1745,23 +1803,151 @@ function ChatsContent() {
                     </button>
                     <button
                       onClick={() => handleDeleteConversation(activeConv.id)}
-                      className="h-8.5 px-2.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-semibold transition-all border border-slate-200/80 hover:border-rose-200 flex items-center gap-1.5 cursor-pointer"
-                      title={isDirect ? "Delete chat conversation" : "Delete group conversation"}
+                      className={`h-8.5 px-2.5 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${chatTheme === "dark" ? "bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border-slate-700 hover:border-rose-800" : "bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border-slate-200/80 hover:border-rose-200"}`}
+                      title={isDirect ? "Delete chat" : "Delete group"}
                     >
                       <Trash2 size={13} strokeWidth={2} />
                     </button>
                     <button
                       onClick={() => setActiveConv(null)}
-                      className="h-8.5 w-8.5 flex items-center justify-center hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all border border-slate-200/80 cursor-pointer"
+                      className={`h-8.5 w-8.5 flex items-center justify-center rounded-lg transition-all border cursor-pointer ${chatTheme === "dark" ? "hover:bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700" : "hover:bg-slate-100 text-slate-400 hover:text-slate-700 border-slate-200/80"}`}
                       title="Close"
                     >
                       <X size={15} strokeWidth={2} />
                     </button>
                   </div>
+
+                  {/* Mobile Actions: Compact Quick Call + Three-Dots Dropdown Menu */}
+                  <div className="flex sm:hidden items-center gap-1 shrink-0 relative" ref={mobileChatMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => handleInitiateCall("AUDIO")}
+                      className={`h-8 w-8 flex items-center justify-center rounded-lg border transition-all cursor-pointer ${chatTheme === "dark" ? "border-slate-700 bg-slate-800 text-emerald-400 hover:bg-slate-700" : "border-slate-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"}`}
+                      title="Audio call"
+                      aria-label="Audio call"
+                    >
+                      <Phone size={14} strokeWidth={2.2} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileChatMenu((prev) => !prev)}
+                      className={`h-8 w-8 flex items-center justify-center rounded-lg border transition-all cursor-pointer ${showMobileChatMenu
+                        ? "border-orange-500 bg-orange-50 text-orange-600 ring-2 ring-orange-500/30"
+                        : chatTheme === "dark"
+                          ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      title="More options"
+                      aria-label="More options"
+                    >
+                      <MoreVertical size={16} strokeWidth={2.2} />
+                    </button>
+
+                    {/* Mobile Dropdown Menu with Vertical Options */}
+                    {showMobileChatMenu && (
+                      <div className={`absolute top-full right-0 mt-2 w-48 rounded-2xl shadow-2xl border p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md ${chatTheme === "dark"
+                        ? "bg-slate-900/95 border-slate-800 text-slate-200 shadow-black/60"
+                        : "bg-white/95 border-slate-200 text-slate-800 shadow-slate-400/20"
+                        }`}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMobileChatMenu(false);
+                            handleInitiateCall("AUDIO");
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${chatTheme === "dark" ? "hover:bg-slate-800 hover:text-emerald-400" : "hover:bg-emerald-50 hover:text-emerald-700"
+                            }`}
+                        >
+                          <Phone size={14} className="text-emerald-500 shrink-0" strokeWidth={2.2} />
+                          <span>Voice Call</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMobileChatMenu(false);
+                            handleInitiateCall("VIDEO");
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${chatTheme === "dark" ? "hover:bg-slate-800 hover:text-orange-400" : "hover:bg-orange-50 hover:text-orange-700"
+                            }`}
+                        >
+                          <Video size={14} className="text-orange-500 shrink-0" strokeWidth={2.2} />
+                          <span>Video Call</span>
+                        </button>
+
+                        <div className={`h-px my-1 ${chatTheme === "dark" ? "bg-slate-800" : "bg-slate-100"}`} />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMobileChatMenu(false);
+                            toggleChatTheme();
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${chatTheme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-100"
+                            }`}
+                        >
+                          {chatTheme === "dark" ? (
+                            <>
+                              <Sun size={14} className="text-amber-400 shrink-0" />
+                              <span>Light Theme</span>
+                            </>
+                          ) : (
+                            <>
+                              <Moon size={14} className="text-slate-600 shrink-0" />
+                              <span>Dark Theme</span>
+                            </>
+                          )}
+                        </button>
+
+                        {!isDirect && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowMobileChatMenu(false);
+                              handleOpenManageMembersModal(activeConv);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${chatTheme === "dark" ? "hover:bg-slate-800 hover:text-sky-400" : "hover:bg-sky-50 hover:text-sky-700"
+                              }`}
+                          >
+                            <Settings2 size={14} className="text-sky-500 shrink-0" />
+                            <span>Manage Members</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMobileChatMenu(false);
+                            handleDeleteConversation(activeConv.id);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left text-rose-500 ${chatTheme === "dark" ? "hover:bg-rose-950/40 hover:text-rose-400" : "hover:bg-rose-50 hover:text-rose-600"
+                            }`}
+                        >
+                          <Trash2 size={14} className="text-rose-500 shrink-0" />
+                          <span>{isDirect ? "Delete Chat" : "Delete Group"}</span>
+                        </button>
+
+                        <div className={`h-px my-1 ${chatTheme === "dark" ? "bg-slate-800" : "bg-slate-100"}`} />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMobileChatMenu(false);
+                            setActiveConv(null);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${chatTheme === "dark" ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"
+                            }`}
+                        >
+                          <X size={14} className="shrink-0" />
+                          <span>Close Chat</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
+                <div className={`flex-1 space-y-4 overflow-y-auto no-scrollbar p-4 sm:p-6 transition-colors ${chatTheme === "dark" ? "bg-slate-950" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70"}`}>
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -1787,8 +1973,12 @@ function ChatsContent() {
                         </div>
                         <div
                           className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] ${isMe
-                            ? "bg-orange-50/90 border border-orange-200/90 text-slate-900 font-medium rounded-br-xs"
-                            : "bg-white text-slate-800 border border-slate-200/90 font-medium rounded-bl-xs"
+                            ? chatTheme === "dark"
+                              ? "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md font-medium rounded-br-xs border border-orange-500/50"
+                              : "bg-orange-50/90 border border-orange-200/90 text-slate-900 font-medium rounded-br-xs"
+                            : chatTheme === "dark"
+                              ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
+                              : "bg-white text-slate-800 border border-slate-200/90 font-medium rounded-bl-xs"
                             }`}
                         >
                           {/* Smiley / Reaction Popover */}
@@ -1974,7 +2164,7 @@ function ChatsContent() {
 
                           {/* Hover Actions */}
                           {!isDeleted && (
-                            <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-0.5 bg-white p-1 rounded-xl shadow-md border border-slate-200 z-10 animate-in fade-in duration-100">
+                            <div className="absolute -top-3.5 right-2 hidden group-hover:flex items-center gap-0.5 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-lg border border-slate-200 z-20 animate-in fade-in zoom-in-95 duration-100 max-w-[calc(100vw-3rem)] overflow-x-auto no-scrollbar">
                               {/* Quick Reaction Bar */}
                               <div className="flex items-center gap-0.5 border-r border-slate-200/80 pr-1 mr-0.5">
                                 {["👍", "❤️", "😂", "🎉", "🙏"].map((emoji) => {
@@ -2106,7 +2296,7 @@ function ChatsContent() {
                 {/* Message Composer with Attachment Button (📎) and Clipboard Paste Support */}
                 <div
                   onPaste={handlePaste}
-                  className="p-2 bg-white border-t border-slate-200/80 space-y-2 flex-shrink-0"
+                  className={`p-2 border-t space-y-2 flex-shrink-0 transition-colors ${chatTheme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200/80"}`}
                 >
                   {/* Reply Banner */}
                   {replyingTo && (
@@ -2204,7 +2394,10 @@ function ChatsContent() {
                           handleSendMessage(e as any);
                         }
                       }}
-                      className="chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 text-slate-900 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all placeholder:text-slate-400 shadow-2xs"
+                      className={`chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all shadow-2xs ${chatTheme === "dark"
+                        ? "bg-slate-800/90 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700 text-white placeholder:text-slate-400"
+                        : "bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 text-slate-900 placeholder:text-slate-400"
+                        }`}
                     />
 
                     {/* Attachment Popover Trigger */}
@@ -2215,7 +2408,8 @@ function ChatsContent() {
                           setShowAttachmentMenu(!showAttachmentMenu);
                           setShowEmojiPicker(false);
                         }}
-                        className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer shrink-0"
+                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer shrink-0 ${chatTheme === "dark" ? "text-slate-300 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                          }`}
                         title="Attach File or Link"
                       >
                         <Paperclip size={21} strokeWidth={2} />

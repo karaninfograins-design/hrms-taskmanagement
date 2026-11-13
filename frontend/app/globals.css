@@ -984,16 +984,89 @@ textarea:not(.chat-composer-textarea) {
 
 /* Hide scrollbar while preserving smooth scrolling functionality */
 .no-scrollbar::-webkit-scrollbar,
-.scrollbar-none::-webkit-scrollbar {
+.scrollbar-none::-webkit-scrollbar,
+select::-webkit-scrollbar,
+datalist::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
 }
 
 .no-scrollbar,
-.scrollbar-none {
+.scrollbar-none,
+select,
+datalist {
   -ms-overflow-style: none !important;
   /* IE and Edge */
   scrollbar-width: none !important;
   /* Firefox */
+}
+
+/* SweetAlert2 Global Clean & Medium-Sized Styling */
+.swal2-container .swal2-popup {
+  font-family: var(--font-sans, 'Satoshi', sans-serif) !important;
+  border-radius: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 14px 30px -5px rgba(15, 23, 42, 0.1), 0 8px 12px -6px rgba(15, 23, 42, 0.05) !important;
+  max-width: 400px !important;
+  padding: 24px 22px !important;
+  background: #ffffff !important;
+}
+
+.swal2-container .swal2-title {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  padding: 8px 0 4px 0 !important;
+  line-height: 1.35 !important;
+}
+
+.swal2-container .swal2-html-container {
+  font-size: 14px !important;
+  color: #475569 !important;
+  margin: 6px 0 18px 0 !important;
+  line-height: 1.55 !important;
+}
+
+.swal2-container .swal2-icon {
+  transform: scale(0.8) !important;
+  margin: 6px auto 10px auto !important;
+  border-width: 2px !important;
+}
+
+.swal2-container .swal2-actions {
+  gap: 12px !important;
+  margin-top: 6px !important;
+  width: 100% !important;
+}
+
+.swal2-container .swal2-confirm,
+.swal2-container .swal2-cancel {
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  padding: 9px 20px !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.swal2-container .swal2-cancel {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.swal2-container .swal2-cancel:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.swal2-container .swal2-confirm {
+  background: #ea580c !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.swal2-container .swal2-confirm:hover {
+  background: #c2410c !important;
 }

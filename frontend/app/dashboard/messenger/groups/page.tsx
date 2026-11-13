@@ -26,6 +26,9 @@ import {
   Check,
   AlertCircle,
   Sparkles,
+  Sun,
+  Moon,
+  ExternalLink,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
@@ -123,6 +126,64 @@ export default function GroupChatsPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [msgInput, setMsgInput] = useState<string>("");
+
+  // Chat Theme Option (Light / Dark)
+  const [chatTheme, setChatTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("hrms_chat_theme");
+      if (saved === "dark" || saved === "light") {
+        setChatTheme(saved);
+      }
+    } catch {}
+  }, []);
+
+  const toggleChatTheme = () => {
+    setChatTheme((prev) => {
+      const next = prev === "light" ? "dark" : "light";
+      try {
+        localStorage.setItem("hrms_chat_theme", next);
+      } catch {}
+      return next;
+    });
+  };
+
+  // Helper to render message content with clickable links
+  const renderFormattedContent = (content: string, isMe: boolean) => {
+    if (!content) return null;
+    const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s]|www\.[^\s<]+[^<.,:;"')\]\s])/gi;
+    const parts = content.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        const href = part.startsWith("http://") || part.startsWith("https://") ? part : `https://${part}`;
+        const isDark = chatTheme === "dark";
+        const linkStyle = isDark
+          ? isMe
+            ? "text-white underline underline-offset-3 font-bold hover:text-amber-200 bg-white/15 px-1.5 py-0.5 rounded border border-white/25"
+            : "text-sky-300 underline underline-offset-3 font-bold hover:text-sky-200 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-800/80"
+          : isMe
+            ? "text-blue-700 underline underline-offset-3 font-bold hover:text-blue-900 bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200/90 shadow-2xs"
+            : "text-blue-600 underline underline-offset-3 font-bold hover:text-blue-800 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200/80 shadow-2xs";
+
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`break-all transition-all inline-flex items-center gap-1 my-0.5 ${linkStyle}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>{part}</span>
+            <ExternalLink size={12} className="inline-block shrink-0 opacity-80" />
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
 
   // Bitrix-Style Daily Work Summary State
   const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false);
@@ -859,13 +920,13 @@ export default function GroupChatsPage() {
             {activeGroup ? (
               <>
                 {/* Header */}
-                <div className="flex min-h-16 items-center justify-between border-t-2 border-t-orange-500 border-b border-slate-200 bg-white px-3 py-2 shadow-sm sm:px-6">
+                <div className={`flex min-h-16 items-center justify-between border-t-2 border-t-orange-500 border-b px-3 py-2 shadow-sm sm:px-6 transition-colors ${chatTheme === "dark" ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900"}`}>
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => setActiveGroup(null)}
                       aria-label="Back to groups"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 lg:hidden"
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition lg:hidden ${chatTheme === "dark" ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200 text-slate-500 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"}`}
                     >
                       <ArrowLeft size={16} />
                     </button>
@@ -873,13 +934,27 @@ export default function GroupChatsPage() {
                       {activeGroup.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-xs md:max-w-md">
-                      <h3 className="text-sm font-black text-slate-900 truncate">{activeGroup.name}</h3>
-                      <p className="truncate text-[11px] font-medium text-slate-500">
+                      <h3 className={`text-sm font-black truncate ${chatTheme === "dark" ? "text-white" : "text-slate-900"}`}>{activeGroup.name}</h3>
+                      <p className={`truncate text-[11px] font-medium ${chatTheme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                         {activeGroup.participants.length} {activeGroup.participants.length === 1 ? "member" : "members"} · {activeGroup.participants.map((p) => p.user.name).join(", ")}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center justify-end gap-1 sm:gap-1.5 shrink-0">
+                    {/* Chat Theme Toggle (Light / Dark) */}
+                    <button
+                      type="button"
+                      onClick={toggleChatTheme}
+                      className={`h-9 px-2.5 rounded-xl text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer shadow-2xs ${chatTheme === "dark"
+                        ? "bg-slate-800 text-amber-300 border-slate-700 hover:bg-slate-700 hover:text-amber-200"
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                        }`}
+                      title={chatTheme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
+                    >
+                      {chatTheme === "dark" ? <Sun size={14} className="text-amber-400" /> : <Moon size={14} className="text-slate-600" />}
+                      <span className="hidden sm:inline text-[11px] font-bold">{chatTheme === "dark" ? "Light" : "Dark"}</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleOpenDailySummaryModal(activeGroup)}
@@ -893,7 +968,7 @@ export default function GroupChatsPage() {
                     <button
                       type="button"
                       onClick={() => handleOpenManageGroup(activeGroup)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 cursor-pointer"
+                      className={`flex h-9 w-9 items-center justify-center rounded-xl border transition cursor-pointer ${chatTheme === "dark" ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white" : "border-slate-200 bg-slate-50 text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"}`}
                       title="Manage group members"
                       aria-label="Manage group members"
                     >
@@ -901,7 +976,7 @@ export default function GroupChatsPage() {
                     </button>
                     <button
                       onClick={() => handleInitiateGroupCall("AUDIO")}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                      className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${chatTheme === "dark" ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white" : "border-slate-200 bg-slate-50 text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"}`}
                       title="Start audio group call"
                       aria-label="Start audio group call"
                     >
@@ -915,7 +990,7 @@ export default function GroupChatsPage() {
                     >
                       <Video size={15} />
                     </button>
-                    <span className="hidden md:inline-flex px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
+                    <span className={`hidden md:inline-flex px-3 py-1 text-xs font-bold rounded-full ${chatTheme === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-700"}`}>
                       {activeGroup.participants.length} Participants
                     </span>
                     <button
@@ -930,7 +1005,7 @@ export default function GroupChatsPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70 p-4 sm:p-6">
+                <div className={`flex-1 space-y-4 overflow-y-auto no-scrollbar p-4 sm:p-6 transition-colors ${chatTheme === "dark" ? "bg-slate-950" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70"}`}>
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -951,12 +1026,16 @@ export default function GroupChatsPage() {
                         )}
                         <div
                           className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-xs relative group break-words [overflow-wrap:anywhere] overflow-hidden ${isMe
-                            ? "bg-orange-500 text-white rounded-br-xs"
-                            : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
+                            ? chatTheme === "dark"
+                              ? "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md font-medium rounded-br-xs border border-orange-500/50"
+                              : "bg-orange-500 text-white rounded-br-xs shadow-2xs"
+                            : chatTheme === "dark"
+                              ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
+                              : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs shadow-2xs"
                             }`}
                         >
                           <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text">
-                            {m.content}
+                            {renderFormattedContent(m.content, isMe)}
                           </div>
                           <span className="mt-1 block text-right text-[10px] opacity-70">
                             {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -1017,7 +1096,7 @@ export default function GroupChatsPage() {
                 </div>
 
                 {/* Composer */}
-                <div className="border-t border-slate-200/80 bg-white p-3 sm:p-4">
+                <div className={`border-t p-3 sm:p-4 transition-colors ${chatTheme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200/80"}`}>
                   <form onSubmit={handleSendMessage} className="flex items-center gap-2 sm:gap-3 relative">
                     {/* Emoji Picker Popover */}
                     {showEmojiPicker && (
@@ -1051,7 +1130,11 @@ export default function GroupChatsPage() {
                           handleSendMessage(e as any);
                         }
                       }}
-                      className="chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 text-slate-900 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all placeholder:text-slate-400 shadow-2xs"
+                      className={`chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all shadow-2xs ${
+                        chatTheme === "dark"
+                          ? "bg-slate-800/90 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700 text-white placeholder:text-slate-400"
+                          : "bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 text-slate-900 placeholder:text-slate-400"
+                      }`}
                     />
 
                     {/* Smiley / Emoji Button */}

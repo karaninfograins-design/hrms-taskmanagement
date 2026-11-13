@@ -1123,36 +1123,76 @@ export async function listAllWorkItems(req: Request, res: Response) {
   if (!user) return;
 
   const isEmployeeRole = user.role.name === "EMPLOYEE";
+  const { projectId, employeeId, status, search, limit } = req.query;
+
+  const whereClause: any = {
+    project: { status: { not: "INACTIVE" } },
+  };
+
+  if (isEmployeeRole) {
+    whereClause.OR = [
+      { assigneeId: user.id },
+      { assignees: { some: { userId: user.id } } },
+      { createdById: user.id },
+      { project: { members: { some: { userId: user.id } } } },
+    ];
+  } else if (employeeId && employeeId !== "ALL") {
+    const empId = Number(employeeId);
+    if (!isNaN(empId)) {
+      whereClause.OR = [
+        { assigneeId: empId },
+        { assignees: { some: { userId: empId } } },
+      ];
+    }
+  }
+
+  if (projectId && projectId !== "ALL") {
+    const pId = Number(projectId);
+    if (!isNaN(pId)) {
+      whereClause.projectId = pId;
+    }
+  }
+
+  if (status && status !== "ALL") {
+    whereClause.status = status;
+  }
+
+  if (search && typeof search === "string" && search.trim()) {
+    const q = search.trim();
+    whereClause.AND = [
+      {
+        OR: [
+          { title: { contains: q } },
+          { description: { contains: q } },
+        ],
+      },
+    ];
+  }
 
   const items = await prisma.workItem.findMany({
-    where: {
-      project: { status: { not: "INACTIVE" } },
-      ...(isEmployeeRole
-        ? {
-          OR: [
-            { assigneeId: user.id },
-            { assignees: { some: { userId: user.id } } },
-            { createdById: user.id },
-            { project: { members: { some: { userId: user.id } } } },
-          ],
-        }
-        : {}),
-    },
+    where: whereClause,
     include: {
       project: { select: { id: true, key: true, name: true } },
       assignee: { select: { id: true, name: true, email: true } },
-      assignees: { select: { userId: true } },
+      assignees: {
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      },
       parent: { select: { id: true, title: true, type: true } },
+      createdBy: { select: { id: true, name: true, email: true } },
     },
     orderBy: { updatedAt: "desc" },
-    take: 100,
+    take: limit ? Math.min(Number(limit), 500) : 250,
   });
 
   res.json({
     items: items.map((item: any) => ({
       id: String(item.id),
+      numericId: item.id,
       key: `${item.project.key || "PRJ"}-${item.keyNumber}`,
       title: item.title,
+      description: item.description,
       type: item.type,
       status: item.status,
       priority: item.priority,
@@ -1160,9 +1200,15 @@ export async function listAllWorkItems(req: Request, res: Response) {
       projectId: item.projectId,
       parentTitle: item.parent?.title,
       assigneeId: item.assigneeId,
-      assignees: item.assignees,
-      assignee: item.assignee?.name || "Unassigned",
+      assignees: item.assignees.map((a: any) => a.user || { id: a.userId }),
+      assignee: item.assignee?.name || item.assignees[0]?.user?.name || "Unassigned",
+      assigneeObj: item.assignee || item.assignees[0]?.user || null,
+      createdBy: item.createdBy?.name || "System",
+      startDate: item.startDate ? item.startDate.toISOString() : null,
+      dueDate: item.dueDate ? item.dueDate.toISOString() : null,
+      storyPoints: item.storyPoints,
       updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : "Recently",
+      rawUpdatedAt: item.updatedAt ? item.updatedAt.toISOString() : null,
     })),
   });
 }
