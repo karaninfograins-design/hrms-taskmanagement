@@ -150,6 +150,33 @@ export function setupSocketServer(httpServer: HttpServer) {
       }
     });
 
+    // Handle Real-time Conversation Read Receipts (Bitrix-style Seen Tracking)
+    socket.on("conversation:read", async (data: { conversationId: number }) => {
+      try {
+        if (!data?.conversationId) return;
+        const readAt = new Date();
+        await prisma.conversationParticipant.updateMany({
+          where: { conversationId: data.conversationId, userId },
+          data: { lastReadAt: readAt },
+        });
+
+        const reader = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, name: true, designation: { select: { name: true } } },
+        });
+
+        io.to(`conversation_${data.conversationId}`).emit("conversation:seen", {
+          conversationId: data.conversationId,
+          userId,
+          name: reader?.name || `User ${userId}`,
+          designation: reader?.designation?.name || null,
+          readAt: readAt.toISOString(),
+        });
+      } catch (err) {
+        console.error("Socket conversation:read error:", err);
+      }
+    });
+
     // WebRTC Signaling Events
     socket.on(
       "call:initiate",

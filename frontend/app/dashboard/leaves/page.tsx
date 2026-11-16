@@ -241,7 +241,14 @@ export default function LeavesPage() {
   const designationName = ((session.user as any)?.designation?.name || (session.user as any)?.designation || "").toUpperCase();
   const userEmail = (session.user?.email || "").toLowerCase();
   const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isHR = roleName.includes("HR") || roleName.includes("ADMIN") || designationName.includes("HR") || userEmail.includes("hr@") || isSuperAdmin || userRoleId === 1 || userRoleId === 2 || userRoleId === 3;
+  const canApproveLeaves =
+    isSuperAdmin ||
+    roleName === "ADMIN" ||
+    (session.user?.permissions || []).some((p: string) => {
+      const lp = p.toLowerCase();
+      return lp === "leave:approve" || lp === "manage_leaves" || lp.includes("leave:manage");
+    });
+  const isHR = canApproveLeaves;
 
   const getLeaveTypeName = (leaveType: any): string => {
     if (!leaveType) return "Leave";

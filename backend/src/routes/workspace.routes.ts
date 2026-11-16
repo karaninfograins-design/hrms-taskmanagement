@@ -4,6 +4,7 @@ import {
   createDesignation,
   createPermission,
   createProject,
+  createRole,
   createSprint,
   createWorkItem,
   deleteDesignation,
@@ -25,6 +26,7 @@ import {
   listSprints,
   updateDesignation,
   updateProjectMembers,
+  updateRole,
   updateRolePermissions,
   updateSprintStatus,
   updateWorkItem,
@@ -62,6 +64,8 @@ router.put("/designations/:id", updateDesignation);
 router.delete("/designations/:id", deleteDesignation);
 
 router.get("/roles", listRoles);
+router.post("/roles", createRole);
+router.put("/roles/:id", updateRole);
 router.delete("/roles/:id", deleteRole);
 router.put("/roles/:id/permissions", updateRolePermissions);
 router.post("/permissions", createPermission);

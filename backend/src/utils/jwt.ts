@@ -18,11 +18,12 @@ export interface PasswordResetPayload {
 }
 
 export const generateToken = (userId: number): string => {
+  const expiresIn = (process.env.JWT_EXPIRES_IN || "30d") as any;
   return jwt.sign(
     { userId },
     JWT_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn,
     }
   );
 };

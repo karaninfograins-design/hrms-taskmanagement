@@ -291,10 +291,17 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
   // When mobile drawer is open, always display full expanded navigation
   const effectivelyCollapsed = isCollapsed && !isMobileOpen;
 
-  const roleName = typeof user?.role === "string" ? user.role : (user?.role as any)?.name || (user?.role === 1 ? "SUPER_ADMIN" : user?.role === 2 ? "ADMIN" : user?.role === 3 ? "HR" : "EMPLOYEE");
-  const userRoleId = typeof user?.role === "number" ? user?.role : (user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
-  const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || roleName === "HR" || userRoleId === 2 || userRoleId === 3;
+  const roleName = typeof user?.role === "string" ? user.role : (user?.role as any)?.name || "";
+  const isSuperAdmin = roleName === "SUPER_ADMIN" || (user as any)?.roleId === 1;
+  const userPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
+  const isAdminUser =
+    isSuperAdmin ||
+    roleName === "ADMIN" ||
+    userPermissions.includes("MANAGE_SETTINGS") ||
+    userPermissions.includes("settings:view") ||
+    userPermissions.includes("MANAGE_EMPLOYEES") ||
+    userPermissions.includes("employee:view") ||
+    userPermissions.includes("dashboard:view");
 
   const hrItems = hrNavigation.items.filter(
     (item) => item.href !== "/dashboard/hr-settings" || isAdminUser
@@ -306,7 +313,6 @@ export function Sidebar({ user, canCreateAdmins = false, onSignOut }: SidebarPro
     (item) => item.href !== "/dashboard/settings" || isAdminUser
   );
 
-  const userPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
   const canViewRoles = isSuperAdmin || userPermissions.includes("VIEW_PERMISSIONS") || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
 
   const administrationItems: NavigationItem[] = [

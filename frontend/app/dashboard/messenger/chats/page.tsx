@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Settings2,
@@ -36,6 +36,10 @@ import {
   Sun,
   Moon,
   MoreVertical,
+  AtSign,
+  CheckCheck,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
@@ -68,6 +72,8 @@ type Employee = {
   name: string;
   email: string;
   role?: { name: string } | string;
+  designation?: string | { name: string } | null;
+  avatarUrl?: string | null;
 };
 
 type Message = {
@@ -124,6 +130,16 @@ type CallSession = {
   startedAt?: string | null;
   endedAt?: string | null;
 };
+
+interface MentionOption {
+  id: string | number;
+  type: "all" | "user";
+  name: string;
+  subtitle: string;
+  avatarText?: string;
+  avatarUrl?: string | null;
+  user?: any;
+}
 
 function ChatsLoadingFallback() {
   const { session, logout } = useAuth();
@@ -235,10 +251,143 @@ function ChatsContent() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // In-Chat Message Search State
+  const [showInChatSearch, setShowInChatSearch] = useState<boolean>(false);
+  const [inChatSearchQuery, setInChatSearchQuery] = useState<string>("");
+  const [inChatSearchMatchIndex, setInChatSearchMatchIndex] = useState<number>(0);
+  const inChatSearchInputRef = useRef<HTMLInputElement>(null);
+
+  const inChatMatchingMsgIds = useMemo(() => {
+    if (!inChatSearchQuery.trim()) return [];
+    const q = inChatSearchQuery.toLowerCase();
+    return messages.filter((m) => m.content && m.content.toLowerCase().includes(q)).map((m) => m.id);
+  }, [messages, inChatSearchQuery]);
+
+  useEffect(() => {
+    if (inChatMatchingMsgIds.length > 0) {
+      const targetId = inChatMatchingMsgIds[inChatSearchMatchIndex] || inChatMatchingMsgIds[0];
+      if (targetId) {
+        const el = document.getElementById(`chat-msg-${targetId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    }
+  }, [inChatMatchingMsgIds, inChatSearchMatchIndex]);
+
+  const toggleInChatSearch = () => {
+    setShowInChatSearch((prev) => {
+      const next = !prev;
+      if (!next) {
+        setInChatSearchQuery("");
+        setInChatSearchMatchIndex(0);
+      } else {
+        setTimeout(() => inChatSearchInputRef.current?.focus(), 50);
+      }
+      return next;
+    });
+  };
+
   // Emoji Picker & Popover Refs
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const attachmentMenuRef = useRef<HTMLDivElement>(null);
+
+  // Bitrix @ Mention State
+  const [showMentions, setShowMentions] = useState<boolean>(false);
+  const [mentionQuery, setMentionQuery] = useState<string>("");
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState<number>(0);
+  const [mentionCursorPos, setMentionCursorPos] = useState<number>(0);
+  const mentionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Build Bitrix Mention Options (All members + Active Conversation Members + All Employees)
+  const mentionOptions = useMemo<MentionOption[]>(() => {
+    const list: MentionOption[] = [
+      {
+        id: "all",
+        type: "all",
+        name: "All members",
+        subtitle: "All members",
+      },
+    ];
+
+    const seenIds = new Set<number>();
+    if (session?.user?.id) {
+      seenIds.add(session.user.id);
+    }
+
+    if (activeConv?.participants) {
+      activeConv.participants.forEach((p) => {
+        if (!seenIds.has(p.userId) && p.user?.name) {
+          seenIds.add(p.userId);
+          const designationName =
+            typeof p.user?.designation === "string"
+              ? p.user.designation
+              : p.user?.designation?.name || (p.user as any)?.role?.name || "Team Member";
+
+          const initials = p.user.name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase() || "U";
+
+          list.push({
+            id: p.userId,
+            type: "user",
+            name: p.user.name,
+            subtitle: designationName,
+            avatarText: initials,
+            avatarUrl: p.user.avatarUrl,
+            user: p.user,
+          });
+        }
+      });
+    }
+
+    if (Array.isArray(employees)) {
+      employees.forEach((emp) => {
+        if (!seenIds.has(emp.id) && emp.name) {
+          seenIds.add(emp.id);
+          const designationName =
+            typeof emp.designation === "string"
+              ? emp.designation
+              : (emp.designation as any)?.name || (emp as any)?.role?.name || "Employee";
+
+          const initials = emp.name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase() || "U";
+
+          list.push({
+            id: emp.id,
+            type: "user",
+            name: emp.name,
+            subtitle: designationName,
+            avatarText: initials,
+            avatarUrl: emp.avatarUrl,
+            user: emp,
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [activeConv?.participants, employees, session?.user?.id]);
+
+  const filteredMentions = useMemo<MentionOption[]>(() => {
+    if (!mentionQuery) return mentionOptions;
+    const q = mentionQuery.toLowerCase().trim();
+    return mentionOptions.filter(
+      (opt: MentionOption) =>
+        opt.name.toLowerCase().includes(q) ||
+        opt.subtitle.toLowerCase().includes(q)
+    );
+  }, [mentionOptions, mentionQuery]);
 
   // Message Reaction Picker & Drag-and-Drop Attachment States
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<number | null>(null);
@@ -252,6 +401,9 @@ function ChatsContent() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (mentionMenuRef.current && !mentionMenuRef.current.contains(e.target as Node)) {
+        setShowMentions(false);
+      }
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
       }
@@ -472,17 +624,30 @@ function ChatsContent() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-  // Auto-adjust textarea height and reset cleanly when empty or message sent
-  useEffect(() => {
-    if (textareaRef.current) {
-      if (msgInput) {
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-      } else {
-        textareaRef.current.style.height = "44px";
-      }
+  // Bitrix24-style auto-adjusting textarea height
+  const adjustComposerHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = 180;
+    const minHeight = 44;
+    const scrollHeight = el.scrollHeight;
+
+    if (!el.value) {
+      el.style.height = `${minHeight}px`;
+      el.style.overflowY = "hidden";
+    } else if (scrollHeight > maxHeight) {
+      el.style.height = `${maxHeight}px`;
+      el.style.overflowY = "auto";
+    } else {
+      el.style.height = `${Math.max(scrollHeight, minHeight)}px`;
+      el.style.overflowY = "hidden";
     }
-  }, [msgInput]);
+  }, []);
+
+  useEffect(() => {
+    adjustComposerHeight();
+  }, [msgInput, adjustComposerHeight]);
 
   // Socket event listeners for real-time messages & typing
   useEffect(() => {
@@ -792,23 +957,124 @@ function ChatsContent() {
     }
   };
 
-  // Helper to render message content with clickable links
+  // Bitrix @ Mention Selection Handler
+  const handleSelectMention = (opt: MentionOption) => {
+    const textBeforeCursor = msgInput.slice(0, mentionCursorPos || msgInput.length);
+    const textAfterCursor = msgInput.slice(mentionCursorPos || msgInput.length);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIndex === -1) {
+      setMsgInput((prev) => `${prev}@${opt.name} `);
+      setShowMentions(false);
+      return;
+    }
+
+    const mentionText = `@${opt.name} `;
+    const newText = textBeforeCursor.slice(0, lastAtIndex) + mentionText + textAfterCursor;
+    setMsgInput(newText);
+    setShowMentions(false);
+    setMentionQuery("");
+
+    setTimeout(() => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.focus();
+        const nextPos = lastAtIndex + mentionText.length;
+        textarea.setSelectionRange(nextPos, nextPos);
+        adjustComposerHeight();
+      }
+    }, 10);
+  };
+
+  // Composer Change Handler with Bitrix @ Mention trigger
+  const handleComposerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    const cursorPos = e.target.selectionStart || 0;
+    setMsgInput(val);
+    adjustComposerHeight();
+
+    if (socket && activeConv) {
+      socket.emit("typing:start", { conversationId: activeConv.id });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("typing:stop", { conversationId: activeConv.id });
+      }, 2000);
+    }
+
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      const charBeforeAt = lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : " ";
+      if (charBeforeAt === " " || charBeforeAt === "\n" || lastAtIndex === 0) {
+        const queryText = textBeforeCursor.slice(lastAtIndex + 1);
+        if (!queryText.includes(" ") && !queryText.includes("\n")) {
+          setShowMentions(true);
+          setMentionQuery(queryText);
+          setMentionCursorPos(cursorPos);
+          setMentionSelectedIndex(0);
+          return;
+        }
+      }
+    }
+
+    setShowMentions(false);
+    setMentionQuery("");
+  };
+
+  // Composer KeyDown Handler for Keyboard Mention Navigation (Arrows, Enter, Tab, Escape)
+  const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMentions && filteredMentions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionSelectedIndex((prev) => (prev + 1) % filteredMentions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionSelectedIndex((prev) => (prev - 1 + filteredMentions.length) % filteredMentions.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const selected = filteredMentions[mentionSelectedIndex];
+        if (selected) {
+          handleSelectMention(selected);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowMentions(false);
+        return;
+      }
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e as any);
+    }
+  };
+
+  // Helper to render message content with clickable links & @mentions
   const renderFormattedContent = (content: string, isMe: boolean) => {
     if (!content) return null;
     const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s]|www\.[^\s<]+[^<.,:;"')\]\s])/gi;
-    const parts = content.split(urlRegex);
+    const tokenRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s]|www\.[^\s<]+[^<.,:;"')\]\s]|@[A-Za-z0-9_.-]+(?:\s[A-Za-z0-9_.-]+)?)/gi;
+    const parts = content.split(tokenRegex);
 
     return parts.map((part, index) => {
+      if (!part) return null;
+
       if (part.match(urlRegex)) {
         const href = part.startsWith("http://") || part.startsWith("https://") ? part : `https://${part}`;
         const isDark = chatTheme === "dark";
         const linkStyle = isDark
           ? isMe
-            ? "text-white underline underline-offset-3 font-bold hover:text-amber-200 bg-white/15 px-1.5 py-0.5 rounded border border-white/25"
+            ? "text-emerald-200 underline underline-offset-3 font-bold hover:text-white bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800"
             : "text-sky-300 underline underline-offset-3 font-bold hover:text-sky-200 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-800/80"
           : isMe
-            ? "text-blue-700 underline underline-offset-3 font-bold hover:text-blue-900 bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200/90 shadow-2xs"
-            : "text-blue-600 underline underline-offset-3 font-bold hover:text-blue-800 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200/80 shadow-2xs";
+            ? "text-emerald-900 underline underline-offset-3 font-bold hover:text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300/80 shadow-2xs"
+            : "text-blue-700 underline underline-offset-3 font-bold hover:text-blue-900 bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200/90 shadow-2xs";
 
         return (
           <a
@@ -824,6 +1090,37 @@ function ChatsContent() {
           </a>
         );
       }
+
+      if (part.startsWith("@")) {
+        const isSelfMention =
+          part.toLowerCase() === `@${session?.user?.name?.toLowerCase()}` ||
+          part.toLowerCase() === "@all members" ||
+          part.toLowerCase() === "@all";
+
+        const isDark = chatTheme === "dark";
+
+        return (
+          <span
+            key={index}
+            className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-lg text-xs mx-0.5 shadow-2xs transition-colors ${isDark
+                ? isMe
+                  ? "bg-emerald-800/60 text-emerald-100 border border-emerald-600/60"
+                  : isSelfMention
+                    ? "bg-amber-950/70 text-amber-200 border border-amber-600/70"
+                    : "bg-slate-800 text-sky-200 border border-slate-700"
+                : isMe
+                  ? "bg-[#d8ece0] text-emerald-950 border border-[#b2d9c1]"
+                  : isSelfMention
+                    ? "bg-amber-100 text-amber-950 border border-amber-300 font-extrabold"
+                    : "bg-sky-100 text-sky-950 border border-sky-300"
+              }`}
+          >
+            <AtSign size={11} className="inline opacity-80 shrink-0" />
+            <span>{part.slice(1)}</span>
+          </span>
+        );
+      }
+
       return <span key={index}>{part}</span>;
     });
   };
@@ -897,6 +1194,8 @@ function ChatsContent() {
         return;
       }
     }
+    // Auto-calculate height when pasting multi-line text
+    setTimeout(adjustComposerHeight, 0);
   };
 
   const handleAddLinkPrompt = async () => {
@@ -1763,6 +2062,22 @@ function ChatsContent() {
 
                   {/* Desktop WebRTC Call Triggers & Management (sm:flex) */}
                   <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                    {/* In-Chat Message Search */}
+                    <button
+                      type="button"
+                      onClick={toggleInChatSearch}
+                      className={`h-8.5 w-8.5 rounded-lg text-xs font-semibold transition-all border flex items-center justify-center cursor-pointer shadow-2xs ${showInChatSearch
+                        ? "bg-orange-50 text-orange-600 border-orange-300 ring-2 ring-orange-500/20"
+                        : chatTheme === "dark"
+                          ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                        }`}
+                      title="Search messages in conversation"
+                      aria-label="Search messages"
+                    >
+                      <Search size={14} strokeWidth={2.2} />
+                    </button>
+
                     {/* Chat Theme Toggle (Light / Dark) */}
                     <button
                       type="button"
@@ -1817,8 +2132,22 @@ function ChatsContent() {
                     </button>
                   </div>
 
-                  {/* Mobile Actions: Compact Quick Call + Three-Dots Dropdown Menu */}
+                  {/* Mobile Actions: Lens Search + Compact Quick Call + Three-Dots Dropdown Menu */}
                   <div className="flex sm:hidden items-center gap-1 shrink-0 relative" ref={mobileChatMenuRef}>
+                    <button
+                      type="button"
+                      onClick={toggleInChatSearch}
+                      className={`h-8 w-8 flex items-center justify-center rounded-lg border transition-all cursor-pointer ${showInChatSearch
+                        ? "border-orange-300 bg-orange-50 text-orange-600 ring-2 ring-orange-500/20"
+                        : chatTheme === "dark"
+                          ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      title="Search messages"
+                      aria-label="Search messages"
+                    >
+                      <Search size={14} strokeWidth={2.2} />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleInitiateCall("AUDIO")}
@@ -1876,6 +2205,18 @@ function ChatsContent() {
                         </button>
 
                         <div className={`h-px my-1 ${chatTheme === "dark" ? "bg-slate-800" : "bg-slate-100"}`} />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMobileChatMenu(false);
+                            toggleInChatSearch();
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-left ${chatTheme === "dark" ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-100 text-slate-700"}`}
+                        >
+                          <Search size={14} className="text-orange-500 shrink-0" strokeWidth={2.2} />
+                          <span>Search in Chat</span>
+                        </button>
 
                         <button
                           type="button"
@@ -1946,6 +2287,78 @@ function ChatsContent() {
                   </div>
                 </div>
 
+                {/* In-Chat Message Search Bar */}
+                {showInChatSearch && (
+                  <div
+                    className={`flex items-center gap-2 px-3 sm:px-6 py-2 border-b animate-in slide-in-from-top-2 duration-150 z-20 transition-colors ${chatTheme === "dark"
+                      ? "bg-slate-900 border-slate-800 text-white"
+                      : "bg-orange-50/80 border-orange-200/80 text-slate-800"
+                      }`}
+                  >
+                    <Search size={14} className="text-orange-500 shrink-0" />
+                    <input
+                      ref={inChatSearchInputRef}
+                      type="text"
+                      value={inChatSearchQuery}
+                      onChange={(e) => {
+                        setInChatSearchQuery(e.target.value);
+                        setInChatSearchMatchIndex(0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (inChatMatchingMsgIds.length > 0) {
+                            if (e.shiftKey) {
+                              setInChatSearchMatchIndex((prev) => (prev - 1 + inChatMatchingMsgIds.length) % inChatMatchingMsgIds.length);
+                            } else {
+                              setInChatSearchMatchIndex((prev) => (prev + 1) % inChatMatchingMsgIds.length);
+                            }
+                          }
+                        } else if (e.key === "Escape") {
+                          toggleInChatSearch();
+                        }
+                      }}
+                      aria-label="Search in conversation"
+                      className="flex-1 min-w-0 bg-transparent text-xs outline-none font-medium text-slate-800 dark:text-slate-100"
+                    />
+                    {inChatSearchQuery && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
+                        {inChatMatchingMsgIds.length > 0
+                          ? `${inChatSearchMatchIndex + 1} of ${inChatMatchingMsgIds.length}`
+                          : "No matches"}
+                      </span>
+                    )}
+                    {inChatMatchingMsgIds.length > 1 && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setInChatSearchMatchIndex((prev) => (prev - 1 + inChatMatchingMsgIds.length) % inChatMatchingMsgIds.length)}
+                          className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                          title="Previous match (Shift+Enter)"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInChatSearchMatchIndex((prev) => (prev + 1) % inChatMatchingMsgIds.length)}
+                          className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                          title="Next match (Enter)"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={toggleInChatSearch}
+                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer shrink-0"
+                      title="Close search (Esc)"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
                 {/* Messages Feed */}
                 <div className={`flex-1 space-y-4 overflow-y-auto no-scrollbar p-4 sm:p-6 transition-colors ${chatTheme === "dark" ? "bg-slate-950" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70"}`}>
                   {messages.length === 0 && (
@@ -1960,25 +2373,33 @@ function ChatsContent() {
                   {messages.map((m) => {
                     const isMe = m.senderId === currentUserId;
                     const isDeleted = Boolean(m.deletedAt);
+                    const isCurrentSearchMatch = m.id === inChatMatchingMsgIds[inChatSearchMatchIndex];
+                    const isAnySearchMatch = inChatMatchingMsgIds.includes(m.id);
 
                     return (
                       <div
                         key={m.id}
+                        id={`chat-msg-${m.id}`}
                         className={`flex flex-col relative ${isMe ? "items-end" : "items-start"}`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-bold text-slate-400">
+                          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                             {m.sender.name}
                           </span>
                         </div>
                         <div
-                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] ${isMe
+                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] ${isCurrentSearchMatch
+                            ? "ring-3 ring-amber-400 ring-offset-2 dark:ring-offset-slate-950 shadow-md"
+                            : isAnySearchMatch
+                              ? "ring-2 ring-amber-300/80"
+                              : ""
+                            } ${isMe
                             ? chatTheme === "dark"
-                              ? "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md font-medium rounded-br-xs border border-orange-500/50"
-                              : "bg-orange-50/90 border border-orange-200/90 text-slate-900 font-medium rounded-br-xs"
+                              ? "bg-[#18362b] text-emerald-100 shadow-md font-medium rounded-br-xs border border-emerald-700/60"
+                              : "bg-[#eaf4ed] text-slate-900 border border-[#cbe4d7] shadow-2xs font-medium rounded-br-xs"
                             : chatTheme === "dark"
                               ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
-                              : "bg-white text-slate-800 border border-slate-200/90 font-medium rounded-bl-xs"
+                              : "bg-white text-slate-900 border border-slate-200/90 shadow-2xs font-medium rounded-bl-xs"
                             }`}
                         >
                           {/* Smiley / Reaction Popover */}
@@ -2360,6 +2781,85 @@ function ChatsContent() {
                   )}
 
                   <form onSubmit={handleSendMessage} onPaste={handlePaste} className="flex items-center gap-2 sm:gap-3 relative">
+                    {/* Bitrix-Style @ Mention Suggestions Popup (Matches Screenshot) */}
+                    {showMentions && filteredMentions.length > 0 && (
+                      <div
+                        ref={mentionMenuRef}
+                        className={`absolute bottom-full mb-3 left-0 sm:left-2 z-50 w-[92vw] sm:w-80 max-h-72 rounded-2xl shadow-2xl border flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150 ${chatTheme === "dark"
+                          ? "bg-slate-900 border-slate-700/80 text-white shadow-slate-950/80"
+                          : "bg-white border-slate-200/90 text-slate-800 shadow-slate-900/15"
+                          }`}
+                      >
+                        {/* Suggestions List */}
+                        <div className="overflow-y-auto max-h-56 p-1.5 space-y-0.5 no-scrollbar">
+                          {filteredMentions.map((opt: MentionOption, idx: number) => {
+                            const isSelected = idx === mentionSelectedIndex;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onMouseEnter={() => setMentionSelectedIndex(idx)}
+                                onClick={() => handleSelectMention(opt)}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer select-none ${isSelected
+                                  ? chatTheme === "dark"
+                                    ? "bg-slate-800 text-white"
+                                    : "bg-orange-50/80 text-orange-950 border border-orange-200/60"
+                                  : chatTheme === "dark"
+                                    ? "hover:bg-slate-800/60 text-slate-200"
+                                    : "hover:bg-slate-50 text-slate-800"
+                                  }`}
+                              >
+                                {/* Avatar */}
+                                {opt.type === "all" ? (
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                                    <Users size={16} />
+                                  </div>
+                                ) : opt.avatarUrl ? (
+                                  <img
+                                    src={opt.avatarUrl}
+                                    alt={opt.name}
+                                    className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
+                                    {opt.avatarText || "U"}
+                                  </div>
+                                )}
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold truncate">
+                                    {opt.name}
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                                    {opt.subtitle}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Footer Navigation Hints (Exact as Bitrix screenshot) */}
+                        <div
+                          className={`px-3 py-1.5 border-t text-[10px] flex items-center justify-between select-none font-medium ${chatTheme === "dark"
+                            ? "bg-slate-950/60 border-slate-800 text-slate-400"
+                            : "bg-slate-50 border-slate-100 text-slate-400"
+                            }`}
+                        >
+                          <span className="flex items-center gap-1">
+                            <span className="font-semibold text-slate-500 dark:text-slate-300">↑ ↓</span> to select user or chat
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="font-semibold text-slate-500 dark:text-slate-300">Enter</span> to select
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="font-semibold text-slate-500 dark:text-slate-300">Esc</span> to cancel
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Emoji Picker Popover */}
                     {showEmojiPicker && (
                       <div ref={emojiPickerRef} className="absolute bottom-16 right-4 sm:right-14 z-50 shadow-2xl rounded-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
@@ -2374,27 +2874,39 @@ function ChatsContent() {
                       </div>
                     )}
 
-                    {/* Input Field (Pill Shape) */}
+                    {/* @ Mention Trigger Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMentions((prev) => !prev);
+                        setMentionQuery("");
+                        setMentionSelectedIndex(0);
+                        if (!showMentions) {
+                          setMsgInput((prev) => prev + (prev.endsWith(" ") || prev === "" ? "@" : " @"));
+                          setTimeout(() => textareaRef.current?.focus(), 50);
+                        }
+                      }}
+                      className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer shrink-0 ${showMentions
+                        ? "bg-orange-100 text-orange-600 ring-2 ring-orange-500/30"
+                        : chatTheme === "dark"
+                          ? "text-slate-400 hover:text-white hover:bg-slate-800"
+                          : "text-slate-400 hover:text-orange-500 hover:bg-orange-50"
+                        }`}
+                      title="Mention (@) user"
+                    >
+                      <AtSign size={18} strokeWidth={2.2} />
+                    </button>
+
+                    {/* Input Field (Bitrix24-style Auto-adjustable Textarea) */}
                     <textarea
                       ref={textareaRef}
                       rows={1}
                       placeholder="Type a message..."
                       value={msgInput}
-                      onChange={(e) => {
-                        handleInputChange(e as any);
-                        e.target.style.height = "auto";
-                        e.target.style.height = e.target.value
-                          ? `${Math.min(e.target.scrollHeight, 120)}px`
-                          : "44px";
-                      }}
+                      onChange={handleComposerChange}
                       onPaste={handlePaste}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e as any);
-                        }
-                      }}
-                      className={`chat-composer-textarea flex-1 min-h-[44px] max-h-32 py-2.5 px-5 text-xs sm:text-[13px] rounded-full focus:outline-none focus:ring-4 focus:ring-orange-500/10 font-medium !resize-none overflow-y-auto no-scrollbar leading-relaxed transition-all shadow-2xs ${chatTheme === "dark"
+                      onKeyDown={handleComposerKeyDown}
+                      className={`chat-composer-textarea flex-1 min-h-[44px] max-h-[180px] py-2.5 px-4 sm:px-5 text-xs sm:text-[13px] rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 font-medium !resize-none leading-relaxed transition-all shadow-2xs ${chatTheme === "dark"
                         ? "bg-slate-800/90 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700 text-white placeholder:text-slate-400"
                         : "bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 focus:border-orange-500 text-slate-900 placeholder:text-slate-400"
                         }`}
@@ -2724,11 +3236,11 @@ function ChatsContent() {
                       </span>
                       <div>
                         <h2 className="text-base font-black">
-                          {editingGroupId ? "Manage group members" : "Create a team group"}
+                          {editingGroupId ? "Manage Group & Members" : "Create a Team Group"}
                         </h2>
                         <p className="mt-1 max-w-lg text-xs text-orange-50">
                           {editingGroupId
-                            ? "Update the people who can participate in this team conversation."
+                            ? "Rename this team group or update the members participating in the conversation."
                             : "Give your group a name and choose the employees who should be part of the conversation."}
                         </p>
                       </div>
@@ -2747,11 +3259,18 @@ function ChatsContent() {
                 <form onSubmit={handleSaveGroupSubmit} className="flex min-h-0 flex-1 flex-col">
                   <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-4 sm:p-6 md:grid-cols-[0.85fr_1.15fr]">
                     <div className="space-y-5">
-                      {!editingGroupId && (
-                        <div>
-                          <label htmlFor="chat-group-name" className="!mt-0 !mb-2 !block text-xs font-bold text-slate-800">
-                            Group name <span className="text-rose-500">*</span>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label htmlFor="chat-group-name" className="!mt-0 !mb-0 text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span>Group name <span className="text-rose-500">*</span></span>
                           </label>
+                          {editingGroupId && (
+                            <span className="text-[10px] font-bold text-orange-600 bg-orange-100/70 border border-orange-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Pencil size={10} /> Editable
+                            </span>
+                          )}
+                        </div>
+                        <div className="relative">
                           <input
                             id="chat-group-name"
                             type="text"
@@ -2761,15 +3280,20 @@ function ChatsContent() {
                               setGroupName(e.target.value);
                               setGroupSubmitError(null);
                             }}
-                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 pr-10 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-500/10"
                             required
-                            autoFocus
+                            autoFocus={!editingGroupId}
                           />
-                          <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                            Use a name that makes the purpose of this group easy to recognize.
-                          </p>
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                            <Pencil size={15} />
+                          </div>
                         </div>
-                      )}
+                        <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                          {editingGroupId
+                            ? "You can rename this group at any time. Changes apply immediately to all members."
+                            : "Use a name that makes the purpose of this group easy to recognize."}
+                        </p>
+                      </div>
 
                       <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                         <div className="flex items-center justify-between gap-2">
@@ -2900,7 +3424,7 @@ function ChatsContent() {
                           disabled={creatingGroup}
                           className="rounded-lg bg-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {creatingGroup ? "Saving..." : editingGroupId ? "Save members" : "Create group"}
+                          {creatingGroup ? "Saving..." : editingGroupId ? "Save changes" : "Create group"}
                         </button>
                       </div>
                     </div>

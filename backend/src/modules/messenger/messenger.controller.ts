@@ -45,6 +45,7 @@ export const getConversations = async (req: Request, res: Response): Promise<voi
                 name: true,
                 email: true,
                 role: { select: { name: true } },
+                designation: { select: { name: true } },
               },
             },
           },
@@ -284,14 +285,64 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
       data: { lastReadAt: new Date() },
     });
 
-    const reactionsStore = loadReactionsStore();
-    const messagesWithReactions = messages.map((m: any) => ({
-      ...m,
-      reactions: reactionsStore[String(m.id)] || {},
+    // Fetch conversation participants with designations and read status for Bitrix-style seen receipts
+    const participants = await prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            designation: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const participantsList = participants.map((p) => ({
+      userId: p.userId,
+      name: p.user.name,
+      email: p.user.email,
+      designation: p.user.designation?.name || null,
+      lastReadAt: p.lastReadAt,
     }));
 
+    const reactionsStore = loadReactionsStore();
+    const messagesWithSeen = messages.map((m: any) => {
+      const msgTime = new Date(m.createdAt).getTime();
+      const seenBy = participantsList
+        .filter((p) => p.userId !== m.senderId && p.lastReadAt && new Date(p.lastReadAt).getTime() >= msgTime)
+        .map((p) => ({
+          userId: p.userId,
+          name: p.name,
+          designation: p.designation,
+          readAt: p.lastReadAt,
+        }));
+
+      return {
+        ...m,
+        reactions: reactionsStore[String(m.id)] || {},
+        seenBy,
+      };
+    });
+
+    // Notify room of live read status update
+    try {
+      const io = getIO();
+      const currentReader = participantsList.find((p) => p.userId === userId);
+      io.to(`conversation_${conversationId}`).emit("conversation:seen", {
+        conversationId,
+        userId,
+        name: currentReader?.name || `User ${userId}`,
+        designation: currentReader?.designation || null,
+        readAt: new Date().toISOString(),
+      });
+    } catch { }
+
     res.json({
-      messages: messagesWithReactions,
+      messages: messagesWithSeen,
+      participants: participantsList,
       pagination: {
         limit: fetchAll ? messages.length : limit,
         hasMore,
@@ -373,10 +424,16 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       data: { updatedAt: new Date() },
     });
 
+    const messageWithMeta = {
+      ...message,
+      reactions: {},
+      seenBy: [],
+    };
+
     // Real-Time Socket.IO Broadcast
     try {
       const io = getIO();
-      io.to(`conversation_${convId}`).emit("message:new", message);
+      io.to(`conversation_${convId}`).emit("message:new", messageWithMeta);
 
       const participants = await prisma.conversationParticipant.findMany({
         where: { conversationId: convId },
@@ -385,14 +442,14 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       participants.forEach((p) => {
         io.to(`user_${p.userId}`).emit("conversation:updated", {
           conversationId: convId,
-          lastMessage: message,
+          lastMessage: messageWithMeta,
         });
       });
     } catch (err) {
       console.error("Socket emit error in sendMessage:", err);
     }
 
-    res.status(201).json({ message });
+    res.status(201).json({ message: messageWithMeta });
   } catch (error) {
     console.error("Send message error:", error);
     res.status(500).json({ message: "Failed to send message" });

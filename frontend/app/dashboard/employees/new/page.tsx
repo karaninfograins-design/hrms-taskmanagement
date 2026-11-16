@@ -50,29 +50,23 @@ export default function AddEmployeePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const roleName = typeof session?.user?.role === "string"
-    ? session.user.role.toUpperCase()
-    : (session?.user?.role as any)?.name?.toUpperCase() || "";
+  const userPermissions = Array.isArray(session?.user?.permissions) ? session.user.permissions : [];
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN" || (session?.user as any)?.roleId === 1;
 
-  const isSuperAdmin = roleName === "SUPER_ADMIN";
-  const isAdmin = roleName === "ADMIN";
-  const isHR = roleName === "HR" || roleName === "HR_MANAGER" || roleName.includes("HR");
-
+  // Fully dynamic permission check: Super Admin master access OR any sub-role with employee management permissions
   const canManageEmployees =
     isSuperAdmin ||
-    isAdmin ||
-    isHR ||
-    Boolean(
-      session?.user?.permissions?.some((p: string) => {
-        const lp = p.toLowerCase();
-        return (
-          lp === "manage_employees" ||
-          lp.includes("employee:create") ||
-          lp.includes("employee:manage") ||
-          lp.includes("employee:write")
-        );
-      })
-    );
+    userPermissions.some((p: string) => {
+      const lp = p.toLowerCase();
+      return (
+        lp === "manage_employees" ||
+        lp.includes("employee:create") ||
+        lp.includes("employee:manage") ||
+        lp.includes("employee:write") ||
+        lp.includes("employee:edit") ||
+        lp.includes("employee:update")
+      );
+    });
 
   useEffect(() => {
     if (!isLoading && !session) {

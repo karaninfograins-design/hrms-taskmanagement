@@ -16,10 +16,23 @@ export const getAdmins = async (req: Request, res: Response): Promise<void> => {
     const { userId } = verifyToken(token);
     const requestingUser = await prisma.user.findUnique({
       where: { id: userId },
-      include: { role: true },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true },
+            },
+          },
+        },
+      },
     });
 
-    if (!requestingUser || (requestingUser.role.name !== "SUPER_ADMIN" && requestingUser.role.name !== "ADMIN" && requestingUser.role.name !== "HR")) {
+    const isSystemAdmin = requestingUser?.role.name === "SUPER_ADMIN" || requestingUser?.role.name === "ADMIN";
+    const hasAdminViewPerm = requestingUser?.role.permissions?.some(
+      (rp: any) => rp?.permission?.name === "admin:view" || rp?.permission?.name === "MANAGE_USERS"
+    );
+
+    if (!requestingUser || (!isSystemAdmin && !hasAdminViewPerm)) {
       res.status(403).json({ message: "Access denied. Only administrators can view admin list" });
       return;
     }

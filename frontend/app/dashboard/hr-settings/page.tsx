@@ -126,10 +126,16 @@ export default function HRSettingsPage() {
       const roleName = typeof session.user.role === "string" ? session.user.role : (session.user.role as any)?.name || "";
       const isSuperAdmin = roleName === "SUPER_ADMIN" || (session.user.role as any) === 1;
       const isAdmin = roleName === "ADMIN" || (session.user.role as any) === 2;
-      const isHR = roleName.includes("HR") || roleName.includes("MANAGER");
+      const canManageSettings =
+        isSuperAdmin ||
+        isAdmin ||
+        (session.user?.permissions || []).some((p: string) => {
+          const lp = p.toLowerCase();
+          return lp.includes("setting") || lp === "manage_settings";
+        });
 
-      if (!isSuperAdmin && !isAdmin && !isHR) {
-        alert("Access Denied: HRMS Settings page is restricted to HR Administrators.");
+      if (!canManageSettings) {
+        alert("Access Denied: HRMS Settings page is restricted to authorized administrators.");
         router.replace("/dashboard");
       }
     }

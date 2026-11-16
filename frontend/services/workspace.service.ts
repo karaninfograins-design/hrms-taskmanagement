@@ -230,12 +230,36 @@ export function deleteWorkItemComment(id: number, token: string) {
 
 export type Designation = { id: number; name: string; description: string | null; status: boolean };
 export type Permission = { id: number; name: string; description: string | null };
-export type Role = { id: number; name: string; description: string | null; permissionIds: string[] };
+export type Role = {
+  id: number;
+  name: string;
+  description: string | null;
+  permissionIds: string[];
+  permissionNumericIds?: number[];
+  userCount?: number;
+  isSystem?: boolean;
+};
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 export const getDesignations = (token: string) => apiRequest<{ items: Designation[] }>("/api/workspace/designations", { headers: auth(token) });
 export const saveDesignation = (data: Partial<Designation>, token: string) => apiRequest<{ item: Designation }>(data.id ? `/api/workspace/designations/${data.id}` : "/api/workspace/designations", { method: data.id ? "PUT" : "POST", headers: auth(token), body: JSON.stringify(data) });
 export const deleteDesignation = (id: number, token: string) => apiRequest(`/api/workspace/designations/${id}`, { method: "DELETE", headers: auth(token) });
 export const deleteRole = (id: number, token: string) => apiRequest(`/api/workspace/roles/${id}`, { method: "DELETE", headers: auth(token) });
+export const createRole = (name: string, description: string, token: string) =>
+  apiRequest<{ role: Role; message: string }>("/api/workspace/roles", {
+    method: "POST",
+    headers: auth(token),
+    body: JSON.stringify({ name, description }),
+  });
+export const updateRole = (
+  id: number,
+  data: { name?: string; description?: string; status?: boolean },
+  token: string
+) =>
+  apiRequest<{ role: Role; message: string }>(`/api/workspace/roles/${id}`, {
+    method: "PUT",
+    headers: auth(token),
+    body: JSON.stringify(data),
+  });
 export const deleteProject = (id: number, token: string) => apiRequest(`/api/workspace/projects/${id}`, { method: "DELETE", headers: auth(token) });
 export const deleteSprint = (id: number, token: string) => apiRequest(`/api/workspace/sprints/${id}`, { method: "DELETE", headers: auth(token) });
 export const getRoles = (token: string) => apiRequest<{ roles: Role[]; permissions: Permission[] }>("/api/workspace/roles", { headers: auth(token) });

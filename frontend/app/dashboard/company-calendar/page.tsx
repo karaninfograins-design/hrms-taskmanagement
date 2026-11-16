@@ -93,7 +93,15 @@ export default function CompanyCalendarPage() {
   const userRoleId = typeof session?.user?.role === "number"
     ? session.user.role
     : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
-  const isHrOrAdmin = roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "HR" || userRoleId === 1 || userRoleId === 2 || userRoleId === 3;
+  const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
+  const canManageHolidays =
+    isSuperAdmin ||
+    roleName === "ADMIN" ||
+    (session?.user?.permissions || []).some((p: string) => {
+      const lp = p.toLowerCase();
+      return lp.includes("setting") || lp.includes("holiday") || lp.includes("manage_settings") || lp.includes("manage_roles");
+    });
+  const isHrOrAdmin = canManageHolidays;
 
   const handleCreateHoliday = async (e: React.FormEvent) => {
     e.preventDefault();

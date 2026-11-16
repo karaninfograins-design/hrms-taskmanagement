@@ -17,12 +17,19 @@ import {
 
 export function LoginForm() {
   const router = useRouter();
-  const { saveSession } = useAuth();
+  const { session, isLoading, saveSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Auto-redirect if user already has an active session (e.g. reopened closed tab)
+  useEffect(() => {
+    if (!isLoading && session?.token) {
+      router.replace("/dashboard");
+    }
+  }, [session, isLoading, router]);
 
   // Forgot password modal state
   const [isForgotOpen, setIsForgotOpen] = useState(false);
@@ -83,6 +90,15 @@ export function LoginForm() {
     setForgotError("");
     setForgotSuccess("");
     setIsForgotOpen(true);
+  }
+
+  if (session?.token) {
+    return (
+      <div className="login-card flex flex-col items-center justify-center p-8 text-center min-h-[300px]">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin mb-3" />
+        <p className="text-sm font-bold text-slate-800">Resuming session...</p>
+      </div>
+    );
   }
 
   return (

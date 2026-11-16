@@ -38,7 +38,7 @@ async function authenticate(req: Request, res: Response) {
 }
 
 function adminOnly(role: string, res: Response) {
-  if (role === "SUPER_ADMIN" || role === "ADMIN" || role === "HR") return true;
+  if (role === "SUPER_ADMIN" || role === "ADMIN") return true;
   res.status(403).json({ message: "Administrator access is required" });
   return false;
 }
@@ -54,6 +54,7 @@ function hasUserPermission(user: any, permissionNames: string[]): boolean {
 function canViewRolesAndPermissions(user: any, res: Response) {
   if (
     user?.role?.name === "SUPER_ADMIN" ||
+    user?.role?.name === "ADMIN" ||
     hasUserPermission(user, [
       "VIEW_PERMISSIONS",
       "MANAGE_PERMISSIONS",
@@ -70,6 +71,7 @@ function canViewRolesAndPermissions(user: any, res: Response) {
 function canManageRolesAndPermissions(user: any, res: Response) {
   if (
     user?.role?.name === "SUPER_ADMIN" ||
+    user?.role?.name === "ADMIN" ||
     hasUserPermission(user, [
       "MANAGE_PERMISSIONS",
       "MANAGE_ROLES",
@@ -423,7 +425,7 @@ export async function createWorkItem(req: Request, res: Response) {
       const adminUsers = await prisma.user.findMany({
         where: {
           status: "ACTIVE",
-          role: { name: { in: ["ADMIN", "SUPER_ADMIN", "HR"] } },
+          role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
         },
         select: { id: true },
       });
@@ -581,7 +583,7 @@ export async function updateWorkItem(req: Request, res: Response) {
       const adminUsers = await prisma.user.findMany({
         where: {
           status: "ACTIVE",
-          role: { name: { in: ["ADMIN", "SUPER_ADMIN", "HR"] } },
+          role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
         },
         select: { id: true },
       });
@@ -670,7 +672,7 @@ export async function deleteWorkItemComment(req: Request, res: Response) {
   });
 
   const isAuthor = comment.userId === user.id;
-  const isAdmin = user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN" || user.role.name === "HR";
+  const isAdmin = user.role.name === "SUPER_ADMIN" || user.role.name === "ADMIN" || hasUserPermission(user, ["comment:delete"]);
 
   if (!isAuthor && !isAdmin && !member) {
     res.status(403).json({ message: "You do not have permission to delete this comment" });
@@ -785,7 +787,7 @@ export async function createProject(req: Request, res: Response) {
 
   // Non-blocking asynchronous notification dispatch
   prisma.user.findMany({
-    where: { status: "ACTIVE", role: { name: { in: ["ADMIN", "SUPER_ADMIN", "HR"] } } },
+    where: { status: "ACTIVE", role: { name: { in: ["ADMIN", "SUPER_ADMIN"] } } },
     select: { id: true }
   }).then((admins) => {
     if (admins.length > 0) {
@@ -1060,46 +1062,169 @@ export async function deleteDesignation(req: Request, res: Response) {
 export async function listRoles(req: Request, res: Response) {
   const user = await authenticate(req, res);
   if (!user || !canViewRolesAndPermissions(user, res)) return;
-  const [roles, permissions] = await Promise.all([prisma.role.findMany({
-    where: { status: true },
-    select: { id: true, name: true, description: true, status: true, permissions: { select: { permission: { select: { name: true } } } } },
-    orderBy: { name: "asc" },
-  }), prisma.permission.findMany({ select: { id: true, name: true, description: true }, orderBy: { name: "asc" } })]);
-  res.json({ roles: roles.map(({ permissions: assigned, ...role }: { permissions: Array<{ permission: { name: string } }>;[key: string]: unknown }) => ({ ...role, permissionIds: assigned.map(({ permission }: { permission: { name: string } }) => permission.name) })), permissions });
+  const [roles, permissions] = await Promise.all([
+    prisma.role.findMany({
+      where: { status: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        _count: { select: { users: true } },
+        permissions: {
+          select: {
+            permission: {
+              select: { id: true, name: true, description: true },
+            },
+          },
+        },
+      },
+      orderBy: { id: "asc" },
+    }),
+    prisma.permission.findMany({
+      select: { id: true, name: true, description: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  res.json({
+    roles: roles.map(({ permissions: assigned, _count, ...role }) => ({
+      ...role,
+      userCount: _count?.users || 0,
+      permissionIds: assigned.map(({ permission }) => permission.name),
+      permissionNumericIds: assigned.map(({ permission }) => permission.id),
+      isSystem: role.name === "SUPER_ADMIN" || role.name === "ADMIN",
+    })),
+    permissions,
+  });
+}
+
+export async function createRole(req: Request, res: Response) {
+  const user = await authenticate(req, res);
+  if (!user || !canManageRolesAndPermissions(user, res)) return;
+  const { name, description } = req.body as { name?: unknown; description?: unknown };
+  if (typeof name !== "string" || !name.trim()) {
+    res.status(400).json({ message: "Role name is required" });
+    return;
+  }
+  const cleanName = name.trim().toUpperCase().replaceAll(/\s+/g, "_");
+  if (cleanName === "SUPER_ADMIN" || cleanName === "ADMIN") {
+    res.status(400).json({ message: "System role names (SUPER_ADMIN, ADMIN) cannot be created manually" });
+    return;
+  }
+  try {
+    const role = await prisma.role.create({
+      data: {
+        name: cleanName,
+        description: typeof description === "string" ? description.trim() || null : null,
+        status: true,
+      },
+      select: { id: true, name: true, description: true, status: true },
+    });
+    res.status(201).json({ role, message: "Sub-role created successfully" });
+  } catch {
+    res.status(409).json({ message: "A role with this name already exists" });
+  }
+}
+
+export async function updateRole(req: Request, res: Response) {
+  const user = await authenticate(req, res);
+  if (!user || !canManageRolesAndPermissions(user, res)) return;
+  const roleId = Number(req.params.id);
+  const { name, description, status } = req.body as { name?: unknown; description?: unknown; status?: unknown };
+  try {
+    const existingRole = await prisma.role.findUnique({ where: { id: roleId } });
+    if (!existingRole) {
+      res.status(404).json({ message: "Role not found" });
+      return;
+    }
+    if ((existingRole.name === "SUPER_ADMIN" || existingRole.name === "ADMIN") && typeof name === "string" && name.trim().toUpperCase() !== existingRole.name) {
+      res.status(403).json({ message: "Root system roles cannot be renamed" });
+      return;
+    }
+    const updateData: any = {};
+    if (typeof name === "string" && name.trim() && existingRole.name !== "SUPER_ADMIN" && existingRole.name !== "ADMIN") {
+      updateData.name = name.trim().toUpperCase().replaceAll(/\s+/g, "_");
+    }
+    if (typeof description === "string") {
+      updateData.description = description.trim() || null;
+    }
+    if (typeof status === "boolean" && existingRole.name !== "SUPER_ADMIN" && existingRole.name !== "ADMIN") {
+      updateData.status = status;
+    }
+    const role = await prisma.role.update({
+      where: { id: roleId },
+      data: updateData,
+    });
+    res.json({ role, message: "Role updated successfully" });
+  } catch {
+    res.status(400).json({ message: "Unable to update role" });
+  }
 }
 
 export async function deleteRole(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !superAdminOnly(user.role.name, res)) return;
+  if (!user || !canManageRolesAndPermissions(user, res)) return;
+  const roleId = Number(req.params.id);
   try {
     const role = await prisma.role.findUnique({
-      where: { id: Number(req.params.id) },
-      select: { name: true },
+      where: { id: roleId },
+      select: { name: true, _count: { select: { users: true } } },
     });
     if (!role) {
       res.status(404).json({ message: "Role not found" });
       return;
     }
-    if (role.name === "SUPER_ADMIN") {
-      res.status(403).json({ message: "The SUPER_ADMIN role cannot be deactivated" });
+    if (role.name === "SUPER_ADMIN" || role.name === "ADMIN") {
+      res.status(403).json({ message: "Root system roles (SUPER_ADMIN, ADMIN) cannot be deleted" });
+      return;
+    }
+    if (role._count.users > 0) {
+      res.status(400).json({
+        message: `Cannot delete sub-role with ${role._count.users} active user(s). Reassign these users to another role first.`,
+      });
       return;
     }
 
-    const item = await prisma.role.update({ where: { id: Number(req.params.id) }, data: { status: false } });
-    res.json({ item, message: "Role  deleted" });
-  } catch { res.status(404).json({ message: "Role not found" }); }
+    await prisma.$transaction([
+      prisma.rolePermission.deleteMany({ where: { roleId } }),
+      prisma.role.delete({ where: { id: roleId } }),
+    ]);
+    res.json({ message: "Sub-role deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ message: "Unable to delete role" });
+  }
 }
 
 export async function updateRolePermissions(req: Request, res: Response) {
   const user = await authenticate(req, res);
   if (!user || !canManageRolesAndPermissions(user, res)) return;
   const permissionIds = req.body?.permissionIds;
-  if (!Array.isArray(permissionIds) || permissionIds.some((id) => typeof id !== "number")) { res.status(400).json({ message: "permissionIds must be an array of permission IDs" }); return; }
+  if (!Array.isArray(permissionIds) || permissionIds.some((id) => typeof id !== "number")) {
+    res.status(400).json({ message: "permissionIds must be an array of numeric permission IDs" });
+    return;
+  }
   const roleId = Number(req.params.id);
+  const targetRole = await prisma.role.findUnique({ where: { id: roleId } });
+  if (!targetRole) {
+    res.status(404).json({ message: "Role not found" });
+    return;
+  }
+  if (targetRole.name === "SUPER_ADMIN") {
+    res.status(403).json({ message: "SUPER_ADMIN permissions are permanently full and cannot be modified" });
+    return;
+  }
   try {
-    await prisma.$transaction([prisma.rolePermission.deleteMany({ where: { roleId } }), prisma.rolePermission.createMany({ data: permissionIds.map((permissionId) => ({ roleId, permissionId })) })]);
-    res.json({ message: "Permissions updated" });
-  } catch { res.status(400).json({ message: "Unable to update role permissions" }); }
+    await prisma.$transaction([
+      prisma.rolePermission.deleteMany({ where: { roleId } }),
+      prisma.rolePermission.createMany({
+        data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
+        skipDuplicates: true,
+      }),
+    ]);
+    res.json({ message: "Permissions updated successfully" });
+  } catch {
+    res.status(400).json({ message: "Unable to update role permissions" });
+  }
 }
 
 export async function createPermission(req: Request, res: Response) {

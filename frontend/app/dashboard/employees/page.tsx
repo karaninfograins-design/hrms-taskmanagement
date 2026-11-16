@@ -14,6 +14,7 @@ import {
   RotateCcw,
   Plus,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   ChevronDown,
 } from "lucide-react";
@@ -75,35 +76,35 @@ export default function EmployeesPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  const userRole = session?.user?.role;
-  const roleName = typeof userRole === "string"
-    ? userRole
-    : (userRole as any)?.name || (userRole === 1 ? "SUPER_ADMIN" : userRole === 2 ? "ADMIN" : userRole === 3 ? "HR" : "EMPLOYEE");
-  const userRoleId = typeof userRole === "number"
-    ? userRole
-    : (userRole as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
+  const userPermissions = Array.isArray(session?.user?.permissions) ? session.user.permissions : [];
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN" || (session?.user as any)?.roleId === 1;
 
-  const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isHRUser = roleName === "HR" || roleName === "HR_MANAGER" || roleName.includes("HR") || userRoleId === 3;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || isHRUser || userRoleId === 2 || userRoleId === 3;
-
+  // Fully dynamic, permission-based checks - works seamlessly for ANY sub-role (HR, CTO, Team Lead, BA, etc.)
   const canManageEmployees =
     isSuperAdmin ||
-    isHRUser ||
-    (isAdminUser && (
-      session?.user?.permissions?.includes("MANAGE_EMPLOYEES") ||
-      session?.user?.permissions?.some((p: string) => {
-        const lp = p.toLowerCase();
-        return (
-          lp === "manage_employees" ||
-          lp.includes("employee:create") ||
-          lp.includes("employee:manage") ||
-          lp.includes("employee:write")
-        );
-      }) ||
-      roleName === "ADMIN" ||
-      roleName === "HR"
-    ));
+    userPermissions.some((p: string) => {
+      const lp = p.toLowerCase();
+      return (
+        lp === "manage_employees" ||
+        lp.includes("employee:create") ||
+        lp.includes("employee:manage") ||
+        lp.includes("employee:write") ||
+        lp.includes("employee:edit") ||
+        lp.includes("employee:update")
+      );
+    });
+
+  const canDeleteEmployees =
+    isSuperAdmin ||
+    userPermissions.some((p: string) => {
+      const lp = p.toLowerCase();
+      return (
+        lp === "manage_employees" ||
+        lp.includes("employee:delete") ||
+        lp.includes("employee:manage")
+      );
+    });
+
   const canCreateAdmins = isSuperAdmin;
 
   // Debounce search input only
@@ -795,29 +796,29 @@ export default function EmployeesPage() {
               onClick={() => setShowDeleteModal(false)}
             >
               <div
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xl max-w-md w-full"
+                className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xl max-w-sm w-full animate-in fade-in zoom-in-95 duration-150"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-black text-lg mb-4">
-                  ⚠️
+                <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200/80 text-amber-600 flex items-center justify-center mb-3.5">
+                  <AlertTriangle className="w-5 h-5" />
                 </div>
-                <h2 className="text-base font-extrabold text-slate-900 mb-2">
+                <h2 className="text-sm font-semibold text-slate-900 mb-1.5">
                   Deactivate Employee
                 </h2>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6">
-                  Are you sure you want to deactivate <strong>{employeeToDelete.name}</strong>?
+                <p className="text-xs text-slate-500 font-normal leading-relaxed mb-5">
+                  Are you sure you want to deactivate <span className="font-semibold text-slate-800">{employeeToDelete.name}</span>? Their access to the workspace will be suspended.
                 </p>
-                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
                   <button
                     onClick={() => setShowDeleteModal(false)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors"
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs transition-colors shadow-2xs cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={confirmDelete}
                     disabled={loading}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs transition-all disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium text-xs shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     {loading ? "Deactivating..." : "Deactivate Employee"}
                   </button>

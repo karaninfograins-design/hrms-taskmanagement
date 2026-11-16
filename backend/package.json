@@ -11,7 +11,8 @@
     "tunnel": "node ../start-tunnel.cjs",
     "db:migrate": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",
-    "cleanup:legacy-users": "tsx scripts/remove-legacy-superadmin.ts"
+    "cleanup:legacy-users": "tsx scripts/remove-legacy-superadmin.ts",
+    "cleanup:legacy-hr": "tsx scripts/remove-legacy-hr.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

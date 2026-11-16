@@ -85,8 +85,14 @@ export default function TasksPage() {
     : (session?.user?.role as any)?.name || (String(session?.user?.role) === "1" ? "SUPER_ADMIN" : String(session?.user?.role) === "2" ? "ADMIN" : String(session?.user?.role) === "3" ? "HR" : "EMPLOYEE");
   const isSuperAdmin = roleName === "SUPER_ADMIN" || String(session?.user?.role) === "1";
   const isAdmin = roleName === "ADMIN" || String(session?.user?.role) === "2";
-  const isHR = roleName.includes("HR") || String(session?.user?.role) === "3";
-  const isAdminOrHR = isSuperAdmin || isAdmin || isHR;
+  const canManageTasks =
+    isSuperAdmin ||
+    isAdmin ||
+    (session?.user?.permissions || []).some((p: string) => {
+      const lp = p.toLowerCase();
+      return lp.includes("work_item") || lp.includes("task") || lp.includes("assign_work") || lp.includes("manage_projects");
+    });
+  const isAdminOrHR = canManageTasks;
 
   // Fetch initial tasks, projects, and employee list
   const loadData = async () => {

@@ -8,48 +8,85 @@ async function main() {
 
   // 1. Seed Permissions (Both legacy colon-separated and standard UPPER_CASE for full compatibility)
   const permissionDefs = [
-    // Resource-specific permissions
+    // 1. Employee Directory & Profiles
     { name: "employee:view", description: "View employee profiles and directory" },
     { name: "employee:create", description: "Create employee profiles" },
     { name: "employee:edit", description: "Edit employee profiles" },
     { name: "employee:delete", description: "Delete employee profiles" },
+    { name: "employee:approve", description: "Approve employee profile changes & promotions" },
+    { name: "MANAGE_EMPLOYEES", description: "Full employee lifecycle management" },
+
+    // 2. Projects & Workspaces
+    { name: "project:view", description: "View workspace projects" },
+    { name: "project:create", description: "Create workspace projects" },
+    { name: "project:edit", description: "Edit workspace projects" },
+    { name: "project:delete", description: "Delete workspace projects" },
+    { name: "project:approve", description: "Approve project completions and milestones" },
+    { name: "CREATE_PROJECTS", description: "Create new projects" },
+    { name: "MANAGE_PROJECTS", description: "Manage all projects" },
+
+    // 3. Sprints & Agile Iterations
+    { name: "sprint:view", description: "View project sprints" },
+    { name: "sprint:create", description: "Create project sprints" },
+    { name: "sprint:edit", description: "Edit project sprints" },
+    { name: "sprint:delete", description: "Delete project sprints" },
+    { name: "sprint:approve", description: "Approve sprint releases and completions" },
+    { name: "CREATE_SPRINTS", description: "Create new sprints" },
+    { name: "MANAGE_SPRINTS", description: "Manage all sprints" },
+
+    // 4. Tasks & Work Items
+    { name: "work_item:view", description: "View work items (tasks, bugs, stories)" },
+    { name: "work_item:create", description: "Create work items" },
+    { name: "work_item:edit", description: "Edit work items" },
+    { name: "work_item:delete", description: "Delete work items" },
+    { name: "work_item:approve", description: "Approve and close work items" },
+    { name: "CREATE_WORK_ITEMS", description: "Create work items" },
+    { name: "MANAGE_WORK_ITEMS", description: "Manage all work items" },
+    { name: "VIEW_WORK_ITEMS", description: "View work items" },
+    { name: "ASSIGN_WORK", description: "Assign work items to users" },
+
+    // 5. Comments & Discussions
+    { name: "comment:view", description: "View work item comments" },
+    { name: "comment:create", description: "Add work item comments" },
+    { name: "comment:edit", description: "Edit work item comments" },
+    { name: "comment:delete", description: "Delete work item comments" },
+
+    // 6. Leaves & Absence
+    { name: "leave:view", description: "View leave requests and calendar" },
+    { name: "leave:create", description: "Apply for leave requests" },
+    { name: "leave:edit", description: "Edit leave applications" },
+    { name: "leave:delete", description: "Cancel / delete leave applications" },
+    { name: "leave:approve", description: "Approve or reject employee leave requests" },
+
+    // 7. Attendance
+    { name: "attendance:view", description: "View attendance logs and records" },
+    { name: "attendance:create", description: "Clock-in / record attendance" },
+    { name: "attendance:edit", description: "Regularize attendance logs" },
+    { name: "attendance:approve", description: "Approve attendance regularization" },
+
+    // 8. HR Policies & Settings
+    { name: "settings:view", description: "View company settings and policies" },
+    { name: "settings:edit", description: "Edit company criteria, shifts and policies" },
+    { name: "MANAGE_SETTINGS", description: "Manage company settings and criteria" },
+
+    // 9. Reports & Analytics
+    { name: "report:view", description: "View system reports and analytics" },
+    { name: "VIEW_REPORTS", description: "View system reports and analytics" },
+
+    // 10. Role & User Governance
     { name: "admin:view", description: "View administrators" },
     { name: "admin:create", description: "Create administrators" },
     { name: "admin:edit", description: "Edit administrators" },
     { name: "admin:delete", description: "Delete administrators" },
     { name: "admin:role_manage", description: "Manage administrator roles" },
-    { name: "project:view", description: "View workspace projects" },
-    { name: "project:create", description: "Create workspace projects" },
-    { name: "project:edit", description: "Edit workspace projects" },
-    { name: "project:delete", description: "Delete workspace projects" },
-    { name: "sprint:view", description: "View project sprints" },
-    { name: "sprint:create", description: "Create project sprints" },
-    { name: "sprint:edit", description: "Edit project sprints" },
-    { name: "sprint:delete", description: "Delete project sprints" },
-    { name: "work_item:view", description: "View work items (tasks, bugs, stories)" },
-    { name: "work_item:create", description: "Create work items" },
-    { name: "work_item:edit", description: "Edit work items" },
-    { name: "work_item:delete", description: "Delete work items" },
-    { name: "comment:view", description: "View work item comments" },
-    { name: "comment:create", description: "Add work item comments" },
-    { name: "comment:delete", description: "Delete work item comments" },
-
-    // Role-action permissions
     { name: "MANAGE_USERS", description: "Create, read, update, and delete users" },
-    { name: "MANAGE_EMPLOYEES", description: "Create, read, update, and delete employees" },
     { name: "MANAGE_ROLES", description: "Create, read, update, and delete roles" },
     { name: "MANAGE_PERMISSIONS", description: "Manage role permissions" },
-    { name: "CREATE_PROJECTS", description: "Create new projects" },
-    { name: "MANAGE_PROJECTS", description: "Manage all projects" },
-    { name: "CREATE_SPRINTS", description: "Create new sprints" },
-    { name: "MANAGE_SPRINTS", description: "Manage all sprints" },
-    { name: "CREATE_WORK_ITEMS", description: "Create work items (epics, stories, tasks, bugs)" },
-    { name: "MANAGE_WORK_ITEMS", description: "Manage all work items" },
-    { name: "VIEW_WORK_ITEMS", description: "View work items" },
-    { name: "ASSIGN_WORK", description: "Assign work items to users" },
-    { name: "VIEW_REPORTS", description: "View system reports and analytics" },
-    { name: "MANAGE_SETTINGS", description: "Manage company settings and criteria" },
     { name: "EMPLOYEE", description: "Base employee permission" },
+
+    // 11. Main Workspace Dashboard
+    { name: "dashboard:view", description: "View main workspace dashboard and analytics" },
+    { name: "dashboard:edit", description: "Edit and customize dashboard metrics" },
   ];
 
   const permissions = await Promise.all(
@@ -63,7 +100,7 @@ async function main() {
   );
   console.log(`Permissions seeded: ${permissions.length} total permissions.`);
 
-  // 2. Seed Roles
+  // 2. Seed Root Core Roles (Only SUPER_ADMIN and ADMIN are root system roles)
   const superAdminRole = await prisma.role.upsert({
     where: { name: "SUPER_ADMIN" },
     create: { name: "SUPER_ADMIN", description: "System super administrator with full unrestricted access", status: true },
@@ -76,21 +113,38 @@ async function main() {
     update: { status: true },
   });
 
-  const hrRole = await prisma.role.upsert({
-    where: { name: "HR" },
-    create: { name: "HR", description: "Human Resource Manager with people and leave management access", status: true },
-    update: { status: true },
-  });
-
   const employeeRole = await prisma.role.upsert({
     where: { name: "EMPLOYEE" },
-    create: { name: "EMPLOYEE", description: "Regular employee with workspace and personal access", status: true },
+    create: { name: "EMPLOYEE", description: "Regular employee sub-role with workspace and personal access", status: true },
     update: { status: true },
   });
 
-  console.log("Roles seeded:", [superAdminRole.name, adminRole.name, hrRole.name, employeeRole.name]);
+  // Preserve HR role as a sub-role if present, ensuring it has full operational permissions
+  const hrRole = await prisma.role.findUnique({ where: { name: "HR" } });
+  if (hrRole) {
+    const hrPermNames = [
+      "employee:view", "employee:create", "employee:edit", "employee:delete", "employee:approve", "MANAGE_EMPLOYEES",
+      "leave:view", "leave:create", "leave:edit", "leave:delete", "leave:approve",
+      "attendance:view", "attendance:create", "attendance:edit", "attendance:approve",
+      "settings:view", "settings:edit", "MANAGE_SETTINGS",
+      "report:view", "VIEW_REPORTS", "EMPLOYEE",
+      "dashboard:view", "dashboard:edit",
+      "project:view", "sprint:view", "work_item:view", "comment:view",
+    ];
+    const hrPermObjs = permissions.filter((p) => hrPermNames.includes(p.name));
+    await prisma.rolePermission.createMany({
+      data: hrPermObjs.map((p) => ({
+        roleId: hrRole.id,
+        permissionId: p.id,
+      })),
+      skipDuplicates: true,
+    });
+    console.log(`Preserved HR sub-role (ID: ${hrRole.id}) with ${hrPermObjs.length} permissions.`);
+  }
 
-  // 3. Assign Permissions to Roles
+  console.log("Core root roles seeded:", [superAdminRole.name, adminRole.name, employeeRole.name]);
+
+  // 3. Assign Permissions to Core Roles
   // SUPER_ADMIN gets ALL permissions
   await prisma.rolePermission.createMany({
     data: permissions.map((p) => ({
@@ -102,16 +156,20 @@ async function main() {
 
   // ADMIN permissions
   const adminPermissionNames = [
-    "employee:view", "employee:create", "employee:edit",
-    "admin:view", "admin:create",
-    "project:view", "project:create", "project:edit", "project:delete",
-    "sprint:view", "sprint:create", "sprint:edit", "sprint:delete",
-    "work_item:view", "work_item:create", "work_item:edit", "work_item:delete",
-    "comment:view", "comment:create", "comment:delete",
+    "employee:view", "employee:create", "employee:edit", "employee:delete", "employee:approve",
+    "admin:view", "admin:create", "admin:edit", "admin:delete", "admin:role_manage",
+    "project:view", "project:create", "project:edit", "project:delete", "project:approve",
+    "sprint:view", "sprint:create", "sprint:edit", "sprint:delete", "sprint:approve",
+    "work_item:view", "work_item:create", "work_item:edit", "work_item:delete", "work_item:approve",
+    "comment:view", "comment:create", "comment:edit", "comment:delete",
+    "leave:view", "leave:create", "leave:edit", "leave:delete", "leave:approve",
+    "attendance:view", "attendance:create", "attendance:edit", "attendance:approve",
+    "settings:view", "settings:edit", "report:view",
     "MANAGE_USERS", "MANAGE_EMPLOYEES", "CREATE_PROJECTS", "MANAGE_PROJECTS",
     "CREATE_SPRINTS", "MANAGE_SPRINTS", "CREATE_WORK_ITEMS", "MANAGE_WORK_ITEMS",
     "VIEW_WORK_ITEMS", "ASSIGN_WORK", "VIEW_REPORTS",
-    "VIEW_PERMISSIONS", "MANAGE_PERMISSIONS",
+    "VIEW_PERMISSIONS", "MANAGE_PERMISSIONS", "MANAGE_ROLES", "MANAGE_SETTINGS",
+    "dashboard:view", "dashboard:edit",
   ];
   const adminPermObjs = permissions.filter((p) => adminPermissionNames.includes(p.name));
   await prisma.rolePermission.createMany({
@@ -122,25 +180,12 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // HR permissions (HR has same permissions as Admin + MANAGE_SETTINGS and employee:delete)
-  const hrPermissionNames = [
-    ...adminPermissionNames,
-    "employee:delete",
-    "MANAGE_SETTINGS",
-  ];
-  const hrPermObjs = permissions.filter((p) => hrPermissionNames.includes(p.name));
-  await prisma.rolePermission.createMany({
-    data: hrPermObjs.map((p) => ({
-      roleId: hrRole.id,
-      permissionId: p.id,
-    })),
-    skipDuplicates: true,
-  });
-
-  // EMPLOYEE permissions
+  // EMPLOYEE sub-role permissions
   const employeePermissionNames = [
     "project:view", "sprint:view", "work_item:view", "work_item:create", "work_item:edit",
-    "comment:view", "comment:create", "VIEW_WORK_ITEMS", "CREATE_WORK_ITEMS", "EMPLOYEE",
+    "comment:view", "comment:create", "VIEW_WORK_ITEMS", "CREATE_WORK_ITEMS",
+    "leave:view", "leave:create", "attendance:view", "attendance:create",
+    "EMPLOYEE",
   ];
   const employeePermObjs = permissions.filter((p) => employeePermissionNames.includes(p.name));
   await prisma.rolePermission.createMany({
@@ -255,15 +300,6 @@ async function main() {
       deptCode: "OPS",
       employeeCode: "EMP-002",
     },
-    {
-      name: "HR Manager",
-      email: "hr@infograins.com",
-      legacyEmails: ["hr@hrms.com", "hr@company.com"],
-      roleId: hrRole.id,
-      designationName: "HR Manager",
-      deptCode: "HR",
-      employeeCode: "EMP-003",
-    },
   ];
 
   // Check if core users exist before creating (safe for already deployed environments)
@@ -363,9 +399,91 @@ async function main() {
     console.log(`Created core user ${u.name} (${u.email}).`);
   }
 
-  console.log(`Seeded ${userDefs.length} core admin/HR users with profiles and leave balances.`);
+  // Enforce strictly ONE unique Super Admin (superadmin@infograins.com) and clean up duplicates
+  const targetSuperAdmin = await prisma.user.findUnique({
+    where: { email: "superadmin@infograins.com" },
+  });
+  const targetAdmin = await prisma.user.findUnique({
+    where: { email: "admin@infograins.com" },
+  });
 
-  // 9. Seed additional employees (defined at the bottom of this file)
+  if (targetSuperAdmin) {
+    const duplicateSuperAdmins = await prisma.user.findMany({
+      where: {
+        OR: [
+          { roleId: superAdminRole.id, NOT: { id: targetSuperAdmin.id } },
+          { email: { in: ["superadmin@hrms.com", "superadmin@company.com"] }, NOT: { id: targetSuperAdmin.id } },
+        ],
+      },
+    });
+
+    for (const dup of duplicateSuperAdmins) {
+      console.log(`Reassigning and removing duplicate superadmin ${dup.email} (ID: ${dup.id})...`);
+      await prisma.$transaction(async (tx) => {
+        await tx.project.updateMany({ where: { createdById: dup.id }, data: { createdById: targetSuperAdmin.id } });
+        await tx.sprint.updateMany({ where: { createdById: dup.id }, data: { createdById: targetSuperAdmin.id } });
+        await tx.workItem.updateMany({ where: { createdById: dup.id }, data: { createdById: targetSuperAdmin.id } });
+        await tx.workItem.updateMany({ where: { reporterId: dup.id }, data: { reporterId: targetSuperAdmin.id } });
+        await tx.workItem.updateMany({ where: { assigneeId: dup.id }, data: { assigneeId: targetSuperAdmin.id } });
+        await tx.workItemAssignee.deleteMany({ where: { userId: dup.id } });
+        await tx.comment.updateMany({ where: { userId: dup.id }, data: { userId: targetSuperAdmin.id } });
+        await tx.comment.updateMany({ where: { deletedById: dup.id }, data: { deletedById: targetSuperAdmin.id } });
+        await tx.notification.deleteMany({ where: { userId: dup.id } });
+        await tx.workItemActivity.deleteMany({ where: { userId: dup.id } });
+        await tx.meeting.updateMany({ where: { organizerId: dup.id }, data: { organizerId: targetSuperAdmin.id } });
+        await tx.meetingParticipant.deleteMany({ where: { userId: dup.id } });
+        await tx.conversationParticipant.deleteMany({ where: { userId: dup.id } });
+        await tx.callParticipant.deleteMany({ where: { userId: dup.id } });
+        await tx.attendance.deleteMany({ where: { userId: dup.id } });
+        await tx.leaveBalance.deleteMany({ where: { userId: dup.id } });
+        await tx.leaveRequest.deleteMany({ where: { userId: dup.id } });
+        await tx.projectMember.deleteMany({ where: { userId: dup.id } });
+        await tx.employeeProfile.deleteMany({ where: { userId: dup.id } });
+        await tx.user.delete({ where: { id: dup.id } });
+      });
+      console.log(`✓ Deleted duplicate superadmin ${dup.email}.`);
+    }
+  }
+
+  // Clean up legacy admin/hr accounts if still present in database
+  if (targetAdmin) {
+    const legacyAdmins = await prisma.user.findMany({
+      where: {
+        email: { in: ["admin@hrms.com", "admin@company.com", "hr@hrms.com", "hr@company.com", "hr@infograins.com"] },
+        NOT: { id: targetAdmin.id },
+      },
+    });
+
+    for (const leg of legacyAdmins) {
+      console.log(`Cleaning legacy account ${leg.email} (ID: ${leg.id})...`);
+      await prisma.$transaction(async (tx) => {
+        await tx.project.updateMany({ where: { createdById: leg.id }, data: { createdById: targetAdmin.id } });
+        await tx.sprint.updateMany({ where: { createdById: leg.id }, data: { createdById: targetAdmin.id } });
+        await tx.workItem.updateMany({ where: { createdById: leg.id }, data: { createdById: targetAdmin.id } });
+        await tx.workItem.updateMany({ where: { reporterId: leg.id }, data: { reporterId: targetAdmin.id } });
+        await tx.workItem.updateMany({ where: { assigneeId: leg.id }, data: { assigneeId: targetAdmin.id } });
+        await tx.workItemAssignee.deleteMany({ where: { userId: leg.id } });
+        await tx.comment.updateMany({ where: { userId: leg.id }, data: { userId: targetAdmin.id } });
+        await tx.notification.deleteMany({ where: { userId: leg.id } });
+        await tx.workItemActivity.deleteMany({ where: { userId: leg.id } });
+        await tx.meeting.updateMany({ where: { organizerId: leg.id }, data: { organizerId: targetAdmin.id } });
+        await tx.meetingParticipant.deleteMany({ where: { userId: leg.id } });
+        await tx.conversationParticipant.deleteMany({ where: { userId: leg.id } });
+        await tx.callParticipant.deleteMany({ where: { userId: leg.id } });
+        await tx.attendance.deleteMany({ where: { userId: leg.id } });
+        await tx.leaveBalance.deleteMany({ where: { userId: leg.id } });
+        await tx.leaveRequest.deleteMany({ where: { userId: leg.id } });
+        await tx.projectMember.deleteMany({ where: { userId: leg.id } });
+        await tx.employeeProfile.deleteMany({ where: { userId: leg.id } });
+        await tx.user.delete({ where: { id: leg.id } });
+      });
+      console.log(`✓ Cleaned legacy account ${leg.email}.`);
+    }
+  }
+
+  console.log(`Seeded core root users: 1 unique Super Admin (${userDefs[0]?.email || "superadmin@infograins.com"}) and 1 Admin (${userDefs[1]?.email || "admin@infograins.com"}).`);
+
+  // 9. Seed additional employees under standard EMPLOYEE sub-role
   await seedAdditionalEmployees(employeeRole.id, leaveTypes);
 
   console.log("HRMS database seed completed successfully!");
@@ -380,14 +498,21 @@ main()
     await prisma.$disconnect();
   });
 
-////////////////////////////////////////////////////////////////////////////////
-// =============================================================================
+// ***********************************************************************************************************
 //                       SECTION 2: EMPLOYEE SEED DATA
 //        (All Employee Dataset & Seeding Functions Start Below This Line)
-// =============================================================================
-////////////////////////////////////////////////////////////////////////////////
+// ***********************************************************************************************************
 
 export const additionalEmployees = [
+  {
+    name: "Payal Porwal",
+    email: "PayalPorwal@infograins.com",
+    phoneNumber: "",
+    password: "Password@123",
+    designation: "HR Manager",
+    deptCode: "Hr",
+    employeeCode: "EMP-003",
+  },
   {
     name: "Parmanand Carpenter",
     email: "parmanandcarpenter@infograins.com",
@@ -514,7 +639,24 @@ export const additionalEmployees = [
     deptCode: "ENG",
     employeeCode: "EMP-017",
   },
-
+  {
+    name: "Dheeraj gami",
+    email: "Dheerajgami@infograins.com",
+    phoneNumber: "",
+    password: "Password@123",
+    designation: "Software developer",
+    deptCode: "Hr",
+    employeeCode: "EMP-018",
+  },
+  {
+    name: "Saina jaiswal",
+    email: "Sainajaiswal@infograins.com",
+    phoneNumber: "9131268958",
+    password: "Password@123",
+    designation: "HR Manager",
+    deptCode: "Hr",
+    employeeCode: "EMP-019",
+  },
 ];
 
 export async function seedAdditionalEmployees(employeeRoleId: number, leaveTypes: any[]) {

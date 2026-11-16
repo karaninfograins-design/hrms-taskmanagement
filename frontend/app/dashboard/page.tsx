@@ -178,18 +178,33 @@ export default function DashboardPage() {
     if (session?.token) loadDashboardMetrics();
   }, [session?.token, loadDashboardMetrics]);
 
-  const roleName = typeof session?.user?.role === "string"
-    ? session.user.role
-    : (session?.user?.role as any)?.name || (session?.user?.role === 1 ? "SUPER_ADMIN" : session?.user?.role === 2 ? "ADMIN" : session?.user?.role === 3 ? "HR" : "EMPLOYEE");
+  const userRole = session?.user?.role;
+  const roleName = typeof userRole === "string" ? userRole : (userRole as any)?.name || "";
+  const isSuperAdmin = roleName === "SUPER_ADMIN" || (session?.user as any)?.roleId === 1;
+  const userPermissions = Array.isArray(session?.user?.permissions) ? session.user.permissions : [];
 
-  const userRoleId = typeof session?.user?.role === "number"
-    ? session.user.role
-    : (session?.user?.role as any)?.id || (roleName === "SUPER_ADMIN" ? 1 : roleName === "ADMIN" ? 2 : roleName === "HR" ? 3 : 4);
+  // Dynamic access: Super Admin master access OR any sub-role with dashboard:view or employee:view permissions
+  const canViewMainDashboard =
+    isSuperAdmin ||
+    roleName === "ADMIN" ||
+    userPermissions.includes("dashboard:view") ||
+    userPermissions.includes("VIEW_DASHBOARD") ||
+    userPermissions.includes("MANAGE_EMPLOYEES") ||
+    userPermissions.includes("employee:view");
+  const isAdminUser = canViewMainDashboard;
 
-  const isSuperAdmin = roleName === "SUPER_ADMIN" || userRoleId === 1;
-  const isAdminUser = isSuperAdmin || roleName === "ADMIN" || roleName === "HR" || userRoleId === 2 || userRoleId === 3;
-
-  const canManageEmployees = isSuperAdmin || (isAdminUser && session?.user?.permissions?.includes("MANAGE_EMPLOYEES"));
+  const canManageEmployees =
+    isSuperAdmin ||
+    userPermissions.some((p: string) => {
+      const lp = p.toLowerCase();
+      return (
+        lp === "manage_employees" ||
+        lp.includes("employee:create") ||
+        lp.includes("employee:manage") ||
+        lp.includes("employee:write") ||
+        lp.includes("employee:edit")
+      );
+    });
   const canCreateAdmins = isSuperAdmin;
 
   const handleSignOut = () => {
