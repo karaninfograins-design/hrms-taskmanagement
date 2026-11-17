@@ -1106,7 +1106,8 @@ datalist {
 
 .swal2-container .swal2-popup.swal2-toast {
   font-family: var(--font-sans, 'Satoshi', sans-serif) !important;
-  background: #182234 !important; /* Bitrix24 deep professional dark navy */
+  background: #182234 !important;
+  /* Bitrix24 deep professional dark navy */
   color: #f8fafc !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 12px !important;
@@ -1195,6 +1196,7 @@ datalist {
     display: flex !important;
     justify-content: center !important;
   }
+
   .swal2-container .swal2-popup.swal2-toast {
     max-width: calc(100vw - 24px) !important;
     width: 100% !important;

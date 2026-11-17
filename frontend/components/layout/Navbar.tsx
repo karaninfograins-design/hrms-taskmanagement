@@ -31,6 +31,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   clearAllNotifications,
+  invalidateNotificationCache,
   type AppNotification,
 } from "@/services/notification.service";
 import { UnauthorizedError } from "@/services/api";
@@ -87,6 +88,30 @@ const SIDEBAR_SEARCH_PAGES: NavigationTarget[] = [
   { title: "My Profile", category: "Account", href: "/dashboard/profile", keywords: "profile account user details password personal info", icon: UserCheck },
   { title: "Settings", category: "Account", href: "/dashboard/settings", keywords: "settings preferences preferences configuration theme", icon: Settings, adminOnly: true },
 ];
+
+// Today Attendance cache to prevent redundant HTTP calls during page transitions
+type TodayAttendanceData = {
+  id: number;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: string;
+  workingHours: number;
+} | null;
+
+let cachedTodayAttendance: {
+  token: string;
+  attendance: TodayAttendanceData;
+  timestamp: number;
+} | null = null;
+
+let inflightTodayAttendancePromise: Promise<TodayAttendanceData> | null = null;
+const TODAY_ATTENDANCE_CACHE_TTL = 60 * 1000; // 60s cache
+
+export function invalidateTodayAttendanceCache() {
+  cachedTodayAttendance = null;
+  inflightTodayAttendancePromise = null;
+}
 
 export function Navbar({ user, onSignOut }: NavbarProps) {
   const router = useRouter();
@@ -156,16 +181,48 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   const [clockActionLoading, setClockActionLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const fetchTodayAttendance = useCallback(async () => {
+  const fetchTodayAttendance = useCallback(async (forceRefresh = false) => {
     if (!session?.token || tokenExpiredRef.current) return;
-    try {
-      const res = await fetch(buildApiUrl("/api/attendance/today"), {
-        headers: { Authorization: `Bearer ${session.token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTodayAttendance(data.attendance || null);
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      cachedTodayAttendance &&
+      cachedTodayAttendance.token === session.token &&
+      now - cachedTodayAttendance.timestamp < TODAY_ATTENDANCE_CACHE_TTL
+    ) {
+      setTodayAttendance(cachedTodayAttendance.attendance);
+      return;
+    }
+
+    if (inflightTodayAttendancePromise && !forceRefresh) {
+      try {
+        const attendance = await inflightTodayAttendancePromise;
+        setTodayAttendance(attendance);
+      } catch {
+        // non-blocking
       }
+      return;
+    }
+
+    try {
+      inflightTodayAttendancePromise = fetch(buildApiUrl("/api/attendance/today"), {
+        headers: { Authorization: `Bearer ${session.token}` },
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            const attendance = data.attendance || null;
+            cachedTodayAttendance = { token: session.token, attendance, timestamp: Date.now() };
+            return attendance;
+          }
+          return null;
+        })
+        .finally(() => {
+          inflightTodayAttendancePromise = null;
+        });
+
+      const attendance = await inflightTodayAttendancePromise;
+      setTodayAttendance(attendance);
     } catch {
       // Non-blocking for navbar
     }
@@ -173,7 +230,10 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
   useEffect(() => {
     fetchTodayAttendance();
-    const handleAttendanceChange = () => fetchTodayAttendance();
+    const handleAttendanceChange = () => {
+      invalidateTodayAttendanceCache();
+      void fetchTodayAttendance(true);
+    };
     window.addEventListener("hrms-attendance-change", handleAttendanceChange);
     return () => {
       window.removeEventListener("hrms-attendance-change", handleAttendanceChange);
@@ -229,7 +289,8 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         throw new Error(errData.message || "Failed to clock in");
       }
       showSuccessToast("Clocked in successfully!");
-      await fetchTodayAttendance();
+      invalidateTodayAttendanceCache();
+      await fetchTodayAttendance(true);
       window.dispatchEvent(new Event("hrms-attendance-change"));
     } catch (err: any) {
       showErrorToast(err.message || "Failed to clock in");
@@ -261,7 +322,8 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         throw new Error(errData.message || "Failed to clock out");
       }
       showSuccessToast("Clocked out successfully!");
-      await fetchTodayAttendance();
+      invalidateTodayAttendanceCache();
+      await fetchTodayAttendance(true);
       window.dispatchEvent(new Event("hrms-attendance-change"));
     } catch (err: any) {
       showErrorToast(err.message || "Failed to clock out");
@@ -273,6 +335,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   useEffect(() => {
     if (!socket) return;
     const onNotificationCreated = () => {
+      invalidateNotificationCache();
       void fetchNotifs();
     };
     const onIncomingCall = (call: {

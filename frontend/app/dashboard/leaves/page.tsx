@@ -374,7 +374,7 @@ export default function LeavesPage() {
                   title="Refresh leave requests"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${loading ? "animate-spin" : ""}`} />
-                  <span>Refresh</span>
+                  {/* <span>Refresh</span> */}
                 </button>
 
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 overflow-x-auto scrollbar-none no-scrollbar max-w-full">

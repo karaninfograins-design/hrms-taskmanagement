@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { Session } from "@/types/auth";
-import { getMe } from "@/services/auth.service";
+import { getMe, invalidateAuthCache } from "@/services/auth.service";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import { UnauthorizedError } from "@/services/api";
 
@@ -59,12 +59,14 @@ export function useAuth() {
   );
 
   const saveSession = useCallback((nextSession: Session) => {
+    invalidateAuthCache();
     memorySessionValue = JSON.stringify(nextSession);
     window.localStorage.setItem(SESSION_KEY, memorySessionValue);
     window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
   }, []);
 
   const logout = useCallback(() => {
+    invalidateAuthCache();
     disconnectSocket();
     memorySessionValue = null;
     window.localStorage.removeItem(SESSION_KEY);

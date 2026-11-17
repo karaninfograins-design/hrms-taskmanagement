@@ -170,14 +170,6 @@ export default function DashboardPage() {
     }
   }, [session?.token]);
 
-  useEffect(() => {
-    if (!isLoading && !session) router.replace("/");
-  }, [isLoading, router, session]);
-
-  useEffect(() => {
-    if (session?.token) loadDashboardMetrics();
-  }, [session?.token, loadDashboardMetrics]);
-
   const userRole = session?.user?.role;
   const roleName = typeof userRole === "string" ? userRole : (userRole as any)?.name || "";
   const isSuperAdmin = roleName === "SUPER_ADMIN" || (session?.user as any)?.roleId === 1;
@@ -206,6 +198,19 @@ export default function DashboardPage() {
       );
     });
   const canCreateAdmins = isSuperAdmin;
+
+  useEffect(() => {
+    if (!isLoading && !session) router.replace("/");
+  }, [isLoading, router, session]);
+
+  useEffect(() => {
+    if (!session?.token) return;
+    if (isAdminUser) {
+      loadDashboardMetrics();
+    } else {
+      setLoading(false);
+    }
+  }, [session?.token, isAdminUser, loadDashboardMetrics]);
 
   const handleSignOut = () => {
     logout();
@@ -241,6 +246,12 @@ export default function DashboardPage() {
               token={session.token}
               userName={session.user.name}
               userId={session.user.id || 0}
+              designation={
+                typeof session.user.designation === "string"
+                  ? session.user.designation
+                  : (session.user.designation as any)?.name || ""
+              }
+              roleName={roleName}
             />
           </section>
         </div>

@@ -16,24 +16,56 @@ export interface GetNotificationsResponse {
   unreadCount: number;
 }
 
+let cachedNotifs: {
+  token: string;
+  data: GetNotificationsResponse;
+  timestamp: number;
+} | null = null;
+
+let inflightNotifsPromise: Promise<GetNotificationsResponse> | null = null;
+
+const NOTIFS_CACHE_TTL = 30 * 1000; // 30 seconds
+
+export function invalidateNotificationCache() {
+  cachedNotifs = null;
+  inflightNotifsPromise = null;
+}
+
 /**
- * Fetches notifications. Throws `UnauthorizedError` if the token is expired/invalid
- * so the caller (Navbar) can stop polling and log the user out.
+ * Fetches notifications. Uses a 30s cache to avoid redundant calls across page navigation.
+ * Throws `UnauthorizedError` if the token is expired/invalid so the caller can stop polling.
  */
-export async function getNotifications(token: string): Promise<GetNotificationsResponse> {
-  try {
-    return await apiRequest<GetNotificationsResponse>("/api/notifications", { token });
-  } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      // Re-throw so Navbar can detect 401 and stop polling
-      throw error;
-    }
-    console.error("Failed to fetch notifications:", error);
-    return { notifications: [], unreadCount: 0 };
+export async function getNotifications(token: string, forceRefresh = false): Promise<GetNotificationsResponse> {
+  const now = Date.now();
+  if (!forceRefresh && cachedNotifs && cachedNotifs.token === token && now - cachedNotifs.timestamp < NOTIFS_CACHE_TTL) {
+    return cachedNotifs.data;
   }
+
+  if (inflightNotifsPromise && !forceRefresh) {
+    return inflightNotifsPromise;
+  }
+
+  inflightNotifsPromise = (async () => {
+    try {
+      const data = await apiRequest<GetNotificationsResponse>("/api/notifications", { token });
+      cachedNotifs = { token, data, timestamp: Date.now() };
+      return data;
+    } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        throw error;
+      }
+      console.error("Failed to fetch notifications:", error);
+      return cachedNotifs?.data || { notifications: [], unreadCount: 0 };
+    } finally {
+      inflightNotifsPromise = null;
+    }
+  })();
+
+  return inflightNotifsPromise;
 }
 
 export async function markNotificationAsRead(id: number, token: string): Promise<void> {
+  invalidateNotificationCache();
   try {
     await apiRequest(`/api/notifications/${id}/read`, {
       method: "PUT",
@@ -45,6 +77,7 @@ export async function markNotificationAsRead(id: number, token: string): Promise
 }
 
 export async function markAllNotificationsAsRead(token: string): Promise<void> {
+  invalidateNotificationCache();
   try {
     await apiRequest("/api/notifications/read-all", {
       method: "PUT",
@@ -56,6 +89,7 @@ export async function markAllNotificationsAsRead(token: string): Promise<void> {
 }
 
 export async function clearAllNotifications(token: string): Promise<void> {
+  invalidateNotificationCache();
   try {
     await apiRequest("/api/notifications/clear-all", {
       method: "DELETE",

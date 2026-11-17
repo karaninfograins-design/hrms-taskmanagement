@@ -195,9 +195,9 @@ const peopleNavigation: { title: string; items: NavigationItem[] } = {
 };
 
 const messengerNavigation: { title: string; items: NavigationItem[] } = {
-  title: "Messenger",
+  title: "ConnectHub",
   items: [
-    { label: "Messenger", href: "/dashboard/messenger/chats", icon: MessageSquare },
+    { label: "ConnectHub", href: "/dashboard/messenger/chats", icon: MessageSquare },
   ],
 };
 
@@ -207,7 +207,7 @@ const hrNavigation: { title: string; items: NavigationItem[] } = {
     { label: "Attendance", href: "/dashboard/attendance", icon: Clock },
     { label: "Leave Management", href: "/dashboard/leaves", icon: CalendarCheck },
     { label: "Event Calendar", href: "/dashboard/company-calendar", icon: CalendarDays },
-    { label: "HRMS", href: "/dashboard/hr-settings", icon: SlidersHorizontal },
+    { label: "HR Settings", href: "/dashboard/hr-settings", icon: SlidersHorizontal },
   ]
 };
 
