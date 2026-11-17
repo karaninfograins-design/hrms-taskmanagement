@@ -36,7 +36,9 @@ import {
   Sun,
   Moon,
   MoreVertical,
+  MoreHorizontal,
   AtSign,
+  Check,
   CheckCheck,
   ChevronUp,
   ChevronDown,
@@ -44,6 +46,7 @@ import {
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
 import { downloadFileDirectly, getCleanFileName, getFileBadgeInfo } from "@/lib/download";
+import { DocumentFileIcon } from "@/components/common/DocumentFileIcon";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -76,6 +79,13 @@ type Employee = {
   avatarUrl?: string | null;
 };
 
+type SeenReceipt = {
+  userId: number;
+  name: string;
+  designation?: string | null;
+  readAt: string;
+};
+
 type Message = {
   id: number;
   conversationId: number;
@@ -98,6 +108,15 @@ type Message = {
     sender: { name: string };
   } | null;
   reactions?: Record<string, Array<{ userId: number; userName: string }>>;
+  seenBy?: SeenReceipt[];
+};
+
+export type ChatAttachment = {
+  id: string;
+  url: string;
+  fileName: string;
+  type: "IMAGE" | "DOCUMENT" | "LINK";
+  fileSize?: number;
 };
 
 type Conversation = {
@@ -107,6 +126,7 @@ type Conversation = {
   unreadCount?: number;
   lastMessage?: Message | null;
   createdAt?: string;
+  createdById?: number;
   createdBy?: {
     id: number;
     name: string;
@@ -174,6 +194,7 @@ function ChatsContent() {
   const searchParams = useSearchParams();
   const { session, isLoading, logout } = useAuth();
   const { socket, onlineUserIds } = useSocket();
+  const currentUserId = session?.user?.id;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -189,6 +210,7 @@ function ChatsContent() {
   const [copyFeedbackId, setCopyFeedbackId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
+  const [selectedSeenModalMessage, setSelectedSeenModalMessage] = useState<Message | null>(null);
 
   // Messenger Tabs: Chats | Groups | Calls
   const tabQuery = searchParams.get("tab");
@@ -219,10 +241,8 @@ function ChatsContent() {
     });
   };
 
-  // Attachments State
-  const [attachmentUrl, setAttachmentUrl] = useState<string>("");
-  const [attachmentFileName, setAttachmentFileName] = useState<string>("");
-  const [attachmentType, setAttachmentType] = useState<"IMAGE" | "DOCUMENT" | "LINK">("IMAGE");
+  // Attachments State (Supports multiple/single documents, images, and links)
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState<boolean>(false);
   const [downloadingFileUrl, setDownloadingFileUrl] = useState<string | null>(null);
@@ -395,6 +415,10 @@ function ChatsContent() {
   const reactionPickerRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
 
+  // Bitrix-Style Message Context Menu State
+  const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null);
+  const messageMenuRef = useRef<HTMLDivElement>(null);
+
   // Mobile Chat Header More Options Menu
   const [showMobileChatMenu, setShowMobileChatMenu] = useState<boolean>(false);
   const mobileChatMenuRef = useRef<HTMLDivElement>(null);
@@ -413,6 +437,9 @@ function ChatsContent() {
       if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
         setReactionPickerMsgId(null);
         setShowFullReactionPicker(false);
+      }
+      if (messageMenuRef.current && !messageMenuRef.current.contains(e.target as Node)) {
+        setActiveMenuMsgId(null);
       }
       if (mobileChatMenuRef.current && !mobileChatMenuRef.current.contains(e.target as Node)) {
         setShowMobileChatMenu(false);
@@ -592,6 +619,21 @@ function ChatsContent() {
     }
   }, [session?.token]);
 
+  const handleSelectConversation = useCallback(
+    (conv: Conversation) => {
+      setActiveConv(conv);
+      // Instantly clear unread badge in sidebar
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c))
+      );
+      if (socket) {
+        socket.emit("join:conversation", conv.id);
+        socket.emit("conversation:read", { conversationId: conv.id });
+      }
+    },
+    [socket]
+  );
+
   // Fetch messages when active conversation changes
   useEffect(() => {
     if (!activeConv) return;
@@ -604,8 +646,18 @@ function ChatsContent() {
         if (!res.ok) return;
         const data = await res.json();
         setMessages(data.messages || []);
+        if (data.conversation) {
+          setActiveConv((prev) => (prev ? { ...prev, ...data.conversation } : data.conversation));
+        } else if (data.participants && Array.isArray(data.participants)) {
+          setActiveConv((prev) => (prev ? { ...prev, participants: data.participants } : prev));
+        }
+        // Instantly clear unread count for current chat
+        setConversations((prev) =>
+          prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c))
+        );
         if (socket) {
           socket.emit("join:conversation", activeConv.id);
+          socket.emit("conversation:read", { conversationId: activeConv.id });
         }
       } catch (err) {
         console.error("Error fetching messages:", err);
@@ -654,17 +706,20 @@ function ChatsContent() {
     if (!socket) return;
 
     const onNewMessage = (newMsg: Message) => {
-      if (activeConvRef.current && newMsg.conversationId === activeConvRef.current.id) {
+      const isCurrentlyActive = activeConvRef.current?.id === newMsg.conversationId;
+      if (isCurrentlyActive) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
+        if (socket && newMsg.senderId !== currentUserId) {
+          socket.emit("conversation:read", { conversationId: newMsg.conversationId });
+        }
       }
 
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id === newMsg.conversationId) {
-            const isCurrentlyActive = activeConvRef.current?.id === c.id;
             return {
               ...c,
               lastMessage: newMsg,
@@ -673,6 +728,63 @@ function ChatsContent() {
           }
           return c;
         })
+      );
+    };
+
+    const onConversationSeen = (seenData: {
+      conversationId: number;
+      userId: number;
+      name: string;
+      designation?: string | null;
+      readAt: string;
+    }) => {
+      if (seenData.userId === currentUserId) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === seenData.conversationId ? { ...c, unreadCount: 0 } : c))
+        );
+      }
+
+      if (activeConvRef.current && seenData.conversationId === activeConvRef.current.id) {
+        setActiveConv((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            participants: prev.participants.map((p) =>
+              p.userId === seenData.userId ? { ...p, lastReadAt: seenData.readAt } : p
+            ),
+          };
+        });
+
+        const readTime = new Date(seenData.readAt).getTime();
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.senderId === seenData.userId) return m;
+            const msgTime = new Date(m.createdAt).getTime();
+            if (readTime < msgTime) return m;
+
+            const existingSeen = m.seenBy || [];
+            if (existingSeen.some((s) => s.userId === seenData.userId)) return m;
+
+            return {
+              ...m,
+              seenBy: [
+                ...existingSeen,
+                {
+                  userId: seenData.userId,
+                  name: seenData.name,
+                  designation: seenData.designation,
+                  readAt: seenData.readAt,
+                },
+              ],
+            };
+          })
+        );
+      }
+    };
+
+    const onConversationMarkedRead = (data: { conversationId: number }) => {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === data.conversationId ? { ...c, unreadCount: 0 } : c))
       );
     };
 
@@ -757,6 +869,8 @@ function ChatsContent() {
     socket.on("user:typing", onUserTyping);
     socket.on("user:stop_typing", onUserStopTyping);
     socket.on("message:reaction", onMessageReaction);
+    socket.on("conversation:seen", onConversationSeen);
+    socket.on("conversation:marked-read", onConversationMarkedRead);
 
     return () => {
       socket.off("message:new", onNewMessage);
@@ -766,6 +880,8 @@ function ChatsContent() {
       socket.off("user:typing", onUserTyping);
       socket.off("user:stop_typing", onUserStopTyping);
       socket.off("message:reaction", onMessageReaction);
+      socket.off("conversation:seen", onConversationSeen);
+      socket.off("conversation:marked-read", onConversationMarkedRead);
     };
   }, [socket]);
 
@@ -832,7 +948,7 @@ function ChatsContent() {
       }
       const data = await res.json();
       await fetchConversations();
-      setActiveConv(data.conversation);
+      handleSelectConversation(data.conversation);
       showSuccessToast("Chat opened");
     } catch (err) {
       console.error("Error starting direct chat:", err);
@@ -915,7 +1031,7 @@ function ChatsContent() {
         }
         const data = await res.json();
         setConversations((prev) => [data.conversation, ...prev]);
-        setActiveConv(data.conversation);
+        handleSelectConversation(data.conversation);
         showSuccessToast("Group created successfully");
       }
       setShowGroupModal(false);
@@ -951,9 +1067,9 @@ function ChatsContent() {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      uploadFile(files[0]);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      uploadFiles(files);
     }
   };
 
@@ -1070,11 +1186,11 @@ function ChatsContent() {
         const isDark = chatTheme === "dark";
         const linkStyle = isDark
           ? isMe
-            ? "text-emerald-200 underline underline-offset-3 font-bold hover:text-white bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800"
-            : "text-sky-300 underline underline-offset-3 font-bold hover:text-sky-200 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-800/80"
+            ? "text-emerald-300 hover:text-emerald-100"
+            : "text-sky-400 hover:text-sky-200"
           : isMe
-            ? "text-emerald-900 underline underline-offset-3 font-bold hover:text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300/80 shadow-2xs"
-            : "text-blue-700 underline underline-offset-3 font-bold hover:text-blue-900 bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200/90 shadow-2xs";
+            ? "text-emerald-800 hover:text-emerald-950"
+            : "text-blue-600 hover:text-blue-800";
 
         return (
           <a
@@ -1082,11 +1198,10 @@ function ChatsContent() {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`break-all transition-all inline-flex items-center gap-1 my-0.5 ${linkStyle}`}
+            className={`break-all inline underline underline-offset-2 hover:font-bold transition-all ${linkStyle}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <span>{part}</span>
-            <ExternalLink size={12} className="inline-block shrink-0 opacity-80" />
+            {part}
           </a>
         );
       }
@@ -1098,25 +1213,24 @@ function ChatsContent() {
           part.toLowerCase() === "@all";
 
         const isDark = chatTheme === "dark";
+        const mentionStyle = isDark
+          ? isMe
+            ? "text-emerald-200"
+            : isSelfMention
+              ? "text-amber-300"
+              : "text-sky-300"
+          : isMe
+            ? "text-emerald-900"
+            : isSelfMention
+              ? "text-amber-700"
+              : "text-blue-600";
 
         return (
           <span
             key={index}
-            className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-lg text-xs mx-0.5 shadow-2xs transition-colors ${isDark
-                ? isMe
-                  ? "bg-emerald-800/60 text-emerald-100 border border-emerald-600/60"
-                  : isSelfMention
-                    ? "bg-amber-950/70 text-amber-200 border border-amber-600/70"
-                    : "bg-slate-800 text-sky-200 border border-slate-700"
-                : isMe
-                  ? "bg-[#d8ece0] text-emerald-950 border border-[#b2d9c1]"
-                  : isSelfMention
-                    ? "bg-amber-100 text-amber-950 border border-amber-300 font-extrabold"
-                    : "bg-sky-100 text-sky-950 border border-sky-300"
-              }`}
+            className={`inline font-bold transition-colors cursor-pointer hover:underline ${mentionStyle}`}
           >
-            <AtSign size={11} className="inline opacity-80 shrink-0" />
-            <span>{part.slice(1)}</span>
+            {part}
           </span>
         );
       }
@@ -1125,52 +1239,96 @@ function ChatsContent() {
     });
   };
 
-  // Reusable File Upload helper (supports file picker, drag & drop, and direct clipboard image paste)
-  const uploadFile = async (file: File) => {
-    setIsUploadingAttachment(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      if (typeof reader.result === "string") {
-        try {
-          const res = await fetch(`${getApiUrl()}/api/messenger/upload`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${getAuthToken()}`,
-            },
-            body: JSON.stringify({
-              fileData: reader.result,
-              fileName: file.name,
-              fileType: file.type.startsWith("image/") ? "IMAGE" : "DOCUMENT",
-            }),
-          });
+  // Reusable Multi-File Upload helper (supports multiple files, drag & drop, and direct clipboard image paste)
+  const MAX_FILE_SIZE_BYTES = 35 * 1024 * 1024; // 35 MB
 
-          if (!res.ok) throw new Error("Upload failed");
-          const data = await res.json();
-          setAttachmentUrl(data.url);
-          setAttachmentFileName(data.fileName);
-          setAttachmentType(data.type);
-          showSuccessToast(file.type.startsWith("image/") ? "Image pasted and attached!" : "Attachment uploaded successfully");
-        } catch (err: any) {
-          console.error("Upload error:", err);
-          showErrorToast("Failed to upload attachment to server storage");
-        } finally {
-          setIsUploadingAttachment(false);
-        }
+  const uploadSingleFile = (file: File): Promise<ChatAttachment> => {
+    return new Promise((resolve, reject) => {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        reject(new Error(`"${file.name}" exceeds the maximum allowed file size of 35MB.`));
+        return;
       }
-    };
-    reader.onerror = () => {
-      setIsUploadingAttachment(false);
-      showErrorToast("Failed to read file");
-    };
-    reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        if (typeof reader.result === "string") {
+          try {
+            const res = await fetch(`${getApiUrl()}/api/messenger/upload`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${getAuthToken()}`,
+              },
+              body: JSON.stringify({
+                fileData: reader.result,
+                fileName: file.name,
+                fileType: file.type.startsWith("image/") ? "IMAGE" : "DOCUMENT",
+              }),
+            });
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.message || "Upload failed");
+            }
+            const data = await res.json();
+            resolve({
+              id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+              url: data.url,
+              fileName: data.fileName,
+              type: data.type,
+              fileSize: file.size,
+            });
+          } catch (err: any) {
+            reject(err);
+          }
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
   };
 
-  // Handle Attachment Upload from File Picker
+  const uploadFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingAttachment(true);
+    try {
+      const results = await Promise.allSettled(files.map(uploadSingleFile));
+      const successful: ChatAttachment[] = [];
+      const errors: string[] = [];
+
+      results.forEach((res) => {
+        if (res.status === "fulfilled") {
+          successful.push(res.value);
+        } else {
+          errors.push(res.reason?.message || "Failed to upload file");
+        }
+      });
+
+      if (successful.length > 0) {
+        setAttachments((prev) => [...prev, ...successful]);
+        showSuccessToast(
+          successful.length === 1
+            ? "Attachment added"
+            : `${successful.length} attachments added`
+        );
+      }
+      if (errors.length > 0) {
+        showErrorToast(errors[0]);
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      showErrorToast("Failed to upload attachment");
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  // Handle Attachment Upload from File Picker (supports multiple files)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    uploadFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    uploadFiles(files);
     setShowAttachmentMenu(false);
     if (e.target) e.target.value = "";
   };
@@ -1180,19 +1338,22 @@ function ChatsContent() {
     const items = e.clipboardData?.items;
     if (!items || items.length === 0) return;
 
+    const filesToUpload: File[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.startsWith("image/")) {
-        e.preventDefault();
         const file = item.getAsFile();
         if (file) {
           const ext = file.type.split("/")[1]?.replace(/[^a-zA-Z0-9]/g, "") || "png";
-          const uniqueName = `pasted_image_${Date.now()}.${ext}`;
-          const renamedFile = new File([file], uniqueName, { type: file.type });
-          uploadFile(renamedFile);
+          const uniqueName = `pasted_image_${Date.now()}_${i}.${ext}`;
+          filesToUpload.push(new File([file], uniqueName, { type: file.type }));
         }
-        return;
       }
+    }
+    if (filesToUpload.length > 0) {
+      e.preventDefault();
+      uploadFiles(filesToUpload);
+      return;
     }
     // Auto-calculate height when pasting multi-line text
     setTimeout(adjustComposerHeight, 0);
@@ -1204,18 +1365,31 @@ function ChatsContent() {
       inputPlaceholder: "https://example.com/document...",
     });
     if (link && link.trim()) {
-      setAttachmentUrl(link.trim());
-      setAttachmentFileName(link.trim().replace(/^https?:\/\//, ""));
-      setAttachmentType("LINK");
+      const trimmed = link.trim();
+      const newAtt: ChatAttachment = {
+        id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        url: trimmed,
+        fileName: trimmed.replace(/^https?:\/\//, ""),
+        type: "LINK",
+      };
+      setAttachments((prev) => [...prev, newAtt]);
       setShowAttachmentMenu(false);
       showSuccessToast("Link attached");
     }
   };
 
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const clearAllAttachments = () => {
+    setAttachments([]);
+  };
+
   // Send or Edit Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!msgInput.trim() && !attachmentUrl) || !activeConv) return;
+    if ((!msgInput.trim() && attachments.length === 0) || !activeConv) return;
 
     if (editingMsg) {
       // Edit mode
@@ -1251,33 +1425,67 @@ function ChatsContent() {
 
     // New message
     try {
-      const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({
-          conversationId: activeConv.id,
-          content: msgInput.trim(),
-          attachmentUrl: attachmentUrl || null,
-          attachmentType: attachmentUrl ? attachmentType : null,
-          replyToId: replyingTo?.id || null,
-        }),
-      });
+      if (attachments.length === 0) {
+        // Plain text message
+        const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            conversationId: activeConv.id,
+            content: msgInput.trim(),
+            attachmentUrl: null,
+            attachmentType: null,
+            replyToId: replyingTo?.id || null,
+          }),
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
+        if (res.ok) {
+          const data = await res.json();
+          setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
+          setMsgInput("");
+          if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+          }
+          setReplyingTo(null);
+          fetchConversations();
+        } else {
+          showErrorToast("Failed to send message");
+        }
+      } else {
+        // Multiple or single attachment: send sequentially, attaching caption/text to the first item
+        for (let i = 0; i < attachments.length; i++) {
+          const att = attachments[i];
+          const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${getAuthToken()}`,
+            },
+            body: JSON.stringify({
+              conversationId: activeConv.id,
+              content: i === 0 ? msgInput.trim() : "",
+              attachmentUrl: att.url,
+              attachmentType: att.type,
+              replyToId: i === 0 ? (replyingTo?.id || null) : null,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
+          }
+        }
+
         setMsgInput("");
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
         }
-        setAttachmentUrl("");
+        setAttachments([]);
         setReplyingTo(null);
         fetchConversations();
-      } else {
-        showErrorToast("Failed to send message");
       }
     } catch (err) {
       console.error("Error sending message:", err);
@@ -1521,8 +1729,8 @@ function ChatsContent() {
     return <main className="route-loading">Loading Messenger...</main>;
   }
 
-  const currentUserId = session.user.id;
   const isDirect = activeConv?.type === "DIRECT";
+  const isGroup = activeConv?.type === "GROUP";
   const partnerUser = isDirect
     ? activeConv?.participants.find((p) => p.userId !== currentUserId)?.user
     : null;
@@ -1720,7 +1928,7 @@ function ChatsContent() {
                         return (
                           <div
                             key={conv.id}
-                            onClick={() => setActiveConv(conv)}
+                            onClick={() => handleSelectConversation(conv)}
                             className={`p-2.5 sm:p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
                               ? "bg-orange-50 border border-orange-200/80 shadow-xs"
                               : "hover:bg-slate-50"
@@ -1823,7 +2031,7 @@ function ChatsContent() {
                       return (
                         <div
                           key={conv.id}
-                          onClick={() => setActiveConv(conv)}
+                          onClick={() => handleSelectConversation(conv)}
                           className={`p-2.5 sm:p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${isSelected
                             ? "bg-orange-50 border border-orange-200/80 shadow-xs"
                             : "hover:bg-slate-50"
@@ -2361,6 +2569,24 @@ function ChatsContent() {
 
                 {/* Messages Feed */}
                 <div className={`flex-1 space-y-4 overflow-y-auto no-scrollbar p-4 sm:p-6 transition-colors ${chatTheme === "dark" ? "bg-slate-950" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70"}`}>
+                  {/* Group Creation Info Pill */}
+                  {activeConv?.type === "GROUP" && (
+                    <div className="my-2 flex items-center justify-center">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-medium shadow-2xs transition-colors ${chatTheme === "dark" ? "bg-slate-900/90 text-slate-300 border border-slate-800" : "bg-white/95 text-slate-600 border border-slate-200/90"}`}>
+                        <Users size={11} className="text-orange-500 shrink-0" />
+                        <span>
+                          Group created by <strong className={chatTheme === "dark" ? "text-slate-100 font-semibold" : "text-slate-900 font-semibold"}>{activeConv.createdBy?.name || activeConv.participants.find((p) => p.userId === activeConv.createdById)?.user.name || "Admin"}</strong>
+                          {activeConv.createdAt && (
+                            <>
+                              {" on "}
+                              <span>{new Date(activeConv.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -2383,7 +2609,7 @@ function ChatsContent() {
                         className={`flex flex-col relative ${isMe ? "items-end" : "items-start"}`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                             {m.sender.name}
                           </span>
                         </div>
@@ -2394,19 +2620,19 @@ function ChatsContent() {
                               ? "ring-2 ring-amber-300/80"
                               : ""
                             } ${isMe
-                            ? chatTheme === "dark"
-                              ? "bg-[#18362b] text-emerald-100 shadow-md font-medium rounded-br-xs border border-emerald-700/60"
-                              : "bg-[#eaf4ed] text-slate-900 border border-[#cbe4d7] shadow-2xs font-medium rounded-br-xs"
-                            : chatTheme === "dark"
-                              ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
-                              : "bg-white text-slate-900 border border-slate-200/90 shadow-2xs font-medium rounded-bl-xs"
+                              ? chatTheme === "dark"
+                                ? "bg-[#18362b] text-emerald-100 shadow-md font-medium rounded-br-xs border border-emerald-700/60"
+                                : "bg-[#eaf4ed] text-slate-900 border border-[#cbe4d7] shadow-2xs font-medium rounded-br-xs"
+                              : chatTheme === "dark"
+                                ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
+                                : "bg-white text-slate-900 border border-slate-200/90 shadow-2xs font-medium rounded-bl-xs"
                             }`}
                         >
                           {/* Smiley / Reaction Popover */}
                           {reactionPickerMsgId === m.id && (
                             <div
                               ref={reactionPickerRef}
-                              className="absolute -top-11 right-2 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150"
+                              className={`absolute -top-11 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150 ${isMe ? "right-2" : "left-2"}`}
                               onClick={(e) => e.stopPropagation()}
                             >
                               {!showFullReactionPicker ? (
@@ -2470,7 +2696,7 @@ function ChatsContent() {
                             const isThisDownloading = downloadingFileUrl === m.attachmentUrl;
 
                             return (
-                              <div className="my-2 relative group/att overflow-hidden rounded-xl">
+                              <div className="my-1.5 relative group/att">
                                 {m.attachmentType === "IMAGE" ? (
                                   <div className="relative rounded-xl overflow-hidden border border-slate-200/80 shadow-2xs">
                                     <img
@@ -2478,77 +2704,66 @@ function ChatsContent() {
                                       alt="Attachment"
                                       className="max-w-xs max-h-60 rounded-xl object-cover"
                                     />
-                                    <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-xs">
+                                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-2xs">
                                       <button
                                         type="button"
                                         onClick={() => handleTriggerDownload(m.attachmentUrl!, getCleanFileName(m.attachmentUrl, "image.jpg"))}
                                         disabled={isThisDownloading}
-                                        className="px-3.5 py-2 bg-slate-900/90 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95 border border-white/20 disabled:opacity-75"
+                                        className="p-2 text-white/90 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all cursor-pointer active:scale-95 disabled:opacity-75"
+                                        title="Download Image"
                                       >
-                                        {isThisDownloading ? <Loader2 size={13} className="animate-spin text-white" /> : <Download size={13} strokeWidth={2.2} />}
-                                        <span>{isThisDownloading ? "Downloading..." : "Download Image"}</span>
+                                        {isThisDownloading ? <Loader2 size={18} className="animate-spin text-white" /> : <Download size={18} strokeWidth={1.8} />}
                                       </button>
                                     </div>
                                   </div>
                                 ) : (
-                                  <div
-                                    className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center justify-between gap-3 shadow-2xs ${isMe
-                                      ? "bg-white/95 border-orange-200/80 hover:border-orange-300"
-                                      : "bg-slate-50/95 border-slate-200/90 hover:border-slate-300 hover:bg-slate-100/70"
-                                      }`}
-                                  >
+                                  <div className="flex items-center justify-between gap-3 py-1 px-0.5 bg-transparent border-0 shadow-none">
                                     {/* Icon & File Details */}
                                     <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                                      <span
-                                        className={`flex h-9 w-9 items-center justify-center rounded-lg border shadow-2xs shrink-0 ${badgeInfo.colorClass}`}
-                                      >
-                                        {m.attachmentType === "LINK" ? (
-                                          <Link2 size={16} strokeWidth={2.2} />
-                                        ) : (
-                                          <FileText size={16} strokeWidth={2.2} />
-                                        )}
-                                      </span>
+                                      {m.attachmentType === "LINK" ? (
+                                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0">
+                                          <Link2 size={18} strokeWidth={2} />
+                                        </span>
+                                      ) : (
+                                        <DocumentFileIcon ext={cleanDocName.split(".").pop()} />
+                                      )}
                                       <div className="flex flex-col min-w-0">
                                         <span
-                                          className="text-xs font-bold text-slate-800 hover:text-slate-950 truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[300px] leading-snug"
+                                          className={`text-xs sm:text-sm font-medium truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px] md:max-w-[320px] leading-snug ${chatTheme === "dark" ? "text-slate-100" : "text-slate-800"}`}
                                           title={cleanDocName}
                                         >
                                           {cleanDocName}
                                         </span>
-                                        <span className="text-[10px] text-slate-400 font-semibold tracking-wide uppercase leading-none mt-0.5">
+                                        <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal leading-tight mt-0.5">
                                           {badgeInfo.label}
                                         </span>
                                       </div>
                                     </div>
 
-                                    {/* Action Button */}
+                                    {/* Action Button - Lucide icon without background or border */}
                                     {m.attachmentType === "LINK" ? (
                                       <a
                                         href={m.attachmentUrl}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer active:scale-95"
+                                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 transition-colors cursor-pointer shrink-0"
+                                        title="Open link"
                                       >
-                                        <ExternalLink size={12} strokeWidth={2} />
-                                        <span>Open</span>
+                                        <ExternalLink size={18} strokeWidth={1.75} />
                                       </a>
                                     ) : (
                                       <button
                                         type="button"
                                         onClick={() => handleTriggerDownload(m.attachmentUrl!, cleanDocName)}
                                         disabled={isThisDownloading}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 border disabled:opacity-60 ${isMe
-                                          ? "bg-slate-900 hover:bg-slate-800 text-white border-slate-900"
-                                          : "bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200/90"
-                                          }`}
-                                        title="Download directly to your PC"
+                                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 rounded-full transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                                        title="Download file"
                                       >
                                         {isThisDownloading ? (
-                                          <Loader2 size={12} className="animate-spin" />
+                                          <Loader2 size={19} className="animate-spin text-slate-400 dark:text-slate-300" />
                                         ) : (
-                                          <Download size={12} strokeWidth={2.2} />
+                                          <Download size={19} strokeWidth={1.75} />
                                         )}
-                                        <span className="font-semibold">{isThisDownloading ? "Saving..." : "Download"}</span>
                                       </button>
                                     )}
                                   </div>
@@ -2569,13 +2784,13 @@ function ChatsContent() {
                                 minute: "2-digit",
                               })}
                             </span>
-                            {isMe && (() => {
+                            {isMe && !isGroup && (() => {
                               const otherParticipants = activeConv?.participants.filter((p) => p.userId !== currentUserId) || [];
                               const isRead = otherParticipants.length > 0 && otherParticipants.some((p) => p.lastReadAt && new Date(p.lastReadAt) >= new Date(m.createdAt));
                               return (
                                 <span
                                   className={`text-xs font-black leading-none ${isRead ? "text-sky-500" : "text-slate-400"}`}
-                                  title={isRead ? "Read by recipient(s)" : "Sent"}
+                                  title={isRead ? "Read by recipient" : "Sent"}
                                 >
                                   {isRead ? "✓✓" : "✓"}
                                 </span>
@@ -2583,94 +2798,188 @@ function ChatsContent() {
                             })()}
                           </div>
 
-                          {/* Hover Actions */}
+                          {/* Bitrix-Style Hover Action Bar (Compact & Perfectly Anchored) */}
                           {!isDeleted && (
-                            <div className="absolute -top-3.5 right-2 hidden group-hover:flex items-center gap-0.5 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-lg border border-slate-200 z-20 animate-in fade-in zoom-in-95 duration-100 max-w-[calc(100vw-3rem)] overflow-x-auto no-scrollbar">
-                              {/* Quick Reaction Bar */}
-                              <div className="flex items-center gap-0.5 border-r border-slate-200/80 pr-1 mr-0.5">
-                                {["👍", "❤️", "😂", "🎉", "🙏"].map((emoji) => {
-                                  const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
-                                  return (
-                                    <button
-                                      key={emoji}
-                                      type="button"
-                                      onClick={() => handleReact(m.id, emoji)}
-                                      className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
-                                        }`}
-                                      title={`React with ${emoji}`}
-                                    >
-                                      {emoji}
-                                    </button>
-                                  );
-                                })}
-                                {/* Add Smiley / Custom Reaction Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id);
-                                    setShowFullReactionPicker(false);
-                                  }}
-                                  className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-110 cursor-pointer ${reactionPickerMsgId === m.id ? "bg-orange-100 text-orange-600" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                                    }`}
-                                  title="Add smiley or reaction"
-                                >
-                                  <Smile size={13} />
-                                </button>
-                              </div>
-
-                              {/* Reply */}
+                            <div
+                              className={`absolute -top-3 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all ${isMe ? "right-2" : "left-2"
+                                } ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                            >
+                              {/* Quick Reaction Button */}
                               <button
-                                onClick={() => setReplyingTo(m)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id);
+                                  setShowFullReactionPicker(false);
+                                  setActiveMenuMsgId(null);
+                                }}
+                                className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all hover:scale-110 cursor-pointer ${reactionPickerMsgId === m.id
+                                    ? "bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400"
+                                    : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                  }`}
+                                title="Add reaction"
+                              >
+                                <Smile size={14} />
+                              </button>
+
+                              {/* Quick Reply Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReplyingTo(m);
+                                  setActiveMenuMsgId(null);
+                                }}
+                                className="w-6 h-6 rounded-lg text-xs flex items-center justify-center text-slate-500 hover:text-orange-600 hover:bg-orange-50 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                                 title="Reply"
                               >
                                 <CornerUpLeft size={14} strokeWidth={2} />
                               </button>
-                              {/* Copy */}
+
+                              {/* Bitrix 3-Dots Menu Button */}
                               <button
-                                onClick={() => handleCopyMessage(m)}
-                                className={`p-1.5 rounded-lg transition-colors ${copyFeedbackId === m.id
-                                  ? "text-emerald-600 bg-emerald-50"
-                                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                                  }`}
-                                title={copyFeedbackId === m.id ? "Copied!" : "Copy"}
-                              >
-                                <Copy size={14} strokeWidth={2} />
-                              </button>
-                              {/* Forward */}
-                              <button
-                                onClick={() => {
-                                  setForwardingMsg(m);
-                                  setForwardTargetId(null);
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
+                                  setReactionPickerMsgId(null);
                                 }}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                title="Forward"
+                                className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${activeMenuMsgId === m.id
+                                    ? "bg-orange-500 text-white shadow-xs"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                  }`}
+                                title="More options"
                               >
-                                <Forward size={14} strokeWidth={2} />
+                                <MoreHorizontal size={15} strokeWidth={2.2} />
                               </button>
-                              {/* Edit (own messages only) */}
-                              {isMe && (
+                            </div>
+                          )}
+
+                          {/* Bitrix-Style Message Context Menu */}
+                          {activeMenuMsgId === m.id && (
+                            <div
+                              ref={messageMenuRef}
+                              className={`absolute z-50 top-full mt-1.5 min-w-[210px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-1.5 animate-in fade-in zoom-in-95 duration-150 ${isMe ? "right-0" : "left-0"
+                                }`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {/* Suggested Smileys / Reaction Bar */}
+                              <div className="px-2 pt-1.5 pb-1">
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                                  Reactions
+                                </span>
+                                <div className="flex items-center justify-between gap-1">
+                                  {["👍", "❤️", "😂", "🎉", "🙏", "🔥"].map((emoji) => {
+                                    const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => {
+                                          handleReact(m.id, emoji);
+                                          setActiveMenuMsgId(null);
+                                        }}
+                                        className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 dark:bg-orange-950/60 scale-110" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                                          }`}
+                                        title={`React with ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setReactionPickerMsgId(m.id);
+                                      setShowFullReactionPicker(false);
+                                      setActiveMenuMsgId(null);
+                                    }}
+                                    className="w-7 h-7 rounded-lg text-xs flex items-center justify-center text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-800 font-bold transition-all cursor-pointer border border-slate-200/70 dark:border-slate-700"
+                                    title="More smileys"
+                                  >
+                                    <Plus size={13} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+
+                              {/* Menu Actions */}
+                              <div className="space-y-0.5">
+                                {/* Reply */}
                                 <button
+                                  type="button"
                                   onClick={() => {
-                                    setEditingMsg(m);
-                                    setMsgInput(m.content);
+                                    setReplyingTo(m);
+                                    setActiveMenuMsgId(null);
                                   }}
-                                  className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                                  title="Edit"
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
                                 >
-                                  <Pencil size={14} strokeWidth={2} />
+                                  <CornerUpLeft size={14} className="text-slate-400" />
+                                  <span>Reply</span>
                                 </button>
-                              )}
-                              {/* Delete (own or Admin) */}
-                              {(isMe || session.user.role === "ADMIN") && (
+
+                                {/* Copy Message */}
                                 <button
-                                  onClick={() => handleDeleteMessage(m.id)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                  title="Delete"
+                                  type="button"
+                                  onClick={() => {
+                                    handleCopyMessage(m);
+                                    setActiveMenuMsgId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
                                 >
-                                  <Trash2 size={14} strokeWidth={2} />
+                                  <Copy size={14} className="text-slate-400" />
+                                  <span>{copyFeedbackId === m.id ? "Copied!" : "Copy message"}</span>
                                 </button>
-                              )}
+
+                                {/* Forward */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setForwardingMsg(m);
+                                    setForwardTargetId(null);
+                                    setActiveMenuMsgId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
+                                >
+                                  <Forward size={14} className="text-slate-400" />
+                                  <span>Forward</span>
+                                </button>
+
+                                {/* Edit (own messages only) */}
+                                {isMe && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingMsg(m);
+                                      setMsgInput(m.content);
+                                      setActiveMenuMsgId(null);
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
+                                  >
+                                    <Pencil size={14} className="text-slate-400" />
+                                    <span>Edit message</span>
+                                  </button>
+                                )}
+
+                                {/* Delete (own or Admin) */}
+                                {(isMe || session?.user?.role === "ADMIN") && (
+                                  <>
+                                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleDeleteMessage(m.id);
+                                        setActiveMenuMsgId(null);
+                                      }}
+                                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer font-medium text-left"
+                                    >
+                                      <Trash2 size={14} className="text-rose-500" />
+                                      <span>Delete message</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -2701,6 +3010,53 @@ function ChatsContent() {
                             })}
                           </div>
                         )}
+
+                        {/* Bitrix-Style Seen View Badge (Group chats only, visible to all group members) */}
+                        {isGroup && (() => {
+                          const seenList = m.seenBy || [];
+                          if (seenList.length === 0) {
+                            if (isMe) {
+                              return (
+                                <div className="mt-0.5 flex items-center justify-end px-1">
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] text-slate-400 select-none"
+                                    style={{ fontSize: "10px", lineHeight: "13px" }}
+                                  >
+                                    <Check size={10} strokeWidth={2.4} />
+                                    <span>Sent</span>
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }
+
+                          const firstViewer = seenList[0]?.name || "1 member";
+                          const moreCount = seenList.length - 1;
+
+                          return (
+                            <div className={`mt-0.5 flex items-center ${isMe ? "justify-end" : "justify-start"} px-1`}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedSeenModalMessage(m)}
+                                title={seenList.map((s) => `${s.name} (${s.designation || "Member"})`).join(", ")}
+                                className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-sky-600 dark:text-slate-500 dark:hover:text-sky-400 transition-colors cursor-pointer select-none bg-transparent border-0 p-0 shadow-none font-normal"
+                                style={{ fontSize: "10px", lineHeight: "13px" }}
+                              >
+                                <CheckCheck size={11} className="text-sky-500 shrink-0 stroke-[2]" />
+                                <span>
+                                  Viewed by {firstViewer}
+                                  {moreCount > 0 && (
+                                    <>
+                                      {" and "}
+                                      <span className="underline underline-offset-2 font-medium">{moreCount} more</span>
+                                    </>
+                                  )}
+                                </span>
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -2742,41 +3098,52 @@ function ChatsContent() {
                     </div>
                   )}
 
-                  {/* Compact Smart Icon / Thumbnail Chip Preview */}
-                  {attachmentUrl && !isUploadingAttachment && (
-                    <div className="inline-flex items-center gap-2.5 bg-slate-50 text-slate-800 pl-2 pr-3 py-1.5 rounded-xl text-xs shadow-2xs border border-slate-200 animate-fade-in">
-                      {attachmentType === "IMAGE" ? (
-                        <img
-                          src={attachmentUrl}
-                          alt="Pasted Attachment"
-                          className="w-7 h-7 object-cover rounded-lg border border-slate-200 shadow-2xs shrink-0"
-                        />
-                      ) : (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-slate-700 shrink-0 border border-slate-200 shadow-2xs">
-                          {attachmentType === "LINK" ? <Link2 size={13} strokeWidth={2.2} /> : <FileText size={13} strokeWidth={2.2} />}
-                        </span>
+                  {/* Compact Multi-Attachment Chip Preview */}
+                  {attachments.length > 0 && !isUploadingAttachment && (
+                    <div className="flex flex-wrap items-center gap-2 max-h-36 overflow-y-auto p-1 animate-fade-in">
+                      {attachments.map((att) => (
+                        <div
+                          key={att.id}
+                          className="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 pl-2 pr-2.5 py-1.5 rounded-xl text-xs shadow-2xs border border-slate-200 dark:border-slate-700 animate-fade-in group"
+                        >
+                          {att.type === "IMAGE" ? (
+                            <img
+                              src={att.url}
+                              alt="Attachment"
+                              className="w-7 h-7 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs shrink-0"
+                            />
+                          ) : (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0 border border-slate-200 dark:border-slate-600 shadow-2xs">
+                              {att.type === "LINK" ? <Link2 size={13} strokeWidth={2.2} /> : <FileText size={13} strokeWidth={2.2} />}
+                            </span>
+                          )}
+                          <div className="flex flex-col min-w-0 max-w-[170px]">
+                            <span className="font-bold text-[11px] truncate leading-tight text-slate-800 dark:text-slate-100" title={att.fileName}>
+                              {att.fileName}
+                            </span>
+                            <span className="text-[9px] text-slate-500 dark:text-slate-400 font-medium leading-tight">
+                              {att.fileSize ? `${Math.round(att.fileSize / 1024)} KB` : att.type === "IMAGE" ? "Image ready" : att.type}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(att.id)}
+                            className="w-4 h-4 rounded-full bg-slate-200 hover:bg-rose-500 text-slate-600 hover:text-white font-black text-[9px] flex items-center justify-center transition-colors ml-1 shadow-2xs cursor-pointer shrink-0"
+                            title="Remove attachment"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      {attachments.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={clearAllAttachments}
+                          className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:underline px-2 py-1 cursor-pointer"
+                        >
+                          Clear all ({attachments.length})
+                        </button>
                       )}
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-[11px] max-w-[170px] truncate leading-tight text-slate-800">
-                          {attachmentFileName || "Attached File"}
-                        </span>
-                        {attachmentType === "IMAGE" && (
-                          <span className="text-[9px] text-emerald-600 font-semibold leading-tight">
-                            Image ready to send
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAttachmentUrl("");
-                          setAttachmentFileName("");
-                        }}
-                        className="w-5 h-5 rounded-full bg-slate-200 hover:bg-rose-500 text-slate-600 hover:text-white font-black text-[10px] flex items-center justify-center transition-colors ml-1 shadow-2xs cursor-pointer shrink-0"
-                        title="Remove attachment"
-                      >
-                        ✕
-                      </button>
                     </div>
                   )}
 
@@ -2977,6 +3344,7 @@ function ChatsContent() {
                       <input
                         ref={fileInputRef}
                         type="file"
+                        multiple
                         onChange={handleFileUpload}
                         className="hidden"
                       />
@@ -3162,7 +3530,7 @@ function ChatsContent() {
                     {groupConversations.map((grp) => (
                       <div
                         key={grp.id}
-                        onClick={() => setActiveConv(grp)}
+                        onClick={() => handleSelectConversation(grp)}
                         className="p-4 bg-white hover:bg-orange-50/30 rounded-2xl border border-slate-200/80 hover:border-orange-200 transition-all cursor-pointer shadow-2xs flex flex-col justify-between space-y-3 group"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -3513,6 +3881,69 @@ function ChatsContent() {
                     <Forward size={13} strokeWidth={2} />
                     {forwardLoading ? "Forwarding..." : "Forward"}
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* ── Bitrix-Style Message Read Receipts Modal (For Groups) ── */}
+          {selectedSeenModalMessage && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+              onClick={() => setSelectedSeenModalMessage(null)}
+            >
+              <div
+                className={`w-full max-w-sm rounded-2xl p-4 shadow-2xl border transition-colors ${chatTheme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+                  }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400">
+                      <CheckCheck size={18} strokeWidth={2.4} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">Message Read Receipts</h4>
+                      <p className="text-[10px] text-slate-400">
+                        Viewed by {selectedSeenModalMessage.seenBy?.length || 0}{" "}
+                        {(selectedSeenModalMessage.seenBy?.length || 0) === 1 ? "member" : "members"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedSeenModalMessage(null)}
+                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="mt-3 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                  {selectedSeenModalMessage.seenBy && selectedSeenModalMessage.seenBy.length > 0 ? (
+                    selectedSeenModalMessage.seenBy.map((seen) => (
+                      <div
+                        key={seen.userId}
+                        className={`flex items-center justify-between rounded-xl p-2 transition-colors ${chatTheme === "dark" ? "hover:bg-slate-800/60" : "hover:bg-slate-50"
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 text-[11px] font-bold text-white shadow-2xs shrink-0">
+                            {seen.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{seen.name}</p>
+                            <p className="text-[10px] text-slate-400">{seen.designation || "Team Member"}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {new Date(seen.readAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="py-6 text-center text-xs text-slate-400">No viewers yet</p>
+                  )}
                 </div>
               </div>
             </div>

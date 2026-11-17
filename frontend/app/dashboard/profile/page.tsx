@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Navbar } from "@/components/layout/Navbar";
@@ -12,13 +12,15 @@ import { getAuthToken } from "@/lib/auth";
 import { buildApiUrl } from "@/lib/api-config";
 import type { User } from "@/types/auth";
 import { ApplyLeaveModal } from "@/components/leaves/ApplyLeaveModal";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Camera, Trash2, Loader2, Upload } from "lucide-react";
+import { showSuccessToast, showErrorToast, showConfirmDialog } from "@/lib/swal";
 
 type ProfileFormData = {
   name: string;
   email: string;
   designation: string;
   phoneNumber: string;
+  avatarUrl?: string | null;
   employeeCode: string;
   dob: string;
   gender: string;
@@ -57,6 +59,7 @@ export default function ProfilePage() {
     email: "",
     designation: "",
     phoneNumber: "",
+    avatarUrl: null,
     employeeCode: "",
     dob: "",
     gender: "",
@@ -64,6 +67,8 @@ export default function ProfilePage() {
     workLocation: "OFFICE",
     employmentType: "FULL_TIME",
   });
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [passwordData, setPasswordData] = useState<PasswordFormData>({
     currentPassword: "",
     newPassword: "",
@@ -125,6 +130,7 @@ export default function ProfilePage() {
           email: emp.email || prev.email,
           designation: desigName || prev.designation,
           phoneNumber: emp.phoneNumber || prev.phoneNumber,
+          avatarUrl: emp.avatarUrl ?? prev.avatarUrl ?? session.user.avatarUrl ?? null,
           employeeCode: prof?.employeeCode || prev.employeeCode || `EMP-${emp.id}`,
           dob: formatDob(prof?.dob) || prev.dob,
           gender: prof?.gender || prev.gender,
@@ -140,6 +146,7 @@ export default function ProfilePage() {
             name: emp.name || session.user.name,
             email: emp.email || session.user.email,
             phoneNumber: emp.phoneNumber || session.user.phoneNumber,
+            avatarUrl: emp.avatarUrl ?? session.user.avatarUrl ?? null,
             designation: desigName || session.user.designation,
             role: roleName || session.user.role,
             employeeProfile: prof,
@@ -162,6 +169,7 @@ export default function ProfilePage() {
         email: session.user.email || "",
         designation: session.user.designation || "",
         phoneNumber: session.user.phoneNumber || "",
+        avatarUrl: session.user.avatarUrl || null,
         employeeCode: prof?.employeeCode || `EMP-${session.user.id}`,
         dob: formatDob(prof?.dob),
         gender: prof?.gender || "",
@@ -265,6 +273,104 @@ export default function ProfilePage() {
   const userRoleStr = typeof session?.user.role === "string" ? session.user.role : (session?.user.role as any)?.name || "";
   const canCreateAdmins = userRoleStr === "SUPER_ADMIN";
 
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session?.user?.id) return;
+
+    if (!file.type.startsWith("image/")) {
+      showErrorToast("Please select a valid image file (PNG, JPG, WEBP).");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showErrorToast("Profile picture must be under 10MB.");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (typeof reader.result === "string") {
+        try {
+          const res = await fetch(buildApiUrl(`/api/users/${session.user.id}/avatar`), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${getAuthToken()}`,
+            },
+            body: JSON.stringify({
+              fileData: reader.result,
+              fileName: file.name,
+            }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || "Failed to upload profile picture");
+          }
+
+          const data = await res.json();
+          const newAvatarUrl = data.avatarUrl;
+
+          setProfileData((prev) => ({ ...prev, avatarUrl: newAvatarUrl }));
+          saveSession({
+            ...session,
+            user: { ...session.user, avatarUrl: newAvatarUrl },
+          });
+
+          showSuccessToast("Profile picture updated successfully!");
+        } catch (err: any) {
+          console.error("Avatar upload error:", err);
+          showErrorToast(err.message || "Failed to upload avatar");
+        } finally {
+          setIsUploadingAvatar(false);
+          if (e.target) e.target.value = "";
+        }
+      }
+    };
+    reader.onerror = () => {
+      setIsUploadingAvatar(false);
+      showErrorToast("Error reading image file");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!session?.user?.id) return;
+    const confirmed = await showConfirmDialog({
+      title: "Remove Profile Picture?",
+      text: "Are you sure you want to remove your profile photo?",
+      confirmButtonText: "Yes, remove",
+      icon: "warning",
+    });
+    if (!confirmed) return;
+
+    try {
+      setIsUploadingAvatar(true);
+      const res = await fetch(buildApiUrl(`/api/users/${session.user.id}/avatar`), {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to remove profile picture");
+
+      setProfileData((prev) => ({ ...prev, avatarUrl: null }));
+      saveSession({
+        ...session,
+        user: { ...session.user, avatarUrl: null },
+      });
+
+      showSuccessToast("Profile picture removed successfully");
+    } catch (err: any) {
+      console.error("Avatar delete error:", err);
+      showErrorToast("Failed to remove profile picture");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const handleSignOut = () => {
     logout();
     router.replace("/");
@@ -344,9 +450,58 @@ export default function ProfilePage() {
 
             <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
-                {/* Avatar */}
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-[#172554] to-[#1e3a8a] text-2xl font-bold tracking-wider text-white shadow-md shadow-slate-900/10">
-                  {initials}
+                {/* Avatar with Upload & Delete Controls */}
+                <div className="relative group shrink-0">
+                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-[#172554] to-[#1e3a8a] text-2xl font-bold tracking-wider text-white shadow-md shadow-slate-900/10 overflow-hidden">
+                    {profileData.avatarUrl || session.user.avatarUrl ? (
+                      <img
+                        src={profileData.avatarUrl || session.user.avatarUrl!}
+                        alt={profileData.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span>{initials}</span>
+                    )}
+
+                    {/* Uploading Overlay */}
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center z-20">
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Change Photo Action Button */}
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-md border-2 border-white transition-transform active:scale-90 cursor-pointer disabled:opacity-50"
+                    title="Change Profile Photo"
+                  >
+                    <Camera size={13} strokeWidth={2.4} />
+                  </button>
+
+                  {/* Remove Photo Action Button (if avatar is present) */}
+                  {(profileData.avatarUrl || session.user.avatarUrl) && !isUploadingAvatar && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteAvatar}
+                      className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-800/90 hover:bg-rose-600 text-white shadow-md border-2 border-white transition-all active:scale-90 cursor-pointer opacity-0 group-hover:opacity-100"
+                      title="Remove Profile Photo"
+                    >
+                      <Trash2 size={11} strokeWidth={2.2} />
+                    </button>
+                  )}
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleAvatarFileChange}
+                    className="hidden"
+                  />
                 </div>
 
                 {/* Name and metadata */}

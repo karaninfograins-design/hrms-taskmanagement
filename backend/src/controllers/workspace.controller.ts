@@ -43,12 +43,141 @@ function adminOnly(role: string, res: Response) {
   return false;
 }
 
+function isSystemAdmin(user: any): boolean {
+  const roleName = (user?.role?.name || "").toUpperCase();
+  return roleName === "SUPER_ADMIN" || roleName === "ADMIN";
+}
+
 function hasUserPermission(user: any, permissionNames: string[]): boolean {
   if (user?.role?.name === "SUPER_ADMIN") return true;
   const userPerms: string[] = (user?.role?.permissions || []).map(
     (rp: any) => rp?.permission?.name || rp?.name
   );
   return permissionNames.some((p) => userPerms.includes(p));
+}
+
+// 1. Dynamic Project Permissions (Super Admin, Admin, PM, or assigned permission)
+function canCreateProject(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "project:create",
+    "CREATE_PROJECTS",
+    "MANAGE_PROJECTS",
+    "project:manage",
+    "project:edit",
+  ]);
+}
+
+function canManageProject(user: any, projectCreatedById?: number): boolean {
+  if (isSystemAdmin(user)) return true;
+  if (projectCreatedById && user.id === projectCreatedById) return true;
+  return hasUserPermission(user, [
+    "project:edit",
+    "project:manage_members",
+    "MANAGE_PROJECTS",
+    "project:manage",
+    "ASSIGN_WORK",
+  ]);
+}
+
+function canDeleteProject(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "project:delete",
+    "MANAGE_PROJECTS",
+  ]);
+}
+
+// 2. Dynamic Sprint Permissions (Super Admin, Admin, PM, TL, BA)
+function canCreateSprint(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "sprint:create",
+    "CREATE_SPRINTS",
+    "MANAGE_SPRINTS",
+    "sprint:manage",
+    "project:edit",
+    "MANAGE_PROJECTS",
+  ]);
+}
+
+function canManageSprint(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "sprint:edit",
+    "sprint:start_complete",
+    "MANAGE_SPRINTS",
+    "sprint:manage",
+    "project:edit",
+    "MANAGE_PROJECTS",
+  ]);
+}
+
+function canDeleteSprint(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "sprint:delete",
+    "MANAGE_SPRINTS",
+  ]);
+}
+
+// 3. Dynamic Work Item Permissions (Super Admin, Admin, PM, TL, BA, Sr. Developer, Developer)
+function canCreateWorkItem(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "work_item:create",
+    "CREATE_WORK_ITEMS",
+    "epic:create",
+    "MANAGE_EPICS",
+    "work_item:manage",
+    "work_item:edit",
+    "MANAGE_PROJECTS",
+    "project:edit",
+    "EMPLOYEE",
+  ]);
+}
+
+function canEditWorkItem(user: any, itemCreatedById?: number, isAssignee?: boolean): boolean {
+  if (isSystemAdmin(user)) return true;
+  if (itemCreatedById && user.id === itemCreatedById) return true;
+  if (isAssignee) return true;
+  return hasUserPermission(user, [
+    "work_item:edit",
+    "work_item:status_transition",
+    "epic:edit",
+    "MANAGE_EPICS",
+    "work_item:create",
+    "CREATE_WORK_ITEMS",
+    "work_item:manage",
+    "MANAGE_PROJECTS",
+    "EMPLOYEE",
+  ]);
+}
+
+function canDeleteWorkItem(user: any, itemCreatedById?: number): boolean {
+  if (isSystemAdmin(user)) return true;
+  if (itemCreatedById && user.id === itemCreatedById) return true;
+  return hasUserPermission(user, [
+    "work_item:delete",
+    "epic:delete",
+    "work_item:manage",
+    "MANAGE_EPICS",
+    "MANAGE_PROJECTS",
+  ]);
+}
+
+function canAssignWorkItem(user: any): boolean {
+  if (isSystemAdmin(user)) return true;
+  return hasUserPermission(user, [
+    "ASSIGN_WORK",
+    "work_item:edit",
+    "backlog:manage",
+    "work_item:manage",
+    "MANAGE_PROJECTS",
+    "project:edit",
+    "MANAGE_SPRINTS",
+    "sprint:edit",
+  ]);
 }
 
 function canViewRolesAndPermissions(user: any, res: Response) {
@@ -101,11 +230,11 @@ function generateProjectKey(name: string): string {
 
 export async function listProjects(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
-  
+
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
-  
+
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where: { status: { not: "INACTIVE" } },
@@ -132,7 +261,7 @@ export async function listProjects(req: Request, res: Response) {
     }),
     prisma.project.count({ where: { status: { not: "INACTIVE" } } })
   ]);
-  
+
   res.json({
     items: items.map(({ createdBy, members, workItems, ...project }: any) => {
       const workItemAssigneeIds = (workItems || []).flatMap((w: any) => [
@@ -161,7 +290,11 @@ export async function listProjects(req: Request, res: Response) {
 
 export async function deleteProject(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !adminOnly(user.role.name, res)) return;
+  if (!user) return;
+  if (!canDeleteProject(user)) {
+    res.status(403).json({ message: "You do not have permission to delete projects" });
+    return;
+  }
   const projectId = Number(req.params.id);
   try {
     const project = await prisma.project.update({
@@ -284,7 +417,11 @@ const VALID_STORY_POINTS = ["4-5 hrs", "8-10 hrs", "12-15 hrs", "20-25 hrs", "32
 
 export async function createWorkItem(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !adminOnly(user.role.name, res)) return;
+  if (!user) return;
+  if (!canCreateWorkItem(user)) {
+    res.status(403).json({ message: "You do not have permission to create work items" });
+    return;
+  }
 
   const { projectId, sprintId, type, title, description, priority, assigneeId, reporterId, parentId, startDate, dueDate, storyPoints } = req.body as Record<string, unknown>;
   const validTypes = ["EPIC", "STORY", "TASK", "FEATURE", "BUG", "SUBTASK"] as const;
@@ -458,15 +595,19 @@ export async function createWorkItem(req: Request, res: Response) {
 
 export async function updateProjectMembers(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !adminOnly(user.role.name, res)) return;
+  if (!user) return;
   const projectId = Number(req.params.id);
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true, createdById: true } });
+  if (!project) { res.status(404).json({ message: "Project not found" }); return; }
+  if (!canManageProject(user, project.createdById)) {
+    res.status(403).json({ message: "You do not have permission to manage project members" });
+    return;
+  }
   const userIds = req.body?.userIds;
   if (!Array.isArray(userIds) || userIds.some((id) => typeof id !== "number")) {
     res.status(400).json({ message: "userIds must be an array of numbers" });
     return;
   }
-  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true } });
-  if (!project) { res.status(404).json({ message: "Project not found" }); return; }
   const activeUsers = await prisma.user.findMany({ where: { id: { in: userIds }, status: "ACTIVE" }, select: { id: true } });
   if (activeUsers.length !== userIds.length) { res.status(400).json({ message: "Every selected user must be active" }); return; }
   await prisma.$transaction([
@@ -532,6 +673,12 @@ export async function updateWorkItem(req: Request, res: Response) {
     },
   });
   if (!item) { res.status(404).json({ message: "Work item not found" }); return; }
+
+  const isAssignee = item.assigneeId === user.id || item.assignees.some((a) => a.userId === user.id);
+  if (!canEditWorkItem(user, item.createdById, isAssignee)) {
+    res.status(403).json({ message: "You do not have permission to edit this work item" });
+    return;
+  }
 
   const previousAssigneeIds = new Set([
     ...(item.assigneeId ? [item.assigneeId] : []),
@@ -623,6 +770,10 @@ export async function deleteWorkItem(req: Request, res: Response) {
   const itemId = Number(req.params.id);
   const item = await prisma.workItem.findUnique({ where: { id: itemId } });
   if (!item) { res.status(404).json({ message: "Work item not found" }); return; }
+  if (!canDeleteWorkItem(user, item.createdById)) {
+    res.status(403).json({ message: "You do not have permission to delete this work item" });
+    return;
+  }
   await prisma.workItem.delete({ where: { id: itemId } });
   res.json({ message: "Work item deleted successfully" });
 }
@@ -770,7 +921,12 @@ export async function getProject(req: Request, res: Response) {
 }
 
 export async function createProject(req: Request, res: Response) {
-  const user = await authenticate(req, res); if (!user || !adminOnly(user.role.name, res)) return;
+  const user = await authenticate(req, res);
+  if (!user) return;
+  if (!canCreateProject(user)) {
+    res.status(403).json({ message: "You do not have permission to create projects" });
+    return;
+  }
   const { name, key, description, startDate, endDate } = req.body as Record<string, string>;
   if (!name?.trim()) { res.status(400).json({ message: "Project name is required" }); return; }
   const projectKey = key?.trim().toUpperCase() || generateProjectKey(name);
@@ -806,11 +962,11 @@ export async function createProject(req: Request, res: Response) {
 
 export async function listSprints(req: Request, res: Response) {
   if (!(await authenticate(req, res))) return;
-  
+
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
-  
+
   const [items, total] = await Promise.all([
     prisma.sprint.findMany({
       where: { status: { not: "CANCELLED" } },
@@ -821,7 +977,7 @@ export async function listSprints(req: Request, res: Response) {
     }),
     prisma.sprint.count({ where: { status: { not: "CANCELLED" } } })
   ]);
-  
+
   res.json({
     items: items.map(({ project, ...sprint }: { project: { name: string };[key: string]: unknown }) => ({ ...sprint, project: project.name })),
     pagination: {
@@ -835,7 +991,11 @@ export async function listSprints(req: Request, res: Response) {
 
 export async function deleteSprint(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !adminOnly(user.role.name, res)) return;
+  if (!user) return;
+  if (!canDeleteSprint(user)) {
+    res.status(403).json({ message: "You do not have permission to delete sprints" });
+    return;
+  }
   const sprintId = Number(req.params.id);
   try {
     const sprint = await prisma.sprint.update({
@@ -849,7 +1009,12 @@ export async function deleteSprint(req: Request, res: Response) {
 }
 
 export async function createSprint(req: Request, res: Response) {
-  const user = await authenticate(req, res); if (!user || !adminOnly(user.role.name, res)) return;
+  const user = await authenticate(req, res);
+  if (!user) return;
+  if (!canCreateSprint(user)) {
+    res.status(403).json({ message: "You do not have permission to create sprints" });
+    return;
+  }
   const { name, projectId, type, startDate, endDate, description } = req.body as Record<string, string | undefined>;
   const rawType = (type || "WEEKLY").toUpperCase();
   const validTypes = ["WEEKLY", "MONTHLY", "MANUAL"] as const;
@@ -897,7 +1062,12 @@ export async function createSprint(req: Request, res: Response) {
 }
 
 export async function updateSprintStatus(req: Request, res: Response) {
-  const user = await authenticate(req, res); if (!user || !adminOnly(user.role.name, res)) return;
+  const user = await authenticate(req, res);
+  if (!user) return;
+  if (!canManageSprint(user)) {
+    res.status(403).json({ message: "You do not have permission to update sprint status" });
+    return;
+  }
   const { status } = req.body as { status?: "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED" }; const sprintId = Number(req.params.id);
   const validStatuses = ["PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"] as const;
   if (!status || !validStatuses.includes(status)) { res.status(400).json({ message: "Invalid sprint status" }); return; }
@@ -912,7 +1082,11 @@ export async function updateSprintStatus(req: Request, res: Response) {
 
 export async function updateWorkItemSprint(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !adminOnly(user.role.name, res)) return;
+  if (!user) return;
+  if (!canAssignWorkItem(user)) {
+    res.status(403).json({ message: "You do not have permission to assign work items to sprints" });
+    return;
+  }
 
   const itemId = Number(req.params.id);
   const { sprintId } = req.body as { sprintId: number | null };
@@ -1024,7 +1198,7 @@ export async function listAdmins(req: Request, res: Response) {
 
 export async function listDesignations(req: Request, res: Response) {
   const user = await authenticate(req, res);
-  if (!user || !adminOnly(user.role.name, res)) return;
+  if (!user) return;
   const items = await prisma.designation.findMany({ where: { status: true }, select: { id: true, name: true, description: true, status: true }, orderBy: { name: "asc" } });
   res.json({ items });
 }
@@ -1247,14 +1421,20 @@ export async function listAllWorkItems(req: Request, res: Response) {
   const user = await authenticate(req, res);
   if (!user) return;
 
-  const isEmployeeRole = user.role.name === "EMPLOYEE";
+  const canViewAll =
+    isSystemAdmin(user) ||
+    hasUserPermission(user, [
+      "VIEW_WORK_ITEMS",
+      "work_item:view",
+      "MANAGE_PROJECTS",
+    ]);
   const { projectId, employeeId, status, search, limit } = req.query;
 
   const whereClause: any = {
     project: { status: { not: "INACTIVE" } },
   };
 
-  if (isEmployeeRole) {
+  if (!canViewAll) {
     whereClause.OR = [
       { assigneeId: user.id },
       { assignees: { some: { userId: user.id } } },

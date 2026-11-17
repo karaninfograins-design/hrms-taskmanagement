@@ -530,9 +530,17 @@ export default function EmployeesPage() {
                         >
                           <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 font-black text-xs flex items-center justify-center shrink-0">
-                                {avatarLetter}
-                              </div>
+                              {employee.avatarUrl ? (
+                                <img
+                                  src={employee.avatarUrl}
+                                  alt={employee.name}
+                                  className="w-9 h-9 rounded-xl object-cover border border-slate-200 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 font-black text-xs flex items-center justify-center shrink-0">
+                                  {avatarLetter}
+                                </div>
+                              )}
                               <div className="min-w-0">
                                 <p className="font-bold text-slate-900 text-xs leading-snug truncate max-w-[160px]">{employee.name}</p>
                                 <p className="text-[11px] font-medium text-slate-400">ID: #{employee.id}</p>
@@ -663,9 +671,17 @@ export default function EmployeesPage() {
                     <div key={employee.id} className="py-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 font-black text-sm flex items-center justify-center shrink-0">
-                            {avatarLetter}
-                          </div>
+                          {employee.avatarUrl ? (
+                            <img
+                              src={employee.avatarUrl}
+                              alt={employee.name}
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 font-black text-sm flex items-center justify-center shrink-0">
+                              {avatarLetter}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 text-sm leading-snug truncate">{employee.name}</p>
                             <p className="text-[11px] font-medium text-slate-400">ID: #{employee.id}</p>

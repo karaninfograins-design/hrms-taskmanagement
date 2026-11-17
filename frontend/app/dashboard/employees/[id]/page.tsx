@@ -296,11 +296,19 @@ export default function ViewEmployeePage() {
             <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex items-center gap-5">
                 <div className="relative">
-                  <div className="w-20 h-20 md:w-18 md:h-18 rounded-4xl bg-gradient-to-tr from-orange-400 to-amber-300 text-white font-black text-3xl md:text-2xl flex items-center justify-center border-4 border-slate-800 shadow-2xl">
-                    {employee.name.slice(0, 1).toUpperCase()}
-                  </div>
+                  {employee.avatarUrl ? (
+                    <img
+                      src={employee.avatarUrl}
+                      alt={employee.name}
+                      className="w-20 h-20 md:w-18 md:h-18 rounded-3xl object-cover border-4 border-slate-800 shadow-2xl"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 md:w-18 md:h-18 rounded-3xl bg-gradient-to-tr from-orange-400 to-amber-300 text-white font-black text-3xl md:text-2xl flex items-center justify-center border-4 border-slate-800 shadow-2xl">
+                      {employee.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
                   <span
-                    className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-slate-900 ${employee.status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"
+                    className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${employee.status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"
                       }`}
                   />
                 </div>

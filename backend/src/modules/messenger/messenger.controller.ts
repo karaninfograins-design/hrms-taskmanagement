@@ -338,9 +338,25 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
         designation: currentReader?.designation || null,
         readAt: new Date().toISOString(),
       });
+      io.to(`user_${userId}`).emit("conversation:marked-read", {
+        conversationId,
+      });
     } catch { }
 
+    const conversationInfo = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: {
+        id: true,
+        type: true,
+        name: true,
+        createdAt: true,
+        createdById: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+
     res.json({
+      conversation: conversationInfo,
       messages: messagesWithSeen,
       participants: participantsList,
       pagination: {

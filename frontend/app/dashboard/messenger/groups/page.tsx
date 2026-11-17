@@ -35,9 +35,19 @@ import {
   Bot,
   Paperclip,
   Eye,
+  Download,
+  Loader2,
+  Link2,
+  MoreHorizontal,
+  Copy,
+  Plus,
+  CornerUpLeft,
+  ImageIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
+import { downloadFileDirectly, getCleanFileName, getFileBadgeInfo } from "@/lib/download";
+import { DocumentFileIcon } from "@/components/common/DocumentFileIcon";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -58,6 +68,7 @@ import {
   showSuccessToast,
   showErrorToast,
   showNotification,
+  showPromptDialog,
 } from "@/lib/swal";
 
 type SeenReceipt = {
@@ -80,6 +91,8 @@ type Message = {
   conversationId: number;
   senderId: number;
   content: string;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
   editedAt?: string | null;
   deletedAt?: string | null;
   createdAt: string;
@@ -90,6 +103,14 @@ type Message = {
   };
   reactions?: Record<string, Array<{ userId: number; userName: string }>>;
   seenBy?: SeenReceipt[];
+};
+
+export type ChatAttachment = {
+  id: string;
+  url: string;
+  fileName: string;
+  type: "IMAGE" | "DOCUMENT" | "LINK";
+  fileSize?: number;
 };
 
 type MentionOption = {
@@ -106,6 +127,13 @@ type GroupConversation = {
   type: "GROUP";
   name: string;
   createdById: number;
+  createdAt?: string;
+  createdBy?: {
+    id: number;
+    name: string;
+    email?: string;
+  } | null;
+  unreadCount?: number;
   participants: Array<{
     userId: number;
     role: string;
@@ -183,6 +211,64 @@ export default function GroupChatsPage() {
       } catch { }
       return next;
     });
+  };
+
+  const [downloadingFileUrl, setDownloadingFileUrl] = useState<string | null>(null);
+
+  // Attachments State (Supports multiple/single documents, images, and links)
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState<boolean>(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState<boolean>(false);
+  const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
+  const attachmentMenuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTriggerDownload = async (url: string, suggestedName?: string) => {
+    if (downloadingFileUrl) return;
+    setDownloadingFileUrl(url);
+    try {
+      await downloadFileDirectly(url, suggestedName);
+    } finally {
+      setDownloadingFileUrl(null);
+    }
+  };
+
+  // Bitrix-Style Message Context Menu States
+  const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null);
+  const [copyFeedbackId, setCopyFeedbackId] = useState<number | null>(null);
+  const messageMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleCopyMessage = (m: Message) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(m.content);
+      setCopyFeedbackId(m.id);
+      setTimeout(() => setCopyFeedbackId(null), 1500);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: number) => {
+    const confirmed = await showConfirmDialog({
+      title: "Delete Message?",
+      text: "Are you sure you want to delete this message? This action cannot be undone.",
+      confirmButtonText: "Yes, delete",
+      icon: "warning",
+    });
+    if (!confirmed) return;
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${getApiUrl()}/api/messenger/messages/${messageId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+        showSuccessToast("Message deleted");
+      } else {
+        showErrorToast("Failed to delete message");
+      }
+    } catch {
+      showErrorToast("Error deleting message");
+    }
   };
 
   // Build Bitrix Mention Options (All members + Channel Members + All Employees)
@@ -367,11 +453,11 @@ export default function GroupChatsPage() {
         const isDark = chatTheme === "dark";
         const linkStyle = isDark
           ? isMe
-            ? "text-emerald-200 underline underline-offset-3 font-bold hover:text-white bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800"
-            : "text-sky-300 underline underline-offset-3 font-bold hover:text-sky-200 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-800/80"
+            ? "text-emerald-300 hover:text-emerald-100"
+            : "text-sky-400 hover:text-sky-200"
           : isMe
-            ? "text-emerald-900 underline underline-offset-3 font-bold hover:text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300/80 shadow-2xs"
-            : "text-blue-700 underline underline-offset-3 font-bold hover:text-blue-900 bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200/90 shadow-2xs";
+            ? "text-emerald-800 hover:text-emerald-950"
+            : "text-blue-600 hover:text-blue-800";
 
         return (
           <a
@@ -379,11 +465,10 @@ export default function GroupChatsPage() {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`break-all transition-all inline-flex items-center gap-1 my-0.5 ${linkStyle}`}
+            className={`break-all inline underline underline-offset-2 hover:font-bold transition-all ${linkStyle}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <span>{part}</span>
-            <ExternalLink size={12} className="inline-block shrink-0 opacity-80" />
+            {part}
           </a>
         );
       }
@@ -395,25 +480,24 @@ export default function GroupChatsPage() {
           part.toLowerCase() === "@all";
 
         const isDark = chatTheme === "dark";
+        const mentionStyle = isDark
+          ? isMe
+            ? "text-emerald-200"
+            : isSelfMention
+              ? "text-amber-300"
+              : "text-sky-300"
+          : isMe
+            ? "text-emerald-900"
+            : isSelfMention
+              ? "text-amber-700"
+              : "text-blue-600";
 
         return (
           <span
             key={index}
-            className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-lg text-xs mx-0.5 shadow-2xs transition-colors ${isDark
-                ? isMe
-                  ? "bg-emerald-800/60 text-emerald-100 border border-emerald-600/60"
-                  : isSelfMention
-                    ? "bg-amber-950/70 text-amber-200 border border-amber-600/70"
-                    : "bg-slate-800 text-sky-200 border border-slate-700"
-                : isMe
-                  ? "bg-[#d8ece0] text-emerald-950 border border-[#b2d9c1]"
-                  : isSelfMention
-                    ? "bg-amber-100 text-amber-950 border border-amber-300 font-extrabold"
-                    : "bg-sky-100 text-sky-950 border border-sky-300"
-              }`}
+            className={`inline font-bold transition-colors cursor-pointer hover:underline ${mentionStyle}`}
           >
-            <AtSign size={11} className="inline opacity-80 shrink-0" />
-            <span>{part.slice(1)}</span>
+            {part}
           </span>
         );
       }
@@ -454,6 +538,12 @@ export default function GroupChatsPage() {
     const handleClickOutside = (e: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
+      }
+      if (messageMenuRef.current && !messageMenuRef.current.contains(e.target as Node)) {
+        setActiveMenuMsgId(null);
+      }
+      if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(e.target as Node)) {
+        setShowAttachmentMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -539,6 +629,17 @@ export default function GroupChatsPage() {
     }
   };
 
+  const handleSelectGroup = (group: GroupConversation) => {
+    setActiveGroup(group);
+    setGroups((prev) =>
+      prev.map((g) => (g.id === group.id ? { ...g, unreadCount: 0 } : g))
+    );
+    if (socket) {
+      socket.emit("join:conversation", group.id);
+      socket.emit("conversation:read", { conversationId: group.id });
+    }
+  };
+
   useEffect(() => {
     if (session?.token) {
       fetchGroups();
@@ -557,6 +658,12 @@ export default function GroupChatsPage() {
         if (!res.ok) return;
         const data = await res.json();
         setMessages(data.messages || []);
+        if (data.conversation) {
+          setActiveGroup((prev) => (prev ? { ...prev, ...data.conversation } : data.conversation));
+        }
+        setGroups((prev) =>
+          prev.map((g) => (g.id === activeGroup.id ? { ...g, unreadCount: 0 } : g))
+        );
         if (socket) {
           socket.emit("join:conversation", activeGroup.id);
           socket.emit("conversation:read", { conversationId: activeGroup.id });
@@ -606,7 +713,8 @@ export default function GroupChatsPage() {
       }
     };
     const onNewMessage = (newMsg: Message) => {
-      if (activeGroup && newMsg.conversationId === activeGroup.id) {
+      const isCurrentlyActive = activeGroup?.id === newMsg.conversationId;
+      if (isCurrentlyActive) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
@@ -615,6 +723,17 @@ export default function GroupChatsPage() {
           socket.emit("conversation:read", { conversationId: activeGroup.id });
         }
       }
+      setGroups((prev) =>
+        prev.map((g) => {
+          if (g.id === newMsg.conversationId) {
+            return {
+              ...g,
+              unreadCount: isCurrentlyActive ? 0 : (g.unreadCount || 0) + 1,
+            };
+          }
+          return g;
+        })
+      );
     };
 
     const onConversationSeen = (seenData: {
@@ -624,6 +743,12 @@ export default function GroupChatsPage() {
       designation?: string | null;
       readAt: string;
     }) => {
+      if (seenData.userId === session?.user?.id) {
+        setGroups((prev) =>
+          prev.map((g) => (g.id === seenData.conversationId ? { ...g, unreadCount: 0 } : g))
+        );
+      }
+
       if (activeGroup && seenData.conversationId === activeGroup.id) {
         const readTime = new Date(seenData.readAt).getTime();
         setMessages((prev) =>
@@ -651,6 +776,13 @@ export default function GroupChatsPage() {
         );
       }
     };
+
+    const onConversationMarkedRead = (data: { conversationId: number }) => {
+      setGroups((prev) =>
+        prev.map((g) => (g.id === data.conversationId ? { ...g, unreadCount: 0 } : g))
+      );
+    };
+
     const onReaction = (data: { messageId: number; conversationId: number; reactions: Record<string, Array<{ userId: number; userName: string }>> }) => {
       setMessages((prev) =>
         prev.map((m) =>
@@ -674,6 +806,7 @@ export default function GroupChatsPage() {
     socket.on("conversation:deleted", onConvDeleted);
     socket.on("message:new", onNewMessage);
     socket.on("conversation:seen", onConversationSeen);
+    socket.on("conversation:marked-read", onConversationMarkedRead);
     socket.on("message:reaction", onReaction);
     socket.on("group:summary-updated", onSummaryUpdated);
     socket.on("group:summary-deleted", onSummaryDeleted);
@@ -682,6 +815,7 @@ export default function GroupChatsPage() {
       socket.off("conversation:deleted", onConvDeleted);
       socket.off("message:new", onNewMessage);
       socket.off("conversation:seen", onConversationSeen);
+      socket.off("conversation:marked-read", onConversationMarkedRead);
       socket.off("message:reaction", onReaction);
       socket.off("group:summary-updated", onSummaryUpdated);
       socket.off("group:summary-deleted", onSummaryDeleted);
@@ -1145,35 +1279,242 @@ export default function GroupChatsPage() {
     }
   };
 
+  // Drag & drop handlers for group message attachments
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDraggingOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      uploadFiles(files);
+    }
+  };
+
+  // Reusable Multi-File Upload helper (supports multiple files, drag & drop, and direct clipboard image paste)
+  const MAX_FILE_SIZE_BYTES = 35 * 1024 * 1024; // 35 MB
+
+  const uploadSingleFile = (file: File): Promise<ChatAttachment> => {
+    return new Promise((resolve, reject) => {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        reject(new Error(`"${file.name}" exceeds the maximum allowed file size of 35MB.`));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async () => {
+        if (typeof reader.result === "string") {
+          try {
+            const res = await fetch(`${getApiUrl()}/api/messenger/upload`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${getAuthToken()}`,
+              },
+              body: JSON.stringify({
+                fileData: reader.result,
+                fileName: file.name,
+                fileType: file.type.startsWith("image/") ? "IMAGE" : "DOCUMENT",
+              }),
+            });
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.message || "Upload failed");
+            }
+            const data = await res.json();
+            resolve({
+              id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+              url: data.url,
+              fileName: data.fileName,
+              type: data.type,
+              fileSize: file.size,
+            });
+          } catch (err: any) {
+            reject(err);
+          }
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingAttachment(true);
+    try {
+      const results = await Promise.allSettled(files.map(uploadSingleFile));
+      const successful: ChatAttachment[] = [];
+      const errors: string[] = [];
+
+      results.forEach((res) => {
+        if (res.status === "fulfilled") {
+          successful.push(res.value);
+        } else {
+          errors.push(res.reason?.message || "Failed to upload file");
+        }
+      });
+
+      if (successful.length > 0) {
+        setAttachments((prev) => [...prev, ...successful]);
+        showSuccessToast(
+          successful.length === 1
+            ? "Attachment added"
+            : `${successful.length} attachments added`
+        );
+      }
+      if (errors.length > 0) {
+        showErrorToast(errors[0]);
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      showErrorToast("Failed to upload attachment");
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  // Handle Attachment Upload from File Picker (supports multiple files)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    uploadFiles(files);
+    setShowAttachmentMenu(false);
+    if (e.target) e.target.value = "";
+  };
+
+  // Handle Direct Clipboard Image Pasting (Ctrl+V)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items || items.length === 0) return;
+
+    const filesToUpload: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          const ext = file.type.split("/")[1]?.replace(/[^a-zA-Z0-9]/g, "") || "png";
+          const uniqueName = `pasted_image_${Date.now()}_${i}.${ext}`;
+          filesToUpload.push(new File([file], uniqueName, { type: file.type }));
+        }
+      }
+    }
+    if (filesToUpload.length > 0) {
+      e.preventDefault();
+      uploadFiles(filesToUpload);
+      return;
+    }
+    setTimeout(adjustComposerHeight, 0);
+  };
+
+  const handleAddLinkPrompt = async () => {
+    const link = await showPromptDialog({
+      title: "Add Document / Web Link",
+      inputPlaceholder: "https://example.com/document...",
+    });
+    if (link && link.trim()) {
+      const trimmed = link.trim();
+      const newAtt: ChatAttachment = {
+        id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        url: trimmed,
+        fileName: trimmed.replace(/^https?:\/\//, ""),
+        type: "LINK",
+      };
+      setAttachments((prev) => [...prev, newAtt]);
+      setShowAttachmentMenu(false);
+      showSuccessToast("Link attached");
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const clearAllAttachments = () => {
+    setAttachments([]);
+  };
+
   // Send Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!msgInput.trim() || !activeGroup) return;
+    if ((!msgInput.trim() && attachments.length === 0) || !activeGroup) return;
 
     try {
       setShowMentions(false);
       setMentionQuery("");
-      const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
-        body: JSON.stringify({
-          conversationId: activeGroup.id,
-          content: msgInput.trim(),
-        }),
-      });
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => [...prev, data.message]);
+      if (attachments.length === 0) {
+        // Plain text message
+        const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            conversationId: activeGroup.id,
+            content: msgInput.trim(),
+            attachmentUrl: null,
+            attachmentType: null,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setMessages((prev) => [...prev, data.message]);
+          setMsgInput("");
+          if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+          }
+        } else {
+          showErrorToast("Failed to send message");
+        }
+      } else {
+        // Multiple or single attachment: send sequentially, attaching caption/text to the first item
+        for (let i = 0; i < attachments.length; i++) {
+          const att = attachments[i];
+          const res = await fetch(`${getApiUrl()}/api/messenger/messages`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${getAuthToken()}`,
+            },
+            body: JSON.stringify({
+              conversationId: activeGroup.id,
+              content: i === 0 ? msgInput.trim() : "",
+              attachmentUrl: att.url,
+              attachmentType: att.type,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setMessages((prev) => [...prev, data.message]);
+          }
+        }
+
         setMsgInput("");
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
         }
-      } else {
-        showErrorToast("Failed to send message");
+        setAttachments([]);
       }
     } catch (err) {
       console.error("Error sending message:", err);
@@ -1235,7 +1576,7 @@ export default function GroupChatsPage() {
                   return (
                     <div
                       key={group.id}
-                      onClick={() => setActiveGroup(group)}
+                      onClick={() => handleSelectGroup(group)}
                       className={`group flex cursor-pointer items-center justify-between border-l-2 p-3.5 transition-all ${isSelected ? "border-orange-500 bg-orange-50/80" : "border-transparent hover:bg-slate-50"
                         }`}
                     >
@@ -1250,18 +1591,25 @@ export default function GroupChatsPage() {
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteGroup(group.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
-                        title="Delete group"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {group.unreadCount ? (
+                          <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-xs">
+                            {group.unreadCount}
+                          </span>
+                        ) : null}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteGroup(group.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
+                          title="Delete group"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   );
                 })
@@ -1448,6 +1796,24 @@ export default function GroupChatsPage() {
 
                 {/* Messages */}
                 <div className={`flex-1 space-y-4 overflow-y-auto no-scrollbar p-4 sm:p-6 transition-colors ${chatTheme === "dark" ? "bg-slate-950" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70"}`}>
+                  {/* Group Creation Info Pill */}
+                  {activeGroup && (
+                    <div className="my-2 flex items-center justify-center">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-medium shadow-2xs transition-colors ${chatTheme === "dark" ? "bg-slate-900/90 text-slate-300 border border-slate-800" : "bg-white/95 text-slate-600 border border-slate-200/90"}`}>
+                        <Users size={11} className="text-orange-500 shrink-0" />
+                        <span>
+                          Group created by <strong className={chatTheme === "dark" ? "text-slate-100 font-semibold" : "text-slate-900 font-semibold"}>{activeGroup.createdBy?.name || activeGroup.participants.find((p) => p.userId === activeGroup.createdById)?.user.name || "Admin"}</strong>
+                          {activeGroup.createdAt && (
+                            <>
+                              {" on "}
+                              <span>{new Date(activeGroup.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -1488,6 +1854,88 @@ export default function GroupChatsPage() {
                                 : "bg-white text-slate-900 border border-slate-200/90 rounded-bl-xs shadow-2xs font-medium"
                             }`}
                         >
+                          {/* Attachment Display with Direct Download Action */}
+                          {m.attachmentUrl && !m.deletedAt && (() => {
+                            const cleanDocName = getCleanFileName(m.attachmentUrl, "Document");
+                            const badgeInfo = getFileBadgeInfo(cleanDocName, m.attachmentType);
+                            const isThisDownloading = downloadingFileUrl === m.attachmentUrl;
+
+                            return (
+                              <div className="my-1.5 relative group/att">
+                                {m.attachmentType === "IMAGE" ? (
+                                  <div className="relative rounded-xl overflow-hidden border border-slate-200/80 shadow-2xs mb-2">
+                                    <img
+                                      src={m.attachmentUrl}
+                                      alt="Attachment"
+                                      className="max-w-xs max-h-60 rounded-xl object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-2xs">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTriggerDownload(m.attachmentUrl!, getCleanFileName(m.attachmentUrl, "image.jpg"))}
+                                        disabled={isThisDownloading}
+                                        className="p-2 text-white/90 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all cursor-pointer active:scale-95 disabled:opacity-75"
+                                        title="Download Image"
+                                      >
+                                        {isThisDownloading ? <Loader2 size={18} className="animate-spin text-white" /> : <Download size={18} strokeWidth={1.8} />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between gap-3 py-1 px-0.5 bg-transparent border-0 shadow-none mb-1">
+                                    {/* Icon & File Details */}
+                                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                      {m.attachmentType === "LINK" ? (
+                                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0">
+                                          <Link2 size={18} strokeWidth={2} />
+                                        </span>
+                                      ) : (
+                                        <DocumentFileIcon ext={cleanDocName.split(".").pop()} />
+                                      )}
+                                      <div className="flex flex-col min-w-0">
+                                        <span
+                                          className={`text-xs sm:text-sm font-medium truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px] md:max-w-[320px] leading-snug ${chatTheme === "dark" ? "text-slate-100" : "text-slate-800"}`}
+                                          title={cleanDocName}
+                                        >
+                                          {cleanDocName}
+                                        </span>
+                                        <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal leading-tight mt-0.5">
+                                          {badgeInfo.label}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Button - Lucide icon without background or border */}
+                                    {m.attachmentType === "LINK" ? (
+                                      <a
+                                        href={m.attachmentUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 transition-colors cursor-pointer shrink-0"
+                                        title="Open link"
+                                      >
+                                        <ExternalLink size={18} strokeWidth={1.75} />
+                                      </a>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTriggerDownload(m.attachmentUrl!, cleanDocName)}
+                                        disabled={isThisDownloading}
+                                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 rounded-full transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                                        title="Download file"
+                                      >
+                                        {isThisDownloading ? (
+                                          <Loader2 size={19} className="animate-spin text-slate-400 dark:text-slate-300" />
+                                        ) : (
+                                          <Download size={19} strokeWidth={1.75} />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text">
                             {renderFormattedContent(m.content, isMe)}
                           </div>
@@ -1495,24 +1943,119 @@ export default function GroupChatsPage() {
                             {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
 
-                          {/* Quick Reaction Bar on Hover */}
-                          <div className="absolute top-1 right-2 hidden group-hover:flex items-center gap-0.5 bg-white p-1 rounded-xl shadow-md border border-slate-200 z-10 animate-in fade-in duration-100">
-                            {["👍", "❤️", "😂", "🎉", "🙏"].map((emoji) => {
-                              const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
-                              return (
+                          {/* Bitrix-Style Hover Action Bar (Compact & Perfectly Anchored) */}
+                          {!m.deletedAt && (
+                            <div
+                              className={`absolute -top-3 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all ${
+                                isMe ? "right-2" : "left-2"
+                              } ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                            >
+                              {/* Quick Reaction Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
+                                }}
+                                className="w-6 h-6 rounded-lg text-xs flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                title="Add reaction"
+                              >
+                                <Smile size={14} />
+                              </button>
+
+                              {/* Bitrix 3-Dots Menu Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
+                                }}
+                                className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${
+                                  activeMenuMsgId === m.id
+                                    ? "bg-orange-500 text-white shadow-xs"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                }`}
+                                title="More options"
+                              >
+                                <MoreHorizontal size={15} strokeWidth={2.2} />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Bitrix-Style Message Context Menu */}
+                          {activeMenuMsgId === m.id && (
+                            <div
+                              ref={messageMenuRef}
+                              className={`absolute z-50 top-full mt-1.5 min-w-[210px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-1.5 animate-in fade-in zoom-in-95 duration-150 ${
+                                isMe ? "right-0" : "left-0"
+                              }`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {/* Suggested Smileys / Reaction Bar */}
+                              <div className="px-2 pt-1.5 pb-1">
+                                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                                  Reactions
+                                </span>
+                                <div className="flex items-center justify-between gap-1">
+                                  {["👍", "❤️", "😂", "🎉", "🙏", "🔥"].map((emoji) => {
+                                    const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => {
+                                          handleReact(m.id, emoji);
+                                          setActiveMenuMsgId(null);
+                                        }}
+                                        className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
+                                          userReacted ? "bg-orange-100 dark:bg-orange-950/60 scale-110" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        }`}
+                                        title={`React with ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+
+                              {/* Actions List */}
+                              <div className="space-y-0.5">
+                                {/* Copy Message */}
                                 <button
-                                  key={emoji}
                                   type="button"
-                                  onClick={() => handleReact(m.id, emoji)}
-                                  className={`w-6 h-6 rounded-md text-xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 scale-110" : "hover:bg-slate-100"
-                                    }`}
-                                  title={`React with ${emoji}`}
+                                  onClick={() => {
+                                    handleCopyMessage(m);
+                                    setActiveMenuMsgId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
                                 >
-                                  {emoji}
+                                  <Copy size={14} className="text-slate-400" />
+                                  <span>{copyFeedbackId === m.id ? "Copied!" : "Copy message"}</span>
                                 </button>
-                              );
-                            })}
-                          </div>
+
+                                {/* Delete (own or Admin) */}
+                                {(isMe || session?.user?.role === "ADMIN") && (
+                                  <>
+                                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleDeleteMessage(m.id);
+                                        setActiveMenuMsgId(null);
+                                      }}
+                                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer font-medium text-left"
+                                    >
+                                      <Trash2 size={14} className="text-rose-500" />
+                                      <span>Delete message</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Reaction Badges Below Message Bubble */}
@@ -1542,15 +2085,20 @@ export default function GroupChatsPage() {
                           </div>
                         )}
 
-                        {/* Bitrix-Style Seen View Badge (Matches Screenshot) */}
+                        {/* Bitrix-Style Seen View Badge for Group Members */}
                         {(() => {
                           const seenList = m.seenBy || [];
                           if (seenList.length === 0) {
                             if (isMe) {
                               return (
-                                <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 justify-end px-1 select-none">
-                                  <Check size={12} strokeWidth={2.4} />
-                                  <span>Sent</span>
+                                <div className="mt-0.5 flex items-center justify-end px-1">
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] text-slate-400 select-none"
+                                    style={{ fontSize: "10px", lineHeight: "13px" }}
+                                  >
+                                    <Check size={10} strokeWidth={2.4} />
+                                    <span>Sent</span>
+                                  </span>
                                 </div>
                               );
                             }
@@ -1561,23 +2109,21 @@ export default function GroupChatsPage() {
                           const moreCount = seenList.length - 1;
 
                           return (
-                            <div className={`mt-1 flex items-center ${isMe ? "justify-end" : "justify-start"}`}>
+                            <div className={`mt-0.5 flex items-center ${isMe ? "justify-end" : "justify-start"} px-1`}>
                               <button
                                 type="button"
                                 onClick={() => setSelectedSeenModalMessage(m)}
                                 title={seenList.map((s) => `${s.name} (${s.designation || "Member"})`).join(", ")}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer shadow-2xs border ${isMe
-                                  ? "bg-sky-500/15 border-sky-400/40 text-sky-800 hover:bg-sky-500/25 dark:bg-sky-950/60 dark:border-sky-800/80 dark:text-sky-200"
-                                  : "bg-sky-500/10 border-sky-400/30 text-sky-700 hover:bg-sky-500/20 dark:bg-sky-950/40 dark:border-sky-800/60 dark:text-sky-300"
-                                  }`}
+                                className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-sky-600 dark:text-slate-500 dark:hover:text-sky-400 transition-colors cursor-pointer select-none bg-transparent border-0 p-0 shadow-none font-normal"
+                                style={{ fontSize: "10px", lineHeight: "13px" }}
                               >
-                                <CheckCheck size={13} className="text-sky-600 dark:text-sky-400 shrink-0 stroke-[2.4]" />
+                                <CheckCheck size={11} className="text-sky-500 shrink-0 stroke-[2]" />
                                 <span>
                                   Viewed by {firstViewer}
                                   {moreCount > 0 && (
                                     <>
                                       {" and "}
-                                      <span className="underline underline-offset-2 font-bold">{moreCount} more</span>
+                                      <span className="underline underline-offset-2 font-medium">{moreCount} more</span>
                                     </>
                                   )}
                                 </span>
@@ -1592,8 +2138,70 @@ export default function GroupChatsPage() {
                 </div>
 
                 {/* Composer */}
-                <div className={`border-t p-3 sm:p-4 transition-colors ${chatTheme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200/80"}`}>
-                  <form onSubmit={handleSendMessage} className="flex items-center gap-2 sm:gap-3 relative">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-t p-3 sm:p-4 transition-colors relative ${chatTheme === "dark" ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200/80"} ${isDraggingOver ? "ring-2 ring-orange-500 ring-inset bg-orange-50/20" : ""}`}
+                >
+                  {/* Uploading Progress Indicator */}
+                  {isUploadingAttachment && (
+                    <div className="mb-2 inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 animate-pulse shadow-2xs">
+                      <div className="w-3.5 h-3.5 border-2 border-slate-600 dark:border-slate-300 border-t-transparent rounded-full animate-spin" />
+                      <span className="font-semibold text-[11px]">Uploading attachment...</span>
+                    </div>
+                  )}
+
+                  {/* Compact Multi-Attachment Chip Preview */}
+                  {attachments.length > 0 && !isUploadingAttachment && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 max-h-36 overflow-y-auto p-1 animate-fade-in">
+                      {attachments.map((att) => (
+                        <div
+                          key={att.id}
+                          className="inline-flex items-center gap-2 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 pl-2 pr-2.5 py-1.5 rounded-xl text-xs shadow-2xs border border-slate-200 dark:border-slate-700 animate-fade-in group"
+                        >
+                          {att.type === "IMAGE" ? (
+                            <img
+                              src={att.url}
+                              alt="Attachment"
+                              className="w-7 h-7 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs shrink-0"
+                            />
+                          ) : (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0 border border-slate-200 dark:border-slate-600 shadow-2xs">
+                              {att.type === "LINK" ? <Link2 size={13} strokeWidth={2.2} /> : <FileText size={13} strokeWidth={2.2} />}
+                            </span>
+                          )}
+                          <div className="flex flex-col min-w-0 max-w-[170px]">
+                            <span className="font-bold text-[11px] truncate leading-tight text-slate-800 dark:text-slate-100" title={att.fileName}>
+                              {att.fileName}
+                            </span>
+                            <span className="text-[9px] text-slate-500 dark:text-slate-400 font-medium leading-tight">
+                              {att.fileSize ? `${Math.round(att.fileSize / 1024)} KB` : att.type === "IMAGE" ? "Image ready" : att.type}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(att.id)}
+                            className="w-4 h-4 rounded-full bg-slate-200 hover:bg-rose-500 text-slate-600 hover:text-white font-black text-[9px] flex items-center justify-center transition-colors ml-1 shadow-2xs cursor-pointer shrink-0"
+                            title="Remove attachment"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      {attachments.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={clearAllAttachments}
+                          className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 hover:underline px-2 py-1 cursor-pointer"
+                        >
+                          Clear all ({attachments.length})
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSendMessage} onPaste={handlePaste} className="flex items-center gap-2 sm:gap-3 relative">
                     {/* Bitrix-Style @ Mention Suggestions Popup (Matches Screenshot) */}
                     {showMentions && filteredMentions.length > 0 && (
                       <div
@@ -1717,6 +2325,80 @@ export default function GroupChatsPage() {
                         }`}
                     />
 
+                    {/* Attachment Popover Trigger */}
+                    <div ref={attachmentMenuRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAttachmentMenu(!showAttachmentMenu);
+                          setShowEmojiPicker(false);
+                        }}
+                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer shrink-0 ${chatTheme === "dark" ? "text-slate-300 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                          }`}
+                        title="Attach File or Link"
+                      >
+                        <Paperclip size={21} strokeWidth={2} />
+                      </button>
+
+                      {showAttachmentMenu && (
+                        <div className={`absolute bottom-14 right-0 z-50 w-56 rounded-2xl border p-2 shadow-xl ${chatTheme === "dark"
+                          ? "bg-slate-900 border-slate-700 shadow-slate-950/80 text-white"
+                          : "bg-white border-slate-200/90 shadow-slate-900/10 text-slate-800"
+                          }`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              fileInputRef.current?.click();
+                              setShowAttachmentMenu(false);
+                            }}
+                            className={`group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors cursor-pointer ${chatTheme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                              <ImageIcon size={17} strokeWidth={2} />
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-semibold leading-4">
+                                Image / Document
+                              </p>
+                              <p className="text-[10px] leading-4 text-slate-400">
+                                Multiple PDF, DOCX, PNG, JPG
+                              </p>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAttachmentMenu(false);
+                              handleAddLinkPrompt();
+                            }}
+                            className={`group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors cursor-pointer ${chatTheme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                              <Link2 size={17} strokeWidth={2} />
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-semibold leading-4">
+                                Web Link
+                              </p>
+                              <p className="text-[10px] leading-4 text-slate-400">
+                                Paste document or web link
+                              </p>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </div>
+
                     {/* Smiley / Emoji Button */}
                     <button
                       type="button"
@@ -1731,7 +2413,8 @@ export default function GroupChatsPage() {
                     {/* Send Button (Solid Orange Circle with Paper Plane) */}
                     <button
                       type="submit"
-                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/25 shrink-0 cursor-pointer"
+                      disabled={isUploadingAttachment}
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white flex items-center justify-center transition-all shadow-md shadow-orange-500/25 shrink-0 cursor-pointer"
                       title="Send Message"
                     >
                       <Send size={17} strokeWidth={2.4} className="text-white translate-x-px" />

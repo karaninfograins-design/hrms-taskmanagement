@@ -22,6 +22,7 @@ async function main() {
     { name: "project:edit", description: "Edit workspace projects" },
     { name: "project:delete", description: "Delete workspace projects" },
     { name: "project:approve", description: "Approve project completions and milestones" },
+    { name: "project:manage_members", description: "Assign and manage members in projects" },
     { name: "CREATE_PROJECTS", description: "Create new projects" },
     { name: "MANAGE_PROJECTS", description: "Manage all projects" },
 
@@ -31,19 +32,32 @@ async function main() {
     { name: "sprint:edit", description: "Edit project sprints" },
     { name: "sprint:delete", description: "Delete project sprints" },
     { name: "sprint:approve", description: "Approve sprint releases and completions" },
+    { name: "sprint:start_complete", description: "Start, activate and complete sprint iterations" },
     { name: "CREATE_SPRINTS", description: "Create new sprints" },
     { name: "MANAGE_SPRINTS", description: "Manage all sprints" },
 
-    // 4. Tasks & Work Items
-    { name: "work_item:view", description: "View work items (tasks, bugs, stories)" },
+    // 4. Epics & Strategic Roadmaps
+    { name: "epic:view", description: "View epics, roadmaps and project milestones" },
+    { name: "epic:create", description: "Create high-level epics and milestones" },
+    { name: "epic:edit", description: "Edit epic descriptions, roadmaps and dates" },
+    { name: "epic:delete", description: "Delete or archive epics" },
+    { name: "MANAGE_EPICS", description: "Full management over epics and strategic roadmaps" },
+
+    // 5. Tasks & Work Items
+    { name: "work_item:view", description: "View work items (tasks, bugs, stories, subtasks)" },
     { name: "work_item:create", description: "Create work items" },
     { name: "work_item:edit", description: "Edit work items" },
     { name: "work_item:delete", description: "Delete work items" },
     { name: "work_item:approve", description: "Approve and close work items" },
+    { name: "work_item:status_transition", description: "Transition task status across Kanban/Scrum columns" },
     { name: "CREATE_WORK_ITEMS", description: "Create work items" },
     { name: "MANAGE_WORK_ITEMS", description: "Manage all work items" },
     { name: "VIEW_WORK_ITEMS", description: "View work items" },
     { name: "ASSIGN_WORK", description: "Assign work items to users" },
+
+    // 6. Project Backlog & Prioritization
+    { name: "backlog:view", description: "View unassigned backlog items and grooming queues" },
+    { name: "backlog:manage", description: "Prioritize backlog and move items between sprints" },
 
     // 5. Comments & Discussions
     { name: "comment:view", description: "View work item comments" },
@@ -89,15 +103,15 @@ async function main() {
     { name: "dashboard:edit", description: "Edit and customize dashboard metrics" },
   ];
 
-  const permissions = await Promise.all(
-    permissionDefs.map((p) =>
-      prisma.permission.upsert({
-        where: { name: p.name },
-        create: { name: p.name, description: p.description },
-        update: { description: p.description },
-      })
-    )
-  );
+  const permissions = [];
+  for (const p of permissionDefs) {
+    const perm = await prisma.permission.upsert({
+      where: { name: p.name },
+      create: { name: p.name, description: p.description },
+      update: { description: p.description },
+    });
+    permissions.push(perm);
+  }
   console.log(`Permissions seeded: ${permissions.length} total permissions.`);
 
   // 2. Seed Root Core Roles (Only SUPER_ADMIN and ADMIN are root system roles)
@@ -158,9 +172,11 @@ async function main() {
   const adminPermissionNames = [
     "employee:view", "employee:create", "employee:edit", "employee:delete", "employee:approve",
     "admin:view", "admin:create", "admin:edit", "admin:delete", "admin:role_manage",
-    "project:view", "project:create", "project:edit", "project:delete", "project:approve",
-    "sprint:view", "sprint:create", "sprint:edit", "sprint:delete", "sprint:approve",
-    "work_item:view", "work_item:create", "work_item:edit", "work_item:delete", "work_item:approve",
+    "project:view", "project:create", "project:edit", "project:delete", "project:approve", "project:manage_members",
+    "sprint:view", "sprint:create", "sprint:edit", "sprint:delete", "sprint:approve", "sprint:start_complete",
+    "epic:view", "epic:create", "epic:edit", "epic:delete", "MANAGE_EPICS",
+    "work_item:view", "work_item:create", "work_item:edit", "work_item:delete", "work_item:approve", "work_item:status_transition",
+    "backlog:view", "backlog:manage",
     "comment:view", "comment:create", "comment:edit", "comment:delete",
     "leave:view", "leave:create", "leave:edit", "leave:delete", "leave:approve",
     "attendance:view", "attendance:create", "attendance:edit", "attendance:approve",
@@ -182,8 +198,8 @@ async function main() {
 
   // EMPLOYEE sub-role permissions
   const employeePermissionNames = [
-    "project:view", "sprint:view", "work_item:view", "work_item:create", "work_item:edit",
-    "comment:view", "comment:create", "VIEW_WORK_ITEMS", "CREATE_WORK_ITEMS",
+    "project:view", "sprint:view", "epic:view", "work_item:view", "work_item:create", "work_item:edit", "work_item:status_transition",
+    "backlog:view", "comment:view", "comment:create", "VIEW_WORK_ITEMS", "CREATE_WORK_ITEMS",
     "leave:view", "leave:create", "attendance:view", "attendance:create",
     "EMPLOYEE",
   ];
@@ -432,11 +448,18 @@ async function main() {
         await tx.workItemActivity.deleteMany({ where: { userId: dup.id } });
         await tx.meeting.updateMany({ where: { organizerId: dup.id }, data: { organizerId: targetSuperAdmin.id } });
         await tx.meetingParticipant.deleteMany({ where: { userId: dup.id } });
+        await tx.conversation.updateMany({ where: { createdById: dup.id }, data: { createdById: targetSuperAdmin.id } });
+        await tx.message.updateMany({ where: { senderId: dup.id }, data: { senderId: targetSuperAdmin.id } });
+        await tx.callSession.updateMany({ where: { hostId: dup.id }, data: { hostId: targetSuperAdmin.id } });
         await tx.conversationParticipant.deleteMany({ where: { userId: dup.id } });
         await tx.callParticipant.deleteMany({ where: { userId: dup.id } });
+        await tx.groupDailySummary.deleteMany({ where: { userId: dup.id } });
         await tx.attendance.deleteMany({ where: { userId: dup.id } });
         await tx.leaveBalance.deleteMany({ where: { userId: dup.id } });
+        await tx.leaveRequest.updateMany({ where: { approvedById: dup.id }, data: { approvedById: targetSuperAdmin.id } });
         await tx.leaveRequest.deleteMany({ where: { userId: dup.id } });
+        await tx.companyHoliday.updateMany({ where: { createdById: dup.id }, data: { createdById: targetSuperAdmin.id } });
+        await tx.employeeProfile.updateMany({ where: { reportingManagerId: dup.id }, data: { reportingManagerId: targetSuperAdmin.id } });
         await tx.projectMember.deleteMany({ where: { userId: dup.id } });
         await tx.employeeProfile.deleteMany({ where: { userId: dup.id } });
         await tx.user.delete({ where: { id: dup.id } });
@@ -468,11 +491,18 @@ async function main() {
         await tx.workItemActivity.deleteMany({ where: { userId: leg.id } });
         await tx.meeting.updateMany({ where: { organizerId: leg.id }, data: { organizerId: targetAdmin.id } });
         await tx.meetingParticipant.deleteMany({ where: { userId: leg.id } });
+        await tx.conversation.updateMany({ where: { createdById: leg.id }, data: { createdById: targetAdmin.id } });
+        await tx.message.updateMany({ where: { senderId: leg.id }, data: { senderId: targetAdmin.id } });
+        await tx.callSession.updateMany({ where: { hostId: leg.id }, data: { hostId: targetAdmin.id } });
         await tx.conversationParticipant.deleteMany({ where: { userId: leg.id } });
         await tx.callParticipant.deleteMany({ where: { userId: leg.id } });
+        await tx.groupDailySummary.deleteMany({ where: { userId: leg.id } });
         await tx.attendance.deleteMany({ where: { userId: leg.id } });
         await tx.leaveBalance.deleteMany({ where: { userId: leg.id } });
+        await tx.leaveRequest.updateMany({ where: { approvedById: leg.id }, data: { approvedById: targetAdmin.id } });
         await tx.leaveRequest.deleteMany({ where: { userId: leg.id } });
+        await tx.companyHoliday.updateMany({ where: { createdById: leg.id }, data: { createdById: targetAdmin.id } });
+        await tx.employeeProfile.updateMany({ where: { reportingManagerId: leg.id }, data: { reportingManagerId: targetAdmin.id } });
         await tx.projectMember.deleteMany({ where: { userId: leg.id } });
         await tx.employeeProfile.deleteMany({ where: { userId: leg.id } });
         await tx.user.delete({ where: { id: leg.id } });

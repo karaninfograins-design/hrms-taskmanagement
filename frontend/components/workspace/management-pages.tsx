@@ -519,7 +519,7 @@ const PERMISSION_DOMAINS: PermissionDomain[] = [
     actions: [
       { type: "create", letter: "C", label: "Create", keys: ["project:create", "CREATE_PROJECTS"], desc: "Create new client and internal projects" },
       { type: "read", letter: "R", label: "View", keys: ["project:view"], desc: "Browse workspace projects" },
-      { type: "update", letter: "U", label: "Edit", keys: ["project:edit"], desc: "Update project metadata and members" },
+      { type: "update", letter: "U", label: "Edit", keys: ["project:edit", "project:manage_members"], desc: "Update project metadata and members" },
       { type: "delete", letter: "D", label: "Delete", keys: ["project:delete"], desc: "Archive or delete projects" },
       { type: "approve", letter: "A", label: "Approve", keys: ["project:approve", "MANAGE_PROJECTS"], desc: "Approve project completions and milestones" },
     ],
@@ -531,8 +531,8 @@ const PERMISSION_DOMAINS: PermissionDomain[] = [
     description: "Agile sprints, backlogs and iteration cycles",
     actions: [
       { type: "create", letter: "C", label: "Create", keys: ["sprint:create", "CREATE_SPRINTS"], desc: "Plan and create agile sprints" },
-      { type: "read", letter: "R", label: "View", keys: ["sprint:view"], desc: "View current and past sprint backlogs" },
-      { type: "update", letter: "U", label: "Edit", keys: ["sprint:edit"], desc: "Modify sprint scopes and dates" },
+      { type: "read", letter: "R", label: "View", keys: ["sprint:view", "backlog:view"], desc: "View current and past sprint backlogs" },
+      { type: "update", letter: "U", label: "Edit", keys: ["sprint:edit", "sprint:start_complete", "backlog:manage"], desc: "Modify sprint scopes, statuses and dates" },
       { type: "delete", letter: "D", label: "Delete", keys: ["sprint:delete"], desc: "Cancel or remove planned sprints" },
       { type: "approve", letter: "A", label: "Approve", keys: ["sprint:approve", "MANAGE_SPRINTS"], desc: "Approve sprint releases and completions" },
     ],
@@ -543,11 +543,11 @@ const PERMISSION_DOMAINS: PermissionDomain[] = [
     icon: CheckSquare,
     description: "Epics, stories, tasks, bugs and task assignments",
     actions: [
-      { type: "create", letter: "C", label: "Create", keys: ["work_item:create", "CREATE_WORK_ITEMS"], desc: "Create tasks, bugs, or user stories" },
-      { type: "read", letter: "R", label: "View", keys: ["work_item:view", "VIEW_WORK_ITEMS"], desc: "Browse tasks and backlog items" },
-      { type: "update", letter: "U", label: "Edit", keys: ["work_item:edit"], desc: "Update task descriptions, estimates, and statuses" },
-      { type: "delete", letter: "D", label: "Delete", keys: ["work_item:delete"], desc: "Permanently delete work items" },
-      { type: "approve", letter: "A", label: "Assign", keys: ["work_item:approve", "ASSIGN_WORK", "MANAGE_WORK_ITEMS"], desc: "Assign work items and approve completions" },
+      { type: "create", letter: "C", label: "Create", keys: ["work_item:create", "CREATE_WORK_ITEMS", "epic:create"], desc: "Create tasks, bugs, epics, or user stories" },
+      { type: "read", letter: "R", label: "View", keys: ["work_item:view", "VIEW_WORK_ITEMS", "epic:view"], desc: "Browse tasks, epics and backlog items" },
+      { type: "update", letter: "U", label: "Edit", keys: ["work_item:edit", "work_item:status_transition", "epic:edit"], desc: "Update task descriptions, estimates, and statuses" },
+      { type: "delete", letter: "D", label: "Delete", keys: ["work_item:delete", "epic:delete"], desc: "Permanently delete work items and epics" },
+      { type: "approve", letter: "A", label: "Assign", keys: ["work_item:approve", "ASSIGN_WORK", "MANAGE_WORK_ITEMS", "MANAGE_EPICS"], desc: "Assign work items and approve completions" },
     ],
   },
   {

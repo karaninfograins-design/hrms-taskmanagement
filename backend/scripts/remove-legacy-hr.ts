@@ -32,35 +32,54 @@ async function removeLegacyHr() {
   for (const legacyUser of legacyUsers) {
     console.log(`Removing legacy HR user "${legacyUser.email}" (ID: ${legacyUser.id})...`);
 
+    if (!fallbackAdmin) {
+      console.error("✗ Fatal: No active fallback admin found to reassign project and chat data. Aborting to avoid data loss.");
+      return;
+    }
+
+    const fallbackId = fallbackAdmin.id;
+    console.log(`Reassigning all project data, work items, and chat messages to ID ${fallbackId} (${fallbackAdmin.email})...`);
+
     await prisma.$transaction(async (tx) => {
-      const fallbackId = fallbackAdmin?.id;
+      // 1. PRESERVE Projects, Sprints, and Work Items (Reassign ownership)
+      await tx.project.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
+      await tx.sprint.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
+      await tx.workItem.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
+      await tx.workItem.updateMany({ where: { reporterId: legacyUser.id }, data: { reporterId: fallbackId } });
+      await tx.workItem.updateMany({ where: { assigneeId: legacyUser.id }, data: { assigneeId: fallbackId } });
+      await tx.comment.updateMany({ where: { userId: legacyUser.id }, data: { userId: fallbackId } });
+      await tx.comment.updateMany({ where: { deletedById: legacyUser.id }, data: { deletedById: fallbackId } });
+      await tx.meeting.updateMany({ where: { organizerId: legacyUser.id }, data: { organizerId: fallbackId } });
 
-      if (fallbackId) {
-        await tx.project.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
-        await tx.sprint.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
-        await tx.workItem.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
-        await tx.workItem.updateMany({ where: { reporterId: legacyUser.id }, data: { reporterId: fallbackId } });
-        await tx.workItem.updateMany({ where: { assigneeId: legacyUser.id }, data: { assigneeId: fallbackId } });
-        await tx.comment.updateMany({ where: { userId: legacyUser.id }, data: { userId: fallbackId } });
-        await tx.comment.updateMany({ where: { deletedById: legacyUser.id }, data: { deletedById: fallbackId } });
-        await tx.meeting.updateMany({ where: { organizerId: legacyUser.id }, data: { organizerId: fallbackId } });
-      }
+      // 2. PRESERVE Messenger Chats, Messages, and Channels (Reassign sender & creator so zero messages are lost)
+      await tx.conversation.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
+      await tx.message.updateMany({ where: { senderId: legacyUser.id }, data: { senderId: fallbackId } });
+      await tx.callSession.updateMany({ where: { hostId: legacyUser.id }, data: { hostId: fallbackId } });
 
+      // 3. PRESERVE Leave approvals, holidays, and management hierarchy
+      await tx.leaveRequest.updateMany({ where: { approvedById: legacyUser.id }, data: { approvedById: fallbackId } });
+      await tx.companyHoliday.updateMany({ where: { createdById: legacyUser.id }, data: { createdById: fallbackId } });
+      await tx.employeeProfile.updateMany({ where: { reportingManagerId: legacyUser.id }, data: { reportingManagerId: fallbackId } });
+
+      // 4. Clean up personal memberships/logs for the deleted account
       await tx.workItemAssignee.deleteMany({ where: { userId: legacyUser.id } });
       await tx.notification.deleteMany({ where: { userId: legacyUser.id } });
       await tx.workItemActivity.deleteMany({ where: { userId: legacyUser.id } });
       await tx.meetingParticipant.deleteMany({ where: { userId: legacyUser.id } });
       await tx.conversationParticipant.deleteMany({ where: { userId: legacyUser.id } });
       await tx.callParticipant.deleteMany({ where: { userId: legacyUser.id } });
+      await tx.groupDailySummary.deleteMany({ where: { userId: legacyUser.id } });
       await tx.attendance.deleteMany({ where: { userId: legacyUser.id } });
       await tx.leaveBalance.deleteMany({ where: { userId: legacyUser.id } });
       await tx.leaveRequest.deleteMany({ where: { userId: legacyUser.id } });
       await tx.projectMember.deleteMany({ where: { userId: legacyUser.id } });
       await tx.employeeProfile.deleteMany({ where: { userId: legacyUser.id } });
+
+      // 5. Finally delete the User account
       await tx.user.delete({ where: { id: legacyUser.id } });
     });
 
-    console.log(`✓ Successfully deleted legacy HR user "${legacyUser.email}" (ID: ${legacyUser.id}).`);
+    console.log(`✓ Successfully deleted legacy HR user "${legacyUser.email}" (ID: ${legacyUser.id}) cleanly while preserving all messages and project data.`);
   }
 }
 

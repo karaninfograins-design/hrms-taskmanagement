@@ -1,4 +1,6 @@
 import type { Request, Response } from "express";
+import fs from "fs";
+import path from "path";
 import { prisma } from "../config/prisma.js";
 import { verifyToken } from "../utils/jwt.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
@@ -73,6 +75,7 @@ export async function getProfile(req: Request, res: Response) {
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber ?? null,
+        avatarUrl: user.avatarUrl ?? null,
         role: user.role.name,
         roleId: user.role.id,
         designation: user.designation?.name ?? null,
@@ -105,10 +108,11 @@ export async function updateProfile(req: Request, res: Response) {
     return;
   }
 
-  const { name, email, phoneNumber, dob, gender, address, workLocation, employmentType, departmentId, designation } = req.body as {
+  const { name, email, phoneNumber, avatarUrl, dob, gender, address, workLocation, employmentType, departmentId, designation } = req.body as {
     name?: string;
     email?: string;
     phoneNumber?: string;
+    avatarUrl?: string | null;
     designation?: string | number;
     dob?: string;
     gender?: string;
@@ -123,11 +127,13 @@ export async function updateProfile(req: Request, res: Response) {
       name?: string;
       email?: string;
       phoneNumber?: string | null;
+      avatarUrl?: string | null;
       designationId?: number | null;
     } = {};
 
     if (typeof name === "string" && name.trim()) updateData.name = name.trim();
     if (typeof phoneNumber === "string") updateData.phoneNumber = phoneNumber.trim() || null;
+    if (avatarUrl !== undefined) updateData.avatarUrl = typeof avatarUrl === "string" ? avatarUrl.trim() || null : null;
     if (typeof email === "string" && email.trim()) {
       const lowerEmail = email.trim().toLowerCase();
       // Check duplicate email
@@ -204,6 +210,7 @@ export async function updateProfile(req: Request, res: Response) {
       name: updatedUser.name,
       email: updatedUser.email,
       phoneNumber: updatedUser.phoneNumber ?? null,
+      avatarUrl: updatedUser.avatarUrl ?? null,
       role: updatedUser.role.name,
       roleId: updatedUser.role.id,
       designation: updatedUser.designation?.name ?? null,
@@ -279,5 +286,160 @@ export async function changePassword(req: Request, res: Response) {
   } catch (err) {
     console.error("Error changing password:", err);
     res.status(500).json({ message: "Failed to change password" });
+  }
+}
+
+export async function uploadAvatar(req: Request, res: Response) {
+  const authUser = await authenticate(req, res);
+  if (!authUser) return;
+
+  const targetIdParam = req.params.id;
+  const targetUserId = targetIdParam === "me" || !targetIdParam ? authUser.id : Number(targetIdParam);
+
+  if (Number.isNaN(targetUserId)) {
+    res.status(400).json({ message: "Invalid user ID" });
+    return;
+  }
+
+  const isAdmin = authUser.role.name === "ADMIN" || authUser.role.name === "SUPER_ADMIN";
+  if (authUser.id !== targetUserId && !isAdmin) {
+    res.status(403).json({ message: "Not authorized to update another user's profile picture" });
+    return;
+  }
+
+  try {
+    const { fileData, fileName } = req.body;
+    if (!fileData) {
+      res.status(400).json({ message: "Image data is required" });
+      return;
+    }
+
+    const matches = fileData.match(/^data:(.+);base64,(.+)$/);
+    const base64Data = matches ? matches[2] : fileData;
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const uploadsDir = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const ext = (fileName || "avatar.jpg").split(".").pop()?.toLowerCase() || "jpg";
+    const uniqueFileName = `avatar_${targetUserId}_${Date.now()}.${ext}`;
+    const filePath = path.join(uploadsDir, uniqueFileName);
+
+    fs.writeFileSync(filePath, buffer);
+
+    const publicApiUrl = process.env.PUBLIC_API_URL?.trim().replace(/\/+$/, "");
+    const requestHost = req.get("host");
+    const forwardedProto = (req.headers["x-forwarded-proto"] as string) || req.protocol;
+    const baseUrl = publicApiUrl || (requestHost ? `${forwardedProto}://${requestHost}` : null);
+    if (!baseUrl) {
+      res.status(500).json({ message: "Public API URL is not configured" });
+      return;
+    }
+    const avatarUrl = `${baseUrl}/uploads/${uniqueFileName}`;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: targetUserId },
+      data: { avatarUrl },
+      include: {
+        role: true,
+        designation: true,
+        employeeProfile: { include: { department: true } },
+      },
+    });
+
+    emitUserUpdated({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      avatarUrl: updatedUser.avatarUrl,
+      role: updatedUser.role.name,
+      roleId: updatedUser.role.id,
+      designation: updatedUser.designation?.name ?? null,
+      employeeProfile: updatedUser.employeeProfile,
+    });
+
+    res.json({
+      message: "Profile picture uploaded successfully",
+      avatarUrl,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        avatarUrl: updatedUser.avatarUrl,
+        role: updatedUser.role.name,
+        roleId: updatedUser.role.id,
+        designation: updatedUser.designation?.name ?? null,
+        employeeProfile: updatedUser.employeeProfile,
+      },
+    });
+  } catch (err: any) {
+    console.error("Avatar upload error:", err);
+    res.status(500).json({ message: "Failed to upload avatar", error: err.message });
+  }
+}
+
+export async function deleteAvatar(req: Request, res: Response) {
+  const authUser = await authenticate(req, res);
+  if (!authUser) return;
+
+  const targetIdParam = req.params.id;
+  const targetUserId = targetIdParam === "me" || !targetIdParam ? authUser.id : Number(targetIdParam);
+
+  if (Number.isNaN(targetUserId)) {
+    res.status(400).json({ message: "Invalid user ID" });
+    return;
+  }
+
+  const isAdmin = authUser.role.name === "ADMIN" || authUser.role.name === "SUPER_ADMIN";
+  if (authUser.id !== targetUserId && !isAdmin) {
+    res.status(403).json({ message: "Not authorized to remove another user's profile picture" });
+    return;
+  }
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: targetUserId },
+      data: { avatarUrl: null },
+      include: {
+        role: true,
+        designation: true,
+        employeeProfile: { include: { department: true } },
+      },
+    });
+
+    emitUserUpdated({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      avatarUrl: null,
+      role: updatedUser.role.name,
+      roleId: updatedUser.role.id,
+      designation: updatedUser.designation?.name ?? null,
+      employeeProfile: updatedUser.employeeProfile,
+    });
+
+    res.json({
+      message: "Profile picture removed successfully",
+      avatarUrl: null,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        avatarUrl: null,
+        role: updatedUser.role.name,
+        roleId: updatedUser.role.id,
+        designation: updatedUser.designation?.name ?? null,
+        employeeProfile: updatedUser.employeeProfile,
+      },
+    });
+  } catch (err: any) {
+    console.error("Avatar delete error:", err);
+    res.status(500).json({ message: "Failed to remove avatar", error: err.message });
   }
 }

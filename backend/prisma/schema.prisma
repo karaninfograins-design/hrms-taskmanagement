@@ -157,6 +157,7 @@ model User {
   email        String     @unique @db.VarChar(191)
   passwordHash String     @db.VarChar(255)
   phoneNumber  String?    @db.VarChar(30)
+  avatarUrl    String?    @db.VarChar(500)
   status       UserStatus @default(ACTIVE)
 
   roleId        Int

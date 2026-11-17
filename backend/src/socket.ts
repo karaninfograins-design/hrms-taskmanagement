@@ -172,6 +172,10 @@ export function setupSocketServer(httpServer: HttpServer) {
           designation: reader?.designation?.name || null,
           readAt: readAt.toISOString(),
         });
+
+        io.to(`user_${userId}`).emit("conversation:marked-read", {
+          conversationId: data.conversationId,
+        });
       } catch (err) {
         console.error("Socket conversation:read error:", err);
       }
@@ -769,6 +773,7 @@ export function emitUserUpdated(user: {
   name?: string;
   email?: string;
   phoneNumber?: string | null;
+  avatarUrl?: string | null;
   role?: string;
   roleId?: number;
   designation?: string | null;

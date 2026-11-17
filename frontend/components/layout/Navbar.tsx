@@ -946,9 +946,17 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             style={{ background: "none", border: "none", cursor: "pointer" }}
             aria-label="User profile menu"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xs flex items-center justify-center shadow-inner shrink-0 ring-2 ring-orange-500/20">
-              {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
-            </div>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.name || "User"}
+                className="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-orange-500/20"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xs flex items-center justify-center shadow-inner shrink-0 ring-2 ring-orange-500/20">
+                {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
+              </div>
+            )}
             <span className="text-xs sm:text-sm font-semibold text-gray-700 hidden md:inline-block max-w-[120px] truncate">
               {user?.name ?? ""}
             </span>
