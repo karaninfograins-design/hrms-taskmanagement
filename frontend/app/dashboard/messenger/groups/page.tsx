@@ -173,6 +173,7 @@ export default function GroupChatsPage() {
   const router = useRouter();
   const { session, isLoading, logout } = useAuth();
   const { socket } = useSocket();
+  const isSuperAdminUser = (typeof session?.user?.role === "string" ? session.user.role : (session?.user?.role as any)?.name)?.toUpperCase().includes("ADMIN");
 
   const [groups, setGroups] = useState<GroupConversation[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -1597,18 +1598,20 @@ export default function GroupChatsPage() {
                             {group.unreadCount}
                           </span>
                         ) : null}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteGroup(group.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
-                          title="Delete group"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        {((group.createdById !== undefined && Number(group.createdById) === Number(currentUserId)) || isSuperAdminUser) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteGroup(group.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-100 text-rose-600 rounded-lg transition-all cursor-pointer"
+                            title="Delete group"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1711,14 +1714,16 @@ export default function GroupChatsPage() {
                     <span className={`hidden md:inline-flex px-3 py-1 text-xs font-bold rounded-full ${chatTheme === "dark" ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-700"}`}>
                       {activeGroup.participants.length} Participants
                     </span>
-                    <button
-                      onClick={() => handleDeleteGroup(activeGroup.id)}
-                      className="px-2.5 sm:px-3 py-1 bg-white-50 hover:bg-orange-600 text-rose-600 hover:text-white border border-rose-200 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
-                      title="Delete this group channel"
-                    >
-                      <span className="hidden sm:inline">Delete Group</span>
-                      <span className="sm:hidden">Delete</span>
-                    </button>
+                    {((activeGroup.createdById !== undefined && Number(activeGroup.createdById) === Number(currentUserId)) || isSuperAdminUser) && (
+                      <button
+                        onClick={() => handleDeleteGroup(activeGroup.id)}
+                        className="px-2.5 sm:px-3 py-1 bg-white-50 hover:bg-orange-600 text-rose-600 hover:text-white border border-rose-200 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
+                        title="Delete this group channel"
+                      >
+                        <span className="hidden sm:inline">Delete Group</span>
+                        <span className="sm:hidden">Delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

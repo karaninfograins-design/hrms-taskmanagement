@@ -670,6 +670,29 @@ export function RolesPermissionManager() {
   const canViewRoles = isSuperAdmin || isAdmin || userPermissions.includes("VIEW_PERMISSIONS") || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
   const canManageRoles = isSuperAdmin || isAdmin || userPermissions.includes("MANAGE_PERMISSIONS") || userPermissions.includes("MANAGE_ROLES") || userPermissions.includes("admin:role_manage");
 
+  // Filter items if searching (placed unconditionally to satisfy React Rules of Hooks)
+  const filteredDomains = useMemo(() => {
+    if (!searchQuery.trim()) return PERMISSION_DOMAINS;
+    const query = searchQuery.toLowerCase();
+    return PERMISSION_DOMAINS.map((domain) => {
+      const matchesDomain =
+        domain.title.toLowerCase().includes(query) ||
+        domain.description.toLowerCase().includes(query);
+      const matchingActions = domain.actions.filter(
+        (action) =>
+          action.label.toLowerCase().includes(query) ||
+          action.letter.toLowerCase().includes(query) ||
+          action.desc.toLowerCase().includes(query) ||
+          action.keys.some((k) => k.toLowerCase().includes(query))
+      );
+      if (matchesDomain) return domain;
+      if (matchingActions.length > 0) {
+        return { ...domain, actions: matchingActions };
+      }
+      return null;
+    }).filter((d): d is PermissionDomain => d !== null);
+  }, [searchQuery]);
+
   const load = () => {
     if (!session?.token) return;
     getRoles(session.token)
@@ -832,6 +855,10 @@ export function RolesPermissionManager() {
     }
   };
 
+  // Group roles into System Core and Dynamic Sub-Roles
+  const systemRoles = roles.filter((r) => r.name === "SUPER_ADMIN" || r.name === "ADMIN");
+  const subRoles = roles.filter((r) => r.name !== "SUPER_ADMIN" && r.name !== "ADMIN");
+
   if (accessDenied || (!canViewRoles && !isSuperAdmin)) {
     return (
       <DashboardShell>
@@ -849,33 +876,6 @@ export function RolesPermissionManager() {
       </DashboardShell>
     );
   }
-
-  // Filter items if searching
-  const filteredDomains = useMemo(() => {
-    if (!searchQuery.trim()) return PERMISSION_DOMAINS;
-    const query = searchQuery.toLowerCase();
-    return PERMISSION_DOMAINS.map((domain) => {
-      const matchesDomain =
-        domain.title.toLowerCase().includes(query) ||
-        domain.description.toLowerCase().includes(query);
-      const matchingActions = domain.actions.filter(
-        (action) =>
-          action.label.toLowerCase().includes(query) ||
-          action.letter.toLowerCase().includes(query) ||
-          action.desc.toLowerCase().includes(query) ||
-          action.keys.some((k) => k.toLowerCase().includes(query))
-      );
-      if (matchesDomain) return domain;
-      if (matchingActions.length > 0) {
-        return { ...domain, actions: matchingActions };
-      }
-      return null;
-    }).filter((d): d is PermissionDomain => d !== null);
-  }, [searchQuery]);
-
-  // Group roles into System Core and Dynamic Sub-Roles
-  const systemRoles = roles.filter((r) => r.name === "SUPER_ADMIN" || r.name === "ADMIN");
-  const subRoles = roles.filter((r) => r.name !== "SUPER_ADMIN" && r.name !== "ADMIN");
 
   return (
     <DashboardShell>

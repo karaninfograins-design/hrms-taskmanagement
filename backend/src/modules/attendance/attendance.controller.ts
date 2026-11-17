@@ -2,19 +2,46 @@ import type { Request, Response } from "express";
 import { prisma } from "../../config/prisma.js";
 import { verifyToken } from "../../utils/jwt.js";
 
-// Helper to get normalized UTC Date for MySQL @db.Date field (YYYY-MM-DD)
-function getTodayDbDate(d: Date = new Date()): Date {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+// Helper to get date components normalized to Indian Standard Time (IST: UTC+5:30)
+function getIstComponents(d: Date = new Date()) {
+  const istFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = istFormatter.formatToParts(d);
+  const partMap: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      partMap[part.type] = part.value;
+    }
+  }
+  const year = parseInt(partMap.year || String(d.getFullYear()), 10);
+  const month = parseInt(partMap.month || String(d.getMonth() + 1), 10);
+  const day = parseInt(partMap.day || String(d.getDate()), 10);
+  const hours = parseInt(partMap.hour || String(d.getHours()), 10);
+  const minutes = parseInt(partMap.minute || String(d.getMinutes()), 10);
+  return { year, month, day, hours, minutes };
 }
 
-// Helper to get local start and end of day for range queries
+// Helper to get normalized UTC Date for MySQL @db.Date field (YYYY-MM-DD) using IST
+function getTodayDbDate(d: Date = new Date()): Date {
+  const { year, month, day } = getIstComponents(d);
+  const m = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return new Date(`${year}-${m}-${dd}T00:00:00.000Z`);
+}
+
+// Helper to get local start and end of day for range queries using IST
 function getDayRange(d: Date = new Date()) {
-  const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-  const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
   const dbDate = getTodayDbDate(d);
+  const { year, month, day } = getIstComponents(d);
+  const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - (5.5 * 60 * 60 * 1000));
+  const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - (5.5 * 60 * 60 * 1000));
   return { startOfDay, endOfDay, dbDate };
 }
 
@@ -73,7 +100,9 @@ export const checkIn = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const status = now.getHours() >= 10 ? "LATE" : "PRESENT";
+    // 10:00 AM in Indian Standard Time (IST) threshold for LATE
+    const { hours } = getIstComponents(now);
+    const status = hours >= 10 ? "LATE" : "PRESENT";
 
     if (attendance) {
       attendance = await prisma.attendance.update({
@@ -187,27 +216,67 @@ export const getAttendanceLogs = async (req: Request, res: Response): Promise<vo
     const { userId } = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { role: true },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true },
+            },
+          },
+        },
+      },
     });
 
-    const isHR = user?.role?.name === "SUPER_ADMIN" || user?.role?.name === "ADMIN";
-    const { page = 1, limit = 20, targetUserId, startDate, endDate, status } = req.query;
+    const roleUpper = (user?.role?.name || "").toUpperCase();
+    // Privacy restriction: Only SUPER_ADMIN, ADMIN, and sub-role HR can view all logs
+    const canViewAllLogs =
+      roleUpper === "SUPER_ADMIN" ||
+      roleUpper === "ADMIN" ||
+      roleUpper === "HR" ||
+      roleUpper.includes("HR") ||
+      user?.roleId === 1 ||
+      user?.roleId === 2 ||
+      user?.roleId === 3;
 
-    const pageNum = Number(page);
-    const limitNum = Number(limit);
+    const { page = 1, limit = 50, targetUserId, startDate, endDate, status, month } = req.query;
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = limit === "ALL" ? 1000 : Math.min(Number(limit) || 50, 1000);
     const where: Record<string, unknown> = {};
 
-    if (!isHR) {
+    // Normal employees can strictly see only their own attendance logs
+    if (!canViewAllLogs) {
       where.userId = userId;
-    } else if (targetUserId) {
-      where.userId = Number(targetUserId);
+    } else if (targetUserId && targetUserId !== "ALL") {
+      const parsedId = Number(targetUserId);
+      if (!isNaN(parsedId) && parsedId > 0) {
+        where.userId = parsedId;
+      }
     }
 
     if (status && status !== "ALL") {
       where.status = String(status);
     }
 
-    if (startDate || endDate) {
+    // Month filter (format: YYYY-MM, e.g. 2026-11)
+    if (month && typeof month === "string" && month.includes("-")) {
+      const parts = month.split("-");
+      const yearStr = parts[0];
+      const monthStr = parts[1];
+      if (yearStr && monthStr) {
+        const y = parseInt(yearStr, 10);
+        const m = parseInt(monthStr, 10);
+        if (!isNaN(y) && !isNaN(m) && m >= 1 && m <= 12) {
+          const startOfMonth = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
+          const lastDay = new Date(y, m, 0).getDate();
+          const endOfMonth = new Date(Date.UTC(y, m - 1, lastDay, 23, 59, 59, 999));
+          where.date = {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          };
+        }
+      }
+    } else if (startDate || endDate) {
       where.date = {
         ...(startDate ? { gte: new Date(String(startDate)) } : {}),
         ...(endDate ? { lte: new Date(String(endDate)) } : {}),
@@ -219,7 +288,13 @@ export const getAttendanceLogs = async (req: Request, res: Response): Promise<vo
         where,
         include: {
           user: {
-            select: { id: true, name: true, email: true },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+              designation: { select: { name: true } },
+            },
           },
         },
         skip: (pageNum - 1) * limitNum,

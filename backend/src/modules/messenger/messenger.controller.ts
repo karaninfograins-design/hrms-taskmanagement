@@ -848,12 +848,20 @@ export const deleteConversation = async (req: Request, res: Response): Promise<v
       select: { role: { select: { name: true } } },
     });
     const isSuperAdmin = currentUser?.role?.name?.toUpperCase().includes("ADMIN");
-    const isCreator = conversation.createdById === userId;
-    const isParticipant = conversation.participants.some((p) => p.userId === userId);
+    const isCreator = Number(conversation.createdById) === Number(userId);
+    const isParticipant = conversation.participants.some((p) => Number(p.userId) === Number(userId));
 
-    if (!isSuperAdmin && !isCreator && !isParticipant) {
-      res.status(403).json({ message: "Not authorized to delete this conversation" });
-      return;
+    // Group deletion security: Only the group creator (or Super Admin) can delete a group channel
+    if (conversation.type === "GROUP") {
+      if (!isCreator && !isSuperAdmin) {
+        res.status(403).json({ message: "Only the group creator can delete this group channel" });
+        return;
+      }
+    } else {
+      if (!isParticipant && !isSuperAdmin) {
+        res.status(403).json({ message: "Not authorized to delete this conversation" });
+        return;
+      }
     }
 
     // 1. Delete associated messages
