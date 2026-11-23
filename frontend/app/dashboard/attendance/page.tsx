@@ -524,12 +524,12 @@ export default function AttendancePage() {
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span
                             className={`px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full tracking-wider border ${row.status === "PRESENT"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : row.status === "LATE"
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : row.status === "HALF_DAY"
-                                    ? "bg-blue-50 text-blue-700 border-blue-200"
-                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : row.status === "LATE"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : row.status === "HALF_DAY"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : "bg-rose-50 text-rose-700 border-rose-200"
                               }`}
                           >
                             {row.status}
@@ -571,8 +571,8 @@ export default function AttendancePage() {
             <div className="flex items-start gap-4">
               <div
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${confirmAction === "CLOCK_IN"
-                    ? "bg-orange-50 text-orange-600 border border-orange-100"
-                    : "bg-rose-50 text-rose-600 border border-rose-100"
+                  ? "bg-orange-50 text-orange-600 border border-orange-100"
+                  : "bg-rose-50 text-rose-600 border border-rose-100"
                   }`}
               >
                 {confirmAction === "CLOCK_IN" ? (
@@ -615,8 +615,8 @@ export default function AttendancePage() {
                 }}
                 disabled={actionLoading}
                 className={`px-5 py-2.5 text-xs font-extrabold text-white rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50 ${confirmAction === "CLOCK_IN"
-                    ? "bg-orange-500 hover:bg-orange-600 active:bg-orange-700"
-                    : "bg-rose-600 hover:bg-rose-700 active:bg-rose-800"
+                  ? "bg-orange-500 hover:bg-orange-600 active:bg-orange-700"
+                  : "bg-rose-600 hover:bg-rose-700 active:bg-rose-800"
                   }`}
               >
                 {actionLoading

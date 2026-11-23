@@ -2821,8 +2821,8 @@ function ChatsContent() {
                                   setActiveMenuMsgId(null);
                                 }}
                                 className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all hover:scale-110 cursor-pointer ${reactionPickerMsgId === m.id
-                                    ? "bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400"
-                                    : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                  ? "bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400"
+                                  : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
                                   }`}
                                 title="Add reaction"
                               >
@@ -2852,8 +2852,8 @@ function ChatsContent() {
                                   setReactionPickerMsgId(null);
                                 }}
                                 className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${activeMenuMsgId === m.id
-                                    ? "bg-orange-500 text-white shadow-xs"
-                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                  ? "bg-orange-500 text-white shadow-xs"
+                                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
                                   }`}
                                 title="More options"
                               >
@@ -2872,9 +2872,9 @@ function ChatsContent() {
                             >
                               {/* Suggested Smileys / Reaction Bar */}
                               <div className="px-2 pt-1.5 pb-1">
-                                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                                {/* <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
                                   Reactions
-                                </span>
+                                </span> */}
                                 <div className="flex items-center justify-between gap-1">
                                   {["👍", "❤️", "😂", "🎉", "🙏", "🔥"].map((emoji) => {
                                     const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));

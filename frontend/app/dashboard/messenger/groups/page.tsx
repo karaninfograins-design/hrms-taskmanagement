@@ -1951,9 +1951,8 @@ export default function GroupChatsPage() {
                           {/* Bitrix-Style Hover Action Bar (Compact & Perfectly Anchored) */}
                           {!m.deletedAt && (
                             <div
-                              className={`absolute -top-3 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all ${
-                                isMe ? "right-2" : "left-2"
-                              } ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                              className={`absolute -top-3 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all ${isMe ? "right-2" : "left-2"
+                                } ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                             >
                               {/* Quick Reaction Button */}
                               <button
@@ -1975,11 +1974,10 @@ export default function GroupChatsPage() {
                                   e.stopPropagation();
                                   setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
                                 }}
-                                className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${
-                                  activeMenuMsgId === m.id
-                                    ? "bg-orange-500 text-white shadow-xs"
-                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
-                                }`}
+                                className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${activeMenuMsgId === m.id
+                                  ? "bg-orange-500 text-white shadow-xs"
+                                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                  }`}
                                 title="More options"
                               >
                                 <MoreHorizontal size={15} strokeWidth={2.2} />
@@ -1991,16 +1989,15 @@ export default function GroupChatsPage() {
                           {activeMenuMsgId === m.id && (
                             <div
                               ref={messageMenuRef}
-                              className={`absolute z-50 top-full mt-1.5 min-w-[210px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-1.5 animate-in fade-in zoom-in-95 duration-150 ${
-                                isMe ? "right-0" : "left-0"
-                              }`}
+                              className={`absolute z-50 top-full mt-1.5 min-w-[210px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-1.5 animate-in fade-in zoom-in-95 duration-150 ${isMe ? "right-0" : "left-0"
+                                }`}
                               onClick={(e) => e.stopPropagation()}
                             >
                               {/* Suggested Smileys / Reaction Bar */}
                               <div className="px-2 pt-1.5 pb-1">
-                                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                                {/* <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
                                   Reactions
-                                </span>
+                                </span> */}
                                 <div className="flex items-center justify-between gap-1">
                                   {["👍", "❤️", "😂", "🎉", "🙏", "🔥"].map((emoji) => {
                                     const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
@@ -2012,9 +2009,8 @@ export default function GroupChatsPage() {
                                           handleReact(m.id, emoji);
                                           setActiveMenuMsgId(null);
                                         }}
-                                        className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
-                                          userReacted ? "bg-orange-100 dark:bg-orange-950/60 scale-110" : "hover:bg-slate-100 dark:hover:bg-slate-800"
-                                        }`}
+                                        className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 dark:bg-orange-950/60 scale-110" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                                          }`}
                                         title={`React with ${emoji}`}
                                       >
                                         {emoji}

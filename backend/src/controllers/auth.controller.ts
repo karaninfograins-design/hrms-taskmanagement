@@ -79,12 +79,14 @@ export const login = async (
         email: user.email,
         phoneNumber: user.phoneNumber ?? null,
         avatarUrl: user.avatarUrl ?? null,
-        role: user.role.name,
+        role: user.role?.name ?? "EMPLOYEE",
         roleId: user.roleId,
-        roleName: user.role.name,
+        roleName: user.role?.name ?? "EMPLOYEE",
         designation: user.designation?.name ?? null,
         employeeProfile: user.employeeProfile ?? null,
-        permissions: user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name),
+        permissions: (user.role?.permissions ?? [])
+          .map((rp: any) => rp?.permission?.name)
+          .filter(Boolean),
       },
     });
   } catch (error) {
@@ -140,12 +142,14 @@ export const getMe = async (
         email: user.email,
         phoneNumber: user.phoneNumber ?? null,
         avatarUrl: user.avatarUrl ?? null,
-        role: user.role.name,
+        role: user.role?.name ?? "EMPLOYEE",
         roleId: user.roleId,
-        roleName: user.role.name,
+        roleName: user.role?.name ?? "EMPLOYEE",
         designation: user.designation?.name ?? null,
         employeeProfile: user.employeeProfile ?? null,
-        permissions: user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name),
+        permissions: (user.role?.permissions ?? [])
+          .map((rp: any) => rp?.permission?.name)
+          .filter(Boolean),
       },
     });
   } catch {

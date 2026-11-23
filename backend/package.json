@@ -10,6 +10,8 @@
     "start": "tsx src/server.ts",
     "tunnel": "node ../start-tunnel.cjs",
     "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "deploy:prod": "prisma migrate deploy && tsx scripts/remove-legacy-superadmin.ts",
     "seed": "tsx prisma/seed.ts",
     "cleanup:legacy-users": "tsx scripts/remove-legacy-superadmin.ts",
     "cleanup:legacy-hr": "tsx scripts/remove-legacy-hr.ts"
