@@ -43,6 +43,10 @@ import {
   Plus,
   CornerUpLeft,
   ImageIcon,
+  UserMinus,
+  PhoneCall,
+  Info,
+  LogOut,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
@@ -935,7 +939,7 @@ export default function GroupChatsPage() {
       return;
     }
 
-    const channelName = `call-${Date.now()}`;
+    const channelName = `group-call-${Date.now()}`;
     socket.emit(
       "call:initiate",
       {
@@ -961,6 +965,7 @@ export default function GroupChatsPage() {
           callSessionId: String(result.callSessionId),
           groupName: activeGroup.name,
           type,
+          isHost: "true",
         });
         router.push(`/dashboard/messenger/calls?${params.toString()}`);
       }
@@ -1039,6 +1044,38 @@ export default function GroupChatsPage() {
     setGroupMemberSearch("");
     setGroupSubmitError(null);
     setShowCreateModal(true);
+  };
+
+  const handleLeaveGroup = async (group: GroupConversation) => {
+    const confirmed = await showConfirmDialog({
+      title: "Leave Group?",
+      text: `Are you sure you want to leave "${group.name}"? You will no longer receive messages or updates from this group channel.`,
+      confirmButtonText: "Yes, leave",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed) return;
+
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`${getApiUrl()}/api/messenger/conversations/group/${group.id}/leave`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        showSuccessToast(`You have left "${group.name}"`);
+        setActiveGroup(null);
+        setGroups((prev) => prev.filter((g) => g.id !== group.id));
+        setShowCreateModal(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showErrorToast(data.message || "Failed to leave group");
+      }
+    } catch (err: any) {
+      showErrorToast(err.message || "Network error while leaving group");
+    }
   };
 
   // Bitrix-Style Daily Work Summary Handlers
@@ -1696,6 +1733,15 @@ export default function GroupChatsPage() {
                       <Settings2 size={16} />
                     </button>
                     <button
+                      type="button"
+                      onClick={() => handleLeaveGroup(activeGroup)}
+                      className={`flex h-9 w-9 items-center justify-center rounded-xl border transition cursor-pointer ${chatTheme === "dark" ? "border-slate-700 bg-slate-800 text-rose-400 hover:bg-rose-950/40 hover:text-rose-300" : "border-slate-200 bg-slate-50 text-rose-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"}`}
+                      title="Leave this group"
+                      aria-label="Leave group"
+                    >
+                      <LogOut size={15} />
+                    </button>
+                    <button
                       onClick={() => handleInitiateGroupCall("AUDIO")}
                       className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${chatTheme === "dark" ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white" : "border-slate-200 bg-slate-50 text-slate-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"}`}
                       title="Start audio group call"
@@ -1801,24 +1847,6 @@ export default function GroupChatsPage() {
 
                 {/* Messages */}
                 <div className={`flex-1 space-y-4 overflow-y-auto no-scrollbar p-4 sm:p-6 transition-colors ${chatTheme === "dark" ? "bg-slate-950" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-slate-50/70 to-slate-100/70"}`}>
-                  {/* Group Creation Info Pill */}
-                  {activeGroup && (
-                    <div className="my-2 flex items-center justify-center">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-medium shadow-2xs transition-colors ${chatTheme === "dark" ? "bg-slate-900/90 text-slate-300 border border-slate-800" : "bg-white/95 text-slate-600 border border-slate-200/90"}`}>
-                        <Users size={11} className="text-orange-500 shrink-0" />
-                        <span>
-                          Group created by <strong className={chatTheme === "dark" ? "text-slate-100 font-semibold" : "text-slate-900 font-semibold"}>{activeGroup.createdBy?.name || activeGroup.participants.find((p) => p.userId === activeGroup.createdById)?.user.name || "Admin"}</strong>
-                          {activeGroup.createdAt && (
-                            <>
-                              {" on "}
-                              <span>{new Date(activeGroup.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
                   {messages.length === 0 && (
                     <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
                       <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-white text-orange-500 shadow-sm">
@@ -1828,310 +1856,357 @@ export default function GroupChatsPage() {
                       <p className="mt-1 text-xs text-slate-500">Send the first message to the team.</p>
                     </div>
                   )}
-                  {messages.map((m) => {
+                  {messages.map((m, idx) => {
                     const isMe = m.senderId === currentUserId;
                     const isCurrentSearchMatch = m.id === inChatMatchingMsgIds[inChatSearchMatchIndex];
                     const isAnySearchMatch = inChatMatchingMsgIds.includes(m.id);
 
+                    const msgDate = new Date(m.createdAt);
+                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                    const prevMsgDate = prevMsg ? new Date(prevMsg.createdAt) : null;
+                    const isNewDay = !prevMsgDate || msgDate.toDateString() !== prevMsgDate.toDateString();
+
+                    const formatDateSeparator = (d: Date) => {
+                      const now = new Date();
+                      const isToday = d.toDateString() === now.toDateString();
+                      const yesterday = new Date(now);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      const isYesterday = d.toDateString() === yesterday.toDateString();
+                      if (isToday) return "Today";
+                      if (isYesterday) return "Yesterday";
+                      return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+                    };
+
+                    const isSystemMsg = m.attachmentType === "SYSTEM" || m.attachmentType === "CALL";
+
                     return (
-                      <div
-                        key={m.id}
-                        id={`group-msg-${m.id}`}
-                        className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
-                      >
-                        {!isMe && (
-                          <span className="text-[10px] font-bold text-slate-500 mb-1 ml-1">
-                            {m.sender.name}
-                          </span>
+                      <div key={m.id} className="flex flex-col w-full">
+                        {isNewDay && (
+                          <div className="flex items-center justify-center my-3 select-none">
+                            <span className="px-3 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-slate-200/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 shadow-2xs backdrop-blur-xs border border-slate-300/40 dark:border-slate-700/50">
+                              {formatDateSeparator(msgDate)}
+                            </span>
+                          </div>
                         )}
-                        <div
-                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group break-words [overflow-wrap:anywhere] overflow-hidden ${isCurrentSearchMatch
-                            ? "ring-3 ring-amber-400 ring-offset-2 dark:ring-offset-slate-950 shadow-md"
-                            : isAnySearchMatch
-                              ? "ring-2 ring-amber-300/80"
-                              : ""
-                            } ${isMe
-                              ? chatTheme === "dark"
-                                ? "bg-[#18362b] text-emerald-100 shadow-md font-medium rounded-br-xs border border-emerald-700/60"
-                                : "bg-[#eaf4ed] text-slate-900 border border-[#cbe4d7] shadow-2xs font-medium rounded-br-xs"
-                              : chatTheme === "dark"
-                                ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
-                                : "bg-white text-slate-900 border border-slate-200/90 rounded-bl-xs shadow-2xs font-medium"
-                            }`}
-                        >
-                          {/* Attachment Display with Direct Download Action */}
-                          {m.attachmentUrl && !m.deletedAt && (() => {
-                            const cleanDocName = getCleanFileName(m.attachmentUrl, "Document");
-                            const badgeInfo = getFileBadgeInfo(cleanDocName, m.attachmentType);
-                            const isThisDownloading = downloadingFileUrl === m.attachmentUrl;
 
-                            return (
-                              <div className="my-1.5 relative group/att">
-                                {m.attachmentType === "IMAGE" ? (
-                                  <div className="relative rounded-xl overflow-hidden border border-slate-200/80 shadow-2xs mb-2">
-                                    <img
-                                      src={m.attachmentUrl}
-                                      alt="Attachment"
-                                      className="max-w-xs max-h-60 rounded-xl object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-2xs">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleTriggerDownload(m.attachmentUrl!, getCleanFileName(m.attachmentUrl, "image.jpg"))}
-                                        disabled={isThisDownloading}
-                                        className="p-2 text-white/90 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all cursor-pointer active:scale-95 disabled:opacity-75"
-                                        title="Download Image"
-                                      >
-                                        {isThisDownloading ? <Loader2 size={18} className="animate-spin text-white" /> : <Download size={18} strokeWidth={1.8} />}
-                                      </button>
-                                    </div>
-                                  </div>
+                        {isSystemMsg ? (
+                          <div id={`group-msg-${m.id}`} className="flex flex-col items-center my-2 px-2 select-none">
+                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs text-[11px] text-slate-600 dark:text-slate-300">
+                              <span className="shrink-0 text-orange-500">
+                                {m.attachmentType === "CALL" ? (
+                                  <PhoneCall size={12} strokeWidth={2.2} />
+                                ) : m.content.includes("added") ? (
+                                  <UserPlus size={12} strokeWidth={2.2} />
+                                ) : m.content.includes("left") || m.content.includes("removed") ? (
+                                  <UserMinus size={12} strokeWidth={2.2} />
+                                ) : m.content.includes("name") ? (
+                                  <Edit3 size={12} strokeWidth={2.2} />
                                 ) : (
-                                  <div className="flex items-center justify-between gap-3 py-1 px-0.5 bg-transparent border-0 shadow-none mb-1">
-                                    {/* Icon & File Details */}
-                                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                                      {m.attachmentType === "LINK" ? (
-                                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0">
-                                          <Link2 size={18} strokeWidth={2} />
-                                        </span>
-                                      ) : (
-                                        <DocumentFileIcon ext={cleanDocName.split(".").pop()} />
-                                      )}
-                                      <div className="flex flex-col min-w-0">
-                                        <span
-                                          className={`text-xs sm:text-sm font-medium truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px] md:max-w-[320px] leading-snug ${chatTheme === "dark" ? "text-slate-100" : "text-slate-800"}`}
-                                          title={cleanDocName}
-                                        >
-                                          {cleanDocName}
-                                        </span>
-                                        <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal leading-tight mt-0.5">
-                                          {badgeInfo.label}
-                                        </span>
-                                      </div>
-                                    </div>
+                                  <Info size={12} strokeWidth={2.2} />
+                                )}
+                              </span>
+                              <span className="font-medium">{m.content}</span>
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500 ml-1">
+                                {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            id={`group-msg-${m.id}`}
+                            className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                          >
+                            {!isMe && (
+                              <span className="text-[10px] font-bold text-slate-500 mb-1 ml-1">
+                                {m.sender.name}
+                              </span>
+                            )}
+                            <div
+                              className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl pt-4 pb-3 px-3.5 sm:px-4 sm:pt-4.5 rounded-2xl text-xs shadow-2xs relative group break-words [overflow-wrap:anywhere] ${isCurrentSearchMatch
+                                ? "ring-3 ring-amber-400 ring-offset-2 dark:ring-offset-slate-950 shadow-md"
+                                : isAnySearchMatch
+                                  ? "ring-2 ring-amber-300/80"
+                                  : ""
+                                } ${isMe
+                                  ? chatTheme === "dark"
+                                    ? "bg-[#18362b] text-emerald-100 shadow-md font-medium rounded-br-xs border border-emerald-700/60"
+                                    : "bg-[#eaf4ed] text-slate-900 border border-[#cbe4d7] shadow-2xs font-medium rounded-br-xs"
+                                  : chatTheme === "dark"
+                                    ? "bg-slate-900 text-slate-100 border border-slate-800 shadow-sm font-medium rounded-bl-xs"
+                                    : "bg-white text-slate-900 border border-slate-200/90 rounded-bl-xs shadow-2xs font-medium"
+                                }`}
+                            >
+                              {/* Attachment Display with Direct Download Action */}
+                              {m.attachmentUrl && !m.deletedAt && (() => {
+                                const cleanDocName = getCleanFileName(m.attachmentUrl, "Document");
+                                const badgeInfo = getFileBadgeInfo(cleanDocName, m.attachmentType);
+                                const isThisDownloading = downloadingFileUrl === m.attachmentUrl;
 
-                                    {/* Action Button - Lucide icon without background or border */}
-                                    {m.attachmentType === "LINK" ? (
-                                      <a
-                                        href={m.attachmentUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 transition-colors cursor-pointer shrink-0"
-                                        title="Open link"
-                                      >
-                                        <ExternalLink size={18} strokeWidth={1.75} />
-                                      </a>
+                                return (
+                                  <div className="my-1.5 relative group/att">
+                                    {m.attachmentType === "IMAGE" ? (
+                                      <div className="relative rounded-xl overflow-hidden border border-slate-200/80 shadow-2xs mb-2">
+                                        <img
+                                          src={m.attachmentUrl}
+                                          alt="Attachment"
+                                          className="max-w-xs max-h-60 rounded-xl object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/att:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 backdrop-blur-2xs">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTriggerDownload(m.attachmentUrl!, getCleanFileName(m.attachmentUrl, "image.jpg"))}
+                                            disabled={isThisDownloading}
+                                            className="p-2 text-white/90 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all cursor-pointer active:scale-95 disabled:opacity-75"
+                                            title="Download Image"
+                                          >
+                                            {isThisDownloading ? <Loader2 size={18} className="animate-spin text-white" /> : <Download size={18} strokeWidth={1.8} />}
+                                          </button>
+                                        </div>
+                                      </div>
                                     ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleTriggerDownload(m.attachmentUrl!, cleanDocName)}
-                                        disabled={isThisDownloading}
-                                        className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 rounded-full transition-colors cursor-pointer shrink-0 disabled:opacity-50"
-                                        title="Download file"
-                                      >
-                                        {isThisDownloading ? (
-                                          <Loader2 size={19} className="animate-spin text-slate-400 dark:text-slate-300" />
+                                      <div className="flex items-center justify-between gap-3 py-1 px-0.5 bg-transparent border-0 shadow-none mb-1">
+                                        {/* Icon & File Details */}
+                                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                          {m.attachmentType === "LINK" ? (
+                                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 shrink-0">
+                                              <Link2 size={18} strokeWidth={2} />
+                                            </span>
+                                          ) : (
+                                            <DocumentFileIcon ext={cleanDocName.split(".").pop()} />
+                                          )}
+                                          <div className="flex flex-col min-w-0">
+                                            <span
+                                              className={`text-xs sm:text-sm font-medium truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[260px] md:max-w-[320px] leading-snug ${chatTheme === "dark" ? "text-slate-100" : "text-slate-800"}`}
+                                              title={cleanDocName}
+                                            >
+                                              {cleanDocName}
+                                            </span>
+                                            <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal leading-tight mt-0.5">
+                                              {badgeInfo.label}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Button - Lucide icon without background or border */}
+                                        {m.attachmentType === "LINK" ? (
+                                          <a
+                                            href={m.attachmentUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 transition-colors cursor-pointer shrink-0"
+                                            title="Open link"
+                                          >
+                                            <ExternalLink size={18} strokeWidth={1.75} />
+                                          </a>
                                         ) : (
-                                          <Download size={19} strokeWidth={1.75} />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTriggerDownload(m.attachmentUrl!, cleanDocName)}
+                                            disabled={isThisDownloading}
+                                            className="p-1.5 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-transparent border-0 rounded-full transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                                            title="Download file"
+                                          >
+                                            {isThisDownloading ? (
+                                              <Loader2 size={19} className="animate-spin text-slate-400 dark:text-slate-300" />
+                                            ) : (
+                                              <Download size={19} strokeWidth={1.75} />
+                                            )}
+                                          </button>
                                         )}
-                                      </button>
+                                      </div>
                                     )}
                                   </div>
-                                )}
+                                );
+                              })()}
+                              <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text">
+                                {renderFormattedContent(m.content, isMe)}
                               </div>
-                            );
-                          })()}
-                          <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed max-h-[360px] overflow-y-auto no-scrollbar pr-1 select-text">
-                            {renderFormattedContent(m.content, isMe)}
-                          </div>
-                          <span className="mt-1 block text-right text-[10px] text-slate-500 font-medium">
-                            {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </span>
+                              <span className="mt-1 block text-right text-[10px] text-slate-500 font-medium">
+                                {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </span>
 
-                          {/* Bitrix-Style Hover Action Bar (Compact & Perfectly Anchored) */}
-                          {!m.deletedAt && (
-                            <div
-                              className={`absolute -top-3 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all ${isMe ? "right-2" : "left-2"
-                                } ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-                            >
-                              {/* Quick Reaction Button */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
-                                }}
-                                className="w-6 h-6 rounded-lg text-xs flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                                title="Add reaction"
-                              >
-                                <Smile size={14} />
-                              </button>
+                              {/* Bitrix-Style Hover Action Bar (Compact & Perfectly Anchored) */}
+                              {!m.deletedAt && (
+                                <div
+                                  className={`absolute -top-3.5 sm:-top-4 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all right-2 sm:right-2.5 ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                                >
+                                  {/* Quick Reaction Button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
+                                    }}
+                                    className="w-6 h-6 rounded-lg text-xs flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                    title="Add reaction"
+                                  >
+                                    <Smile size={14} />
+                                  </button>
 
-                              {/* Bitrix 3-Dots Menu Button */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
-                                }}
-                                className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${activeMenuMsgId === m.id
-                                  ? "bg-orange-500 text-white shadow-xs"
-                                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
-                                  }`}
-                                title="More options"
-                              >
-                                <MoreHorizontal size={15} strokeWidth={2.2} />
-                              </button>
-                            </div>
-                          )}
+                                  {/* Bitrix 3-Dots Menu Button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveMenuMsgId(activeMenuMsgId === m.id ? null : m.id);
+                                    }}
+                                    className={`w-6 h-6 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${activeMenuMsgId === m.id
+                                      ? "bg-orange-500 text-white shadow-xs"
+                                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                      }`}
+                                    title="More options"
+                                  >
+                                    <MoreHorizontal size={15} strokeWidth={2.2} />
+                                  </button>
+                                </div>
+                              )}
 
-                          {/* Bitrix-Style Message Context Menu */}
-                          {activeMenuMsgId === m.id && (
-                            <div
-                              ref={messageMenuRef}
-                              className={`absolute z-50 top-full mt-1.5 min-w-[210px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-1.5 animate-in fade-in zoom-in-95 duration-150 ${isMe ? "right-0" : "left-0"
-                                }`}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {/* Suggested Smileys / Reaction Bar */}
-                              <div className="px-2 pt-1.5 pb-1">
-                                {/* <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                              {/* Bitrix-Style Message Context Menu */}
+                              {activeMenuMsgId === m.id && (
+                                <div
+                                  ref={messageMenuRef}
+                                  className={`absolute z-50 top-full mt-1.5 min-w-[210px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-1.5 animate-in fade-in zoom-in-95 duration-150 ${isMe ? "right-0" : "left-0"
+                                    }`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {/* Suggested Smileys / Reaction Bar */}
+                                  <div className="px-2 pt-1.5 pb-1">
+                                    {/* <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
                                   Reactions
                                 </span> */}
-                                <div className="flex items-center justify-between gap-1">
-                                  {["👍", "❤️", "😂", "🎉", "🙏", "🔥"].map((emoji) => {
-                                    const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
-                                    return (
-                                      <button
-                                        key={emoji}
-                                        type="button"
-                                        onClick={() => {
-                                          handleReact(m.id, emoji);
-                                          setActiveMenuMsgId(null);
-                                        }}
-                                        className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 dark:bg-orange-950/60 scale-110" : "hover:bg-slate-100 dark:hover:bg-slate-800"
-                                          }`}
-                                        title={`React with ${emoji}`}
-                                      >
-                                        {emoji}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                                    <div className="flex items-center justify-between gap-1">
+                                      {["👍", "❤️", "😂", "🎉", "🙏", "🔥"].map((emoji) => {
+                                        const userReacted = Boolean(m.reactions?.[emoji]?.some((u) => u.userId === currentUserId));
+                                        return (
+                                          <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={() => {
+                                              handleReact(m.id, emoji);
+                                              setActiveMenuMsgId(null);
+                                            }}
+                                            className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${userReacted ? "bg-orange-100 dark:bg-orange-950/60 scale-110" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                                              }`}
+                                            title={`React with ${emoji}`}
+                                          >
+                                            {emoji}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
 
-                              <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                  <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
 
-                              {/* Actions List */}
-                              <div className="space-y-0.5">
-                                {/* Copy Message */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleCopyMessage(m);
-                                    setActiveMenuMsgId(null);
-                                  }}
-                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
-                                >
-                                  <Copy size={14} className="text-slate-400" />
-                                  <span>{copyFeedbackId === m.id ? "Copied!" : "Copy message"}</span>
-                                </button>
-
-                                {/* Delete (own or Admin) */}
-                                {(isMe || session?.user?.role === "ADMIN") && (
-                                  <>
-                                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                  {/* Actions List */}
+                                  <div className="space-y-0.5">
+                                    {/* Copy Message */}
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        handleDeleteMessage(m.id);
+                                        handleCopyMessage(m);
                                         setActiveMenuMsgId(null);
                                       }}
-                                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer font-medium text-left"
+                                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer font-medium text-left"
                                     >
-                                      <Trash2 size={14} className="text-rose-500" />
-                                      <span>Delete message</span>
+                                      <Copy size={14} className="text-slate-400" />
+                                      <span>{copyFeedbackId === m.id ? "Copied!" : "Copy message"}</span>
                                     </button>
-                                  </>
-                                )}
-                              </div>
+
+                                    {/* Delete (own or Admin) */}
+                                    {(isMe || session?.user?.role === "ADMIN") && (
+                                      <>
+                                        <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleDeleteMessage(m.id);
+                                            setActiveMenuMsgId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer font-medium text-left"
+                                        >
+                                          <Trash2 size={14} className="text-rose-500" />
+                                          <span>Delete message</span>
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
 
-                        {/* Reaction Badges Below Message Bubble */}
-                        {m.reactions && Object.keys(m.reactions).length > 0 && (
-                          <div className={`flex flex-wrap gap-1 mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                            {Object.entries(m.reactions).map(([emoji, users]) => {
-                              if (!users || users.length === 0) return null;
-                              const userReacted = users.some((u) => u.userId === currentUserId);
-                              const tooltipText = users.map((u) => (u.userId === currentUserId ? "You" : u.userName)).join(", ");
+                            {/* Reaction Badges Below Message Bubble */}
+                            {m.reactions && Object.keys(m.reactions).length > 0 && (
+                              <div className={`flex flex-wrap gap-1 mt-1 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                                {Object.entries(m.reactions).map(([emoji, users]) => {
+                                  if (!users || users.length === 0) return null;
+                                  const userReacted = users.some((u) => u.userId === currentUserId);
+                                  const tooltipText = users.map((u) => (u.userId === currentUserId ? "You" : u.userName)).join(", ");
 
-                              return (
-                                <button
-                                  key={emoji}
-                                  type="button"
-                                  onClick={() => handleReact(m.id, emoji)}
-                                  title={tooltipText}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${userReacted
-                                    ? "bg-orange-50 border-orange-300 text-orange-700"
-                                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                                    }`}
-                                >
-                                  <span>{emoji}</span>
-                                  <span className="text-[10px] text-slate-500">{users.length}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={() => handleReact(m.id, emoji)}
+                                      title={tooltipText}
+                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${userReacted
+                                        ? "bg-orange-50 border-orange-300 text-orange-700"
+                                        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                                        }`}
+                                    >
+                                      <span>{emoji}</span>
+                                      <span className="text-[10px] text-slate-500">{users.length}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
 
-                        {/* Bitrix-Style Seen View Badge for Group Members */}
-                        {(() => {
-                          const seenList = m.seenBy || [];
-                          if (seenList.length === 0) {
-                            if (isMe) {
+                            {/* Bitrix-Style Seen View Badge (Visible to message sender only) */}
+                            {isMe && (() => {
+                              const seenList = m.seenBy || [];
+                              if (seenList.length === 0) {
+                                return (
+                                  <div className="mt-0.5 flex items-center justify-end px-1">
+                                    <span
+                                      className="inline-flex items-center gap-1 text-[10px] text-slate-400 select-none"
+                                      style={{ fontSize: "10px", lineHeight: "13px" }}
+                                    >
+                                      <Check size={10} strokeWidth={2.4} />
+                                      <span>Sent</span>
+                                    </span>
+                                  </div>
+                                );
+                              }
+
+                              const firstViewer = seenList[0]?.name || "1 member";
+                              const moreCount = seenList.length - 1;
+
                               return (
                                 <div className="mt-0.5 flex items-center justify-end px-1">
-                                  <span
-                                    className="inline-flex items-center gap-1 text-[10px] text-slate-400 select-none"
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedSeenModalMessage(m)}
+                                    title={seenList.map((s) => `${s.name} (${s.designation || "Member"})`).join(", ")}
+                                    className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-sky-600 dark:text-slate-500 dark:hover:text-sky-400 transition-colors cursor-pointer select-none bg-transparent border-0 p-0 shadow-none font-normal"
                                     style={{ fontSize: "10px", lineHeight: "13px" }}
                                   >
-                                    <Check size={10} strokeWidth={2.4} />
-                                    <span>Sent</span>
-                                  </span>
+                                    <CheckCheck size={11} className="text-sky-500 shrink-0 stroke-[2]" />
+                                    <span>
+                                      Viewed by {firstViewer}
+                                      {moreCount > 0 && (
+                                        <>
+                                          {" and "}
+                                          <span className="underline underline-offset-2 font-medium">{moreCount} more</span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </button>
                                 </div>
                               );
-                            }
-                            return null;
-                          }
-
-                          const firstViewer = seenList[0]?.name || "1 member";
-                          const moreCount = seenList.length - 1;
-
-                          return (
-                            <div className={`mt-0.5 flex items-center ${isMe ? "justify-end" : "justify-start"} px-1`}>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedSeenModalMessage(m)}
-                                title={seenList.map((s) => `${s.name} (${s.designation || "Member"})`).join(", ")}
-                                className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-sky-600 dark:text-slate-500 dark:hover:text-sky-400 transition-colors cursor-pointer select-none bg-transparent border-0 p-0 shadow-none font-normal"
-                                style={{ fontSize: "10px", lineHeight: "13px" }}
-                              >
-                                <CheckCheck size={11} className="text-sky-500 shrink-0 stroke-[2]" />
-                                <span>
-                                  Viewed by {firstViewer}
-                                  {moreCount > 0 && (
-                                    <>
-                                      {" and "}
-                                      <span className="underline underline-offset-2 font-medium">{moreCount} more</span>
-                                    </>
-                                  )}
-                                </span>
-                              </button>
-                            </div>
-                          );
-                        })()}
+                            })()}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -2631,6 +2706,16 @@ export default function GroupChatsPage() {
                           : "You can add employees now or invite them later"}
                       </p>
                       <div className="flex items-center justify-end gap-2">
+                        {editingGroupId && activeGroup && (
+                          <button
+                            type="button"
+                            onClick={() => handleLeaveGroup(activeGroup)}
+                            className="mr-auto inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 cursor-pointer"
+                          >
+                            <LogOut size={13} />
+                            <span>Leave Group</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setShowCreateModal(false)}

@@ -36,7 +36,9 @@ export const getMeetings = async (req: Request, res: Response): Promise<void> =>
     }
 
     if (status && status !== "ALL") {
-      const statusStr = String(status).toUpperCase();
+      let statusStr = String(status).toUpperCase();
+      if (statusStr === "ACTIVE") statusStr = "IN_PROGRESS";
+      if (statusStr === "ENDED") statusStr = "COMPLETED";
       if ((VALID_MEETING_STATUSES as readonly string[]).includes(statusStr)) {
         where.status = statusStr;
       }
@@ -56,7 +58,34 @@ export const getMeetings = async (req: Request, res: Response): Promise<void> =>
       orderBy: { startTime: "asc" },
     });
 
-    res.json({ meetings });
+    const activeStandupSession = await prisma.callSession.findFirst({
+      where: {
+        channelName: "permanent-daily-standup",
+        status: { in: ["RINGING", "ACTIVE"] },
+      },
+      include: {
+        host: { select: { id: true, name: true, email: true } },
+        participants: {
+          where: { status: "ACCEPTED" },
+          select: { userId: true },
+        },
+      },
+    });
+
+    const standupStatus = activeStandupSession
+      ? {
+          isLive: true,
+          callSessionId: activeStandupSession.id,
+          hostId: activeStandupSession.hostId,
+          hostName: activeStandupSession.host?.name || "Host",
+          participantsCount: activeStandupSession.participants.length,
+          startedAt: activeStandupSession.startedAt || activeStandupSession.createdAt,
+        }
+      : {
+          isLive: false,
+        };
+
+    res.json({ meetings, standupStatus });
   } catch (error) {
     console.error("Get meetings error:", error);
     res.status(500).json({ message: "Failed to fetch meetings" });
@@ -71,8 +100,10 @@ export const getMeetingById = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    let userId: number;
     try {
-      verifyToken(token);
+      const decoded = verifyToken(token);
+      userId = decoded.userId;
     } catch {
       res.status(401).json({ message: "Invalid or expired token" });
       return;
@@ -102,7 +133,19 @@ export const getMeetingById = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    res.json({ meeting });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+    const isAdmin = user?.role?.name === "ADMIN" || user?.role?.name === "SUPER_ADMIN";
+    const isHost = meeting.organizerId === userId || isAdmin;
+
+    res.json({
+      meeting: {
+        ...meeting,
+        isHost,
+      },
+    });
   } catch (error) {
     console.error("Get meeting error:", error);
     res.status(500).json({ message: "Failed to fetch meeting details" });
@@ -278,11 +321,18 @@ export const updateMeeting = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    if (status && !(VALID_MEETING_STATUSES as readonly string[]).includes(String(status).toUpperCase())) {
-      res.status(400).json({
-        message: `Invalid status. Valid options are: ${VALID_MEETING_STATUSES.join(", ")}`,
-      });
-      return;
+    let normalizedStatus: string | undefined = undefined;
+    if (status) {
+      let s = String(status).toUpperCase();
+      if (s === "ACTIVE") s = "IN_PROGRESS";
+      if (s === "ENDED") s = "COMPLETED";
+      if (!(VALID_MEETING_STATUSES as readonly string[]).includes(s)) {
+        res.status(400).json({
+          message: `Invalid status. Valid options are: ${VALID_MEETING_STATUSES.join(", ")}, ACTIVE, ENDED`,
+        });
+        return;
+      }
+      normalizedStatus = s;
     }
 
     if (Array.isArray(participantIds)) {
@@ -318,7 +368,7 @@ export const updateMeeting = async (req: Request, res: Response): Promise<void> 
         ...(endTime && { endTime: newEnd }),
         ...(timezone && { timezone: timezone.trim() }),
         ...(notes !== undefined && { notes: notes ? notes.trim() : null }),
-        ...(status && { status: String(status).toUpperCase() as any }),
+        ...(normalizedStatus && { status: normalizedStatus as any }),
       },
       include: {
         organizer: { select: { id: true, name: true, email: true } },
@@ -466,9 +516,22 @@ export const getLiveKitToken = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    const isPermanent =
+      meeting.roomName === "permanent-daily-standup" ||
+      meeting.roomName.startsWith("permanent-") ||
+      meeting.title.toLowerCase().includes("daily standup");
+
     if (meeting.status === "COMPLETED") {
-      res.status(400).json({ message: "This meeting has already ended and is marked as completed" });
-      return;
+      if (isPermanent) {
+        // Automatically reopen permanent 24/7 company room so it is always accessible
+        await prisma.meeting.update({
+          where: { id: meetingId },
+          data: { status: "IN_PROGRESS" },
+        });
+      } else {
+        res.status(400).json({ message: "This meeting has already ended and is marked as completed" });
+        return;
+      }
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });

@@ -10,6 +10,7 @@ import {
   searchMessages,
   uploadAttachment,
   updateGroupConversation,
+  leaveGroupConversation,
   deleteConversation,
   reactToMessage,
 } from "./messenger.controller.js";
@@ -25,6 +26,7 @@ router.get("/conversations", getConversations);
 router.post("/conversations/direct", createDirectConversation);
 router.post("/conversations/group", createGroupConversation);
 router.put("/conversations/group/:id", updateGroupConversation);
+router.post("/conversations/group/:id/leave", leaveGroupConversation);
 router.delete("/conversations/:id", deleteConversation);
 router.get("/conversations/:conversationId/messages", getMessages);
 router.get("/conversations/:conversationId/daily-summaries", getGroupDailySummaries);

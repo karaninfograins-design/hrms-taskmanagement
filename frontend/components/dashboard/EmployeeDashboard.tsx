@@ -49,6 +49,7 @@ type TodayAttendance = {
   checkOut: string | null;
   status: string;
   workingHours: number;
+  canClockIn?: boolean;
 };
 
 type CompanyHoliday = {
@@ -112,7 +113,11 @@ export function EmployeeDashboard({
       });
       if (res.ok) {
         const data = await res.json();
-        setTodayAttendance(data.attendance || null);
+        const att = data.attendance || null;
+        if (att) {
+          att.canClockIn = Boolean(data.canClockIn);
+        }
+        setTodayAttendance(att);
       }
     } catch {
       // Non-blocking
@@ -132,7 +137,14 @@ export function EmployeeDashboard({
           fetch(buildApiUrl("/api/attendance/today"), {
             headers: { Authorization: `Bearer ${token}` },
           })
-            .then((r) => (r.ok ? r.json() : { attendance: null }))
+            .then(async (r) => {
+              if (!r.ok) return { attendance: null };
+              const d = await r.json();
+              if (d.attendance) {
+                d.attendance.canClockIn = Boolean(d.canClockIn);
+              }
+              return d;
+            })
             .catch(() => ({ attendance: null })),
 
           fetch(
@@ -258,7 +270,7 @@ export function EmployeeDashboard({
     };
   }, [fetchTodayAttendance]);
 
-  // Live timer tick for active shift
+  // Live timer tick for active shift (caps at 12 hours)
   useEffect(() => {
     if (!todayAttendance?.checkIn || todayAttendance?.checkOut) {
       setElapsedSeconds(0);
@@ -266,15 +278,22 @@ export function EmployeeDashboard({
     }
 
     const checkInMs = new Date(todayAttendance.checkIn).getTime();
+    const MAX_SECS = 12 * 3600; // 12 hours
+
     const updateElapsed = () => {
       const diffSecs = Math.max(0, Math.floor((Date.now() - checkInMs) / 1000));
-      setElapsedSeconds(diffSecs);
+      if (diffSecs >= MAX_SECS) {
+        setElapsedSeconds(MAX_SECS);
+        void fetchTodayAttendance();
+      } else {
+        setElapsedSeconds(diffSecs);
+      }
     };
 
     updateElapsed();
     const timer = setInterval(updateElapsed, 1000);
     return () => clearInterval(timer);
-  }, [todayAttendance?.checkIn, todayAttendance?.checkOut]);
+  }, [todayAttendance?.checkIn, todayAttendance?.checkOut, fetchTodayAttendance]);
 
   const formatElapsed = (totalSecs: number) => {
     const hrs = Math.floor(totalSecs / 3600);
@@ -459,14 +478,14 @@ export function EmployeeDashboard({
             </div>
 
             <div className="pl-2 border-l border-slate-200">
-              {!todayAttendance?.checkIn ? (
+              {!todayAttendance?.checkIn || todayAttendance?.canClockIn ? (
                 <button
                   onClick={handlePunchIn}
                   disabled={punchLoading}
                   className="px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 active:scale-98 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <Play className="w-3 h-3 fill-current" />
-                  <span>Clock In</span>
+                  <span>{todayAttendance?.checkOut ? "Clock In (Next)" : "Clock In"}</span>
                 </button>
               ) : !todayAttendance?.checkOut ? (
                 <button

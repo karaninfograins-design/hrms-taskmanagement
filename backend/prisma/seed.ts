@@ -675,7 +675,7 @@ export const additionalEmployees = [
     phoneNumber: "",
     password: "Password@123",
     designation: "Software developer",
-    deptCode: "Hr",
+    deptCode: "ENG",
     employeeCode: "EMP-018",
   },
   {
@@ -686,6 +686,15 @@ export const additionalEmployees = [
     designation: "HR Manager",
     deptCode: "Hr",
     employeeCode: "EMP-019",
+  },
+  {
+    name: "Mahi Rajput",
+    email: "mahirajput@infograins.com",
+    phoneNumber: "",
+    password: "Password@123",
+    designation: "BDE",
+    deptCode: "SALES",
+    employeeCode: "EMP-020",
   },
 ];
 

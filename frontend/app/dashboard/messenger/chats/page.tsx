@@ -42,6 +42,10 @@ import {
   CheckCheck,
   ChevronUp,
   ChevronDown,
+  UserMinus,
+  Info,
+  Edit3,
+  LogOut,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
@@ -92,7 +96,7 @@ type Message = {
   senderId: number;
   content: string;
   attachmentUrl?: string | null;
-  attachmentType?: "IMAGE" | "DOCUMENT" | "LINK" | null;
+  attachmentType?: "IMAGE" | "DOCUMENT" | "LINK" | "SYSTEM" | "CALL" | null;
   replyToId?: number | null;
   editedAt?: string | null;
   deletedAt?: string | null;
@@ -1659,7 +1663,7 @@ function ChatsContent() {
   const handleInitiateCall = (type: "AUDIO" | "VIDEO") => {
     if (!activeConv || !socket) return;
     if (activeConv.type === "GROUP") {
-      const channelName = `call-${Date.now()}`;
+      const channelName = `group-call-${Date.now()}`;
       socket.emit(
         "call:initiate",
         {
@@ -1683,8 +1687,9 @@ function ChatsContent() {
             activeChannel: channelName,
             groupCall: "true",
             callSessionId: String(result.callSessionId),
-            groupName: activeConv.name || "Group",
+            groupName: activeConv.name || "Group Call",
             type,
+            isHost: "true",
           });
           router.push(`/dashboard/messenger/calls?${params.toString()}`);
         }
@@ -2603,25 +2608,74 @@ function ChatsContent() {
                       <p className="mt-1 text-xs text-slate-500">Send a message to get things going.</p>
                     </div>
                   )}
-                  {messages.map((m) => {
+                  {messages.map((m, idx) => {
                     const isMe = m.senderId === currentUserId;
                     const isDeleted = Boolean(m.deletedAt);
                     const isCurrentSearchMatch = m.id === inChatMatchingMsgIds[inChatSearchMatchIndex];
                     const isAnySearchMatch = inChatMatchingMsgIds.includes(m.id);
 
+                    const msgDate = new Date(m.createdAt);
+                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                    const prevMsgDate = prevMsg ? new Date(prevMsg.createdAt) : null;
+                    const isNewDay = !prevMsgDate || msgDate.toDateString() !== prevMsgDate.toDateString();
+
+                    const formatDateSeparator = (d: Date) => {
+                      const now = new Date();
+                      const isToday = d.toDateString() === now.toDateString();
+                      const yesterday = new Date(now);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      const isYesterday = d.toDateString() === yesterday.toDateString();
+                      if (isToday) return "Today";
+                      if (isYesterday) return "Yesterday";
+                      return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+                    };
+
+                    const isSystemMsg = m.attachmentType === "SYSTEM" || m.attachmentType === "CALL";
+
                     return (
-                      <div
-                        key={m.id}
-                        id={`chat-msg-${m.id}`}
-                        className={`flex flex-col relative ${isMe ? "items-end" : "items-start"}`}
-                      >
+                      <div key={m.id} className="flex flex-col w-full">
+                        {isNewDay && (
+                          <div className="flex items-center justify-center my-3 select-none">
+                            <span className="px-3 py-1 rounded-full text-[10px] font-semibold tracking-wide bg-slate-200/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 shadow-2xs backdrop-blur-xs border border-slate-300/40 dark:border-slate-700/50">
+                              {formatDateSeparator(msgDate)}
+                            </span>
+                          </div>
+                        )}
+
+                        {isSystemMsg ? (
+                          <div id={`chat-msg-${m.id}`} className="flex flex-col items-center my-2 px-2 select-none">
+                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs text-[11px] text-slate-600 dark:text-slate-300">
+                              <span className="shrink-0 text-orange-500">
+                                {m.attachmentType === "CALL" ? (
+                                  <PhoneCall size={12} strokeWidth={2.2} />
+                                ) : m.content.includes("added") ? (
+                                  <UserPlus size={12} strokeWidth={2.2} />
+                                ) : m.content.includes("left") || m.content.includes("removed") ? (
+                                  <UserMinus size={12} strokeWidth={2.2} />
+                                ) : m.content.includes("name") ? (
+                                  <Edit3 size={12} strokeWidth={2.2} />
+                                ) : (
+                                  <Info size={12} strokeWidth={2.2} />
+                                )}
+                              </span>
+                              <span className="font-medium">{m.content}</span>
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500 ml-1">
+                                {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            id={`chat-msg-${m.id}`}
+                            className={`flex flex-col relative ${isMe ? "items-end" : "items-start"}`}
+                          >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                             {m.sender.name}
                           </span>
                         </div>
                         <div
-                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl p-3.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] ${isCurrentSearchMatch
+                          className={`max-w-[85vw] sm:max-w-md md:max-w-lg lg:max-w-xl pt-4 pb-3 px-3.5 sm:px-4 sm:pt-4.5 rounded-2xl text-xs shadow-2xs relative group transition-all break-words [overflow-wrap:anywhere] ${isCurrentSearchMatch
                             ? "ring-3 ring-amber-400 ring-offset-2 dark:ring-offset-slate-950 shadow-md"
                             : isAnySearchMatch
                               ? "ring-2 ring-amber-300/80"
@@ -2639,7 +2693,7 @@ function ChatsContent() {
                           {reactionPickerMsgId === m.id && (
                             <div
                               ref={reactionPickerRef}
-                              className={`absolute -top-11 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150 ${isMe ? "right-2" : "left-2"}`}
+                              className="absolute -top-11 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150 right-2"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {!showFullReactionPicker ? (
@@ -2808,8 +2862,7 @@ function ChatsContent() {
                           {/* Bitrix-Style Hover Action Bar (Compact & Perfectly Anchored) */}
                           {!isDeleted && (
                             <div
-                              className={`absolute -top-3 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all ${isMe ? "right-2" : "left-2"
-                                } ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                              className={`absolute -top-3.5 sm:-top-4 z-30 flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs p-0.5 rounded-xl shadow-md border border-slate-200/90 dark:border-slate-700 transition-all right-2 sm:right-2.5 ${activeMenuMsgId === m.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                             >
                               {/* Quick Reaction Button */}
                               <button
@@ -3018,31 +3071,28 @@ function ChatsContent() {
                           </div>
                         )}
 
-                        {/* Bitrix-Style Seen View Badge (Group chats only, visible to all group members) */}
-                        {isGroup && (() => {
+                        {/* Bitrix-Style Seen View Badge (Group chats only, visible to message sender only) */}
+                        {isGroup && isMe && (() => {
                           const seenList = m.seenBy || [];
                           if (seenList.length === 0) {
-                            if (isMe) {
-                              return (
-                                <div className="mt-0.5 flex items-center justify-end px-1">
-                                  <span
-                                    className="inline-flex items-center gap-1 text-[10px] text-slate-400 select-none"
-                                    style={{ fontSize: "10px", lineHeight: "13px" }}
-                                  >
-                                    <Check size={10} strokeWidth={2.4} />
-                                    <span>Sent</span>
-                                  </span>
-                                </div>
-                              );
-                            }
-                            return null;
+                            return (
+                              <div className="mt-0.5 flex items-center justify-end px-1">
+                                <span
+                                  className="inline-flex items-center gap-1 text-[10px] text-slate-400 select-none"
+                                  style={{ fontSize: "10px", lineHeight: "13px" }}
+                                >
+                                  <Check size={10} strokeWidth={2.4} />
+                                  <span>Sent</span>
+                                </span>
+                              </div>
+                            );
                           }
 
                           const firstViewer = seenList[0]?.name || "1 member";
                           const moreCount = seenList.length - 1;
 
                           return (
-                            <div className={`mt-0.5 flex items-center ${isMe ? "justify-end" : "justify-start"} px-1`}>
+                            <div className="mt-0.5 flex items-center justify-end px-1">
                               <button
                                 type="button"
                                 onClick={() => setSelectedSeenModalMessage(m)}
@@ -3065,8 +3115,10 @@ function ChatsContent() {
                           );
                         })()}
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
+                );
+              })}
                   <div ref={messagesEndRef} />
                 </div>
 

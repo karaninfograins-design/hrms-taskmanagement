@@ -189,6 +189,27 @@ export const createGroupConversation = async (req: Request, res: Response): Prom
       },
     });
 
+    // Bitrix-Style initial group creation system message
+    const creatorName = conversation.createdBy?.name || "A member";
+    const initialMsg = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: userId,
+        content: `${creatorName} created the group "${name.trim()}".`,
+        attachmentType: "SYSTEM",
+      },
+      include: {
+        sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    }).catch(() => null);
+
+    if (initialMsg) {
+      const io = getIO();
+      for (const uid of uniqueMemberIds) {
+        io.to(`user_${uid}`).emit("message:new", initialMsg);
+      }
+    }
+
     res.status(201).json({ conversation });
   } catch (error) {
     console.error("Create group conversation error:", error);
@@ -747,12 +768,23 @@ export const updateGroupConversation = async (req: Request, res: Response): Prom
       return;
     }
 
-    if (name && name.trim()) {
+    const actorUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true },
+    });
+    const actorName = actorUser?.name || "A member";
+
+    let nameChanged = false;
+    if (name && name.trim() && name.trim() !== conversation.name) {
+      nameChanged = true;
       await prisma.conversation.update({
         where: { id: convId },
         data: { name: name.trim() },
       });
     }
+
+    let addedUserIds: number[] = [];
+    let removedUserIds: number[] = [];
 
     if (Array.isArray(participantIds)) {
       const targetUserIds = Array.from(new Set([userId, ...participantIds.map(Number)]));
@@ -760,6 +792,7 @@ export const updateGroupConversation = async (req: Request, res: Response): Prom
 
       const idsToAdd = targetUserIds.filter((uid) => !existingUserIds.includes(uid));
       if (idsToAdd.length > 0) {
+        addedUserIds = idsToAdd;
         await prisma.conversationParticipant.createMany({
           data: idsToAdd.map((uid) => ({
             conversationId: convId,
@@ -770,6 +803,7 @@ export const updateGroupConversation = async (req: Request, res: Response): Prom
 
       const idsToRemove = existingUserIds.filter((uid) => !targetUserIds.includes(uid));
       if (idsToRemove.length > 0) {
+        removedUserIds = idsToRemove;
         await prisma.conversationParticipant.deleteMany({
           where: {
             conversationId: convId,
@@ -794,9 +828,86 @@ export const updateGroupConversation = async (req: Request, res: Response): Prom
     if (updatedGroup) {
       const io = getIO();
       const updatedUserIds = updatedGroup.participants.map((participant) => participant.userId);
-      const removedUserIds = conversation.participants
-        .map((participant) => participant.userId)
-        .filter((participantId) => !updatedUserIds.includes(participantId));
+
+      // Bitrix-Style Activity System Messages:
+      // 1. Group renamed
+      if (nameChanged && name?.trim()) {
+        const nameMsg = await prisma.message.create({
+          data: {
+            conversationId: convId,
+            senderId: userId,
+            content: `${actorName} changed the group name to "${name.trim()}".`,
+            attachmentType: "SYSTEM",
+          },
+          include: {
+            sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          },
+        }).catch(() => null);
+        if (nameMsg) {
+          for (const pid of updatedUserIds) {
+            io.to(`user_${pid}`).emit("message:new", nameMsg);
+          }
+        }
+      }
+
+      // 2. Members added
+      if (addedUserIds.length > 0) {
+        const addedUsers = await prisma.user.findMany({
+          where: { id: { in: addedUserIds } },
+          select: { id: true, name: true },
+        });
+        const firstAdded = addedUsers[0]?.name || "a member";
+        const secondAdded = addedUsers[1]?.name || "another member";
+        const addedNames = addedUsers.length === 1
+          ? firstAdded
+          : addedUsers.length === 2
+            ? `${firstAdded} and ${secondAdded}`
+            : `${firstAdded} and ${addedUsers.length - 1} others`;
+        const addMsg = await prisma.message.create({
+          data: {
+            conversationId: convId,
+            senderId: userId,
+            content: `${actorName} added ${addedNames} to the chat.`,
+            attachmentType: "SYSTEM",
+          },
+          include: {
+            sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          },
+        }).catch(() => null);
+        if (addMsg) {
+          for (const pid of updatedUserIds) {
+            io.to(`user_${pid}`).emit("message:new", addMsg);
+          }
+        }
+      }
+
+      // 3. Members removed
+      if (removedUserIds.length > 0) {
+        const removedUsers = await prisma.user.findMany({
+          where: { id: { in: removedUserIds } },
+          select: { id: true, name: true },
+        });
+        const firstRemoved = removedUsers[0]?.name || "a member";
+        const removedNames = removedUsers.length === 1
+          ? firstRemoved
+          : `${firstRemoved} and ${removedUsers.length - 1} others`;
+        const removeMsg = await prisma.message.create({
+          data: {
+            conversationId: convId,
+            senderId: userId,
+            content: `${actorName} removed ${removedNames} from the chat.`,
+            attachmentType: "SYSTEM",
+          },
+          include: {
+            sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          },
+        }).catch(() => null);
+        if (removeMsg) {
+          for (const pid of updatedUserIds) {
+            io.to(`user_${pid}`).emit("message:new", removeMsg);
+          }
+        }
+      }
 
       for (const participantId of updatedUserIds) {
         io.to(`user_${participantId}`).emit("conversation:members-updated", {
@@ -900,5 +1011,93 @@ export const deleteConversation = async (req: Request, res: Response): Promise<v
   } catch (error) {
     console.error("Delete conversation error:", error);
     res.status(500).json({ message: "Failed to delete conversation" });
+  }
+};
+
+export const leaveGroupConversation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      res.status(401).json({ message: "Authentication required" });
+      return;
+    }
+
+    const { userId } = verifyToken(token);
+    const { id } = req.params;
+    const convId = Number(id);
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: convId },
+      include: {
+        participants: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    if (!conversation || conversation.type !== "GROUP") {
+      res.status(404).json({ message: "Group conversation not found" });
+      return;
+    }
+
+    const participant = conversation.participants.find((p) => p.userId === userId);
+    if (!participant) {
+      res.status(400).json({ message: "You are not a member of this group" });
+      return;
+    }
+
+    // 1. Remove user from conversationParticipant
+    await prisma.conversationParticipant.deleteMany({
+      where: {
+        conversationId: convId,
+        userId,
+      },
+    });
+
+    const leavingUserName = participant.user?.name || "A member";
+    const io = getIO();
+
+    // 2. Create Bitrix-style activity message
+    const leaveMsg = await prisma.message.create({
+      data: {
+        conversationId: convId,
+        senderId: userId,
+        content: `${leavingUserName} left the chat.`,
+        attachmentType: "SYSTEM",
+      },
+      include: {
+        sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    }).catch(() => null);
+
+    // 3. Socket notifications
+    const remainingParticipants = conversation.participants.filter((p) => p.userId !== userId);
+
+    if (leaveMsg) {
+      for (const p of remainingParticipants) {
+        io.to(`user_${p.userId}`).emit("message:new", leaveMsg);
+      }
+    }
+
+    io.in(`user_${userId}`).socketsLeave(`conversation_${convId}`);
+    io.to(`user_${userId}`).emit("conversation:members-updated", {
+      conversationId: convId,
+      removed: true,
+    });
+
+    for (const p of remainingParticipants) {
+      io.to(`user_${p.userId}`).emit("conversation:members-updated", {
+        conversationId: convId,
+        participantId: userId,
+        action: "left",
+      });
+    }
+
+    res.json({ message: "You have left the group successfully", conversationId: convId });
+  } catch (error) {
+    console.error("Leave group error:", error);
+    res.status(500).json({ message: "Failed to leave group" });
   }
 };

@@ -37,3 +37,6 @@ list_old_users.ts
 test-reset-flow.ts
 src/test-project-flow.ts
 test_meeting_voice_suite.ts
+test_zoom_meetings_and_media.ts
+test_all_audio_calls.ts
+scripts/test-all-meetings-and-calls.ts

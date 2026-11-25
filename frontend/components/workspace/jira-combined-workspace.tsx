@@ -695,7 +695,12 @@ export function ProjectSprintPage({ mode }: Props) {
 
               <tbody className="divide-y divide-slate-100">
                 {(() => {
-                  const isEmployeeRole = session?.user?.role === "EMPLOYEE";
+                  const rawRole = session?.user?.role;
+                  const rName = (typeof rawRole === "string" ? rawRole : (rawRole as any)?.name || "").toUpperCase();
+                  const userPerms = (session?.user?.permissions || []).map((p: string) => String(p).toUpperCase());
+                  const canManageAll = userPerms.includes("MANAGE_PROJECTS") || userPerms.includes("PROJECT:MANAGE");
+                  const isAdminOrHR = rName === "SUPER_ADMIN" || rName === "ADMIN" || rName === "HR" || rName === "HR_ADMIN" || canManageAll;
+                  const isEmployeeRole = !isAdminOrHR;
                   const roleFiltered = isEmployeeRole
                     ? items.filter((item: any) => {
                       const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
@@ -843,7 +848,12 @@ export function ProjectSprintPage({ mode }: Props) {
           {/* Mobile Project Cards */}
           <div className="md:hidden divide-y divide-slate-100 p-3 sm:p-4">
             {(() => {
-              const isEmployeeRole = session?.user?.role === "EMPLOYEE";
+              const rawRole = session?.user?.role;
+              const rName = (typeof rawRole === "string" ? rawRole : (rawRole as any)?.name || "").toUpperCase();
+              const userPerms = (session?.user?.permissions || []).map((p: string) => String(p).toUpperCase());
+              const canManageAll = userPerms.includes("MANAGE_PROJECTS") || userPerms.includes("PROJECT:MANAGE");
+              const isAdminOrHR = rName === "SUPER_ADMIN" || rName === "ADMIN" || rName === "HR" || rName === "HR_ADMIN" || canManageAll;
+              const isEmployeeRole = !isAdminOrHR;
               const roleFiltered = isEmployeeRole
                 ? items.filter((item: any) => {
                   const isMember = Array.isArray(item.members) && item.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);

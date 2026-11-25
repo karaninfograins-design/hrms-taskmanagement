@@ -54,7 +54,12 @@ export async function getNotifications(token: string, forceRefresh = false): Pro
       if (error instanceof UnauthorizedError) {
         throw error;
       }
-      console.error("Failed to fetch notifications:", error);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("Failed to fetch") || msg.includes("Network error") || msg.includes("connectivity")) {
+        console.warn("[Notifications] Backend connectivity paused (will retry on next interval):", msg);
+      } else {
+        console.error("Failed to fetch notifications:", error);
+      }
       return cachedNotifs?.data || { notifications: [], unreadCount: 0 };
     } finally {
       inflightNotifsPromise = null;

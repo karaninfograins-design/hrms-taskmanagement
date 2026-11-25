@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "tsx scripts/test-all-meetings-and-calls.ts",
     "postinstall": "prisma skills sync || exit 0",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",

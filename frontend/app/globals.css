@@ -432,7 +432,8 @@ textarea:not(.chat-composer-textarea) {
   }
 
   .topbar {
-    padding: 0 14px;
+    padding: 0 10px;
+    height: 56px;
   }
 
   .dashboard-frame {
@@ -466,6 +467,13 @@ textarea:not(.chat-composer-textarea) {
   top: 0;
   z-index: 40;
   width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .topbar {
+    padding: 0 10px !important;
+    height: 56px !important;
+  }
 }
 
 .profile {

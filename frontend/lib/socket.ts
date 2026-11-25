@@ -29,11 +29,11 @@ export const getSocket = (): Socket | null => {
     currentToken = token;
     socket = io(getApiUrl(), {
       auth: { token },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       upgrade: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 15,
       reconnectionDelay: 1000,
       extraHeaders: {
         "ngrok-skip-browser-warning": "1",

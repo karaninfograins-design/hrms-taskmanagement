@@ -38,6 +38,7 @@ export default function AttendancePage() {
   const { session, isLoading, logout } = useAuth();
 
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
+  const [canClockIn, setCanClockIn] = useState<boolean>(false);
   const [logs, setLogs] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -153,6 +154,7 @@ export default function AttendancePage() {
       if (todayRes.ok) {
         const todayData = await todayRes.json();
         setTodayAttendance(todayData.attendance || null);
+        setCanClockIn(Boolean(todayData.canClockIn));
       }
 
       if (logsRes.ok) {
@@ -335,15 +337,15 @@ export default function AttendancePage() {
               </h2>
               <p className="text-xs font-medium text-blue-100/80">
                 {todayAttendance?.checkOut
-                  ? `Clocked out at ${formatTime(todayAttendance.checkOut)} (${todayAttendance.workingHours.toFixed(2)} hrs worked)`
+                  ? `Clocked out at ${formatTime(todayAttendance.checkOut)} (${todayAttendance.workingHours.toFixed(2)} hrs worked)${canClockIn ? " • 12 hrs elapsed, ready for next shift" : ""}`
                   : todayAttendance?.checkIn
-                    ? "Shift in progress..."
+                    ? "Shift in progress (maximum 12 hrs)..."
                     : "Click the button to record your shift start time."}
               </p>
             </div>
 
-            <div className="relative z-10 flex w-full sm:w-auto gap-3">
-              {!todayAttendance?.checkIn ? (
+            <div className="relative z-10 flex w-full sm:w-auto items-center gap-3">
+              {!todayAttendance?.checkIn || canClockIn ? (
                 <button
                   type="button"
                   onClick={() => setConfirmAction("CLOCK_IN")}
@@ -351,7 +353,7 @@ export default function AttendancePage() {
                   className="w-full sm:w-auto px-6 py-2.5 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold rounded-xl shadow-xs transition-all text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Clock className="w-4 h-4" />
-                  <span>{actionLoading ? "Processing..." : "Clock In"}</span>
+                  <span>{actionLoading ? "Processing..." : todayAttendance?.checkOut ? "Clock In (Next Shift)" : "Clock In"}</span>
                 </button>
               ) : !todayAttendance?.checkOut ? (
                 <button

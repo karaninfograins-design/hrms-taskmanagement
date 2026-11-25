@@ -52,6 +52,18 @@ app.use(
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Live HTTP Request Logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const statusColor = res.statusCode >= 500 ? "\x1b[31m" : res.statusCode >= 400 ? "\x1b[33m" : res.statusCode >= 300 ? "\x1b[36m" : "\x1b[32m";
+    const reset = "\x1b[0m";
+    console.log(`[HTTP] ${req.method} ${req.originalUrl || req.url} ${statusColor}${res.statusCode}${reset} (${duration}ms)`);
+  });
+  next();
+});
 app.use(
   "/uploads",
   express.static(uploadsDir, {

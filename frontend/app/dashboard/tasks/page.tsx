@@ -80,19 +80,23 @@ export default function TasksPage() {
     router.replace("/");
   };
 
-  const roleName = typeof session?.user?.role === "string"
-    ? session.user.role
-    : (session?.user?.role as any)?.name || (String(session?.user?.role) === "1" ? "SUPER_ADMIN" : String(session?.user?.role) === "2" ? "ADMIN" : String(session?.user?.role) === "3" ? "HR" : "EMPLOYEE");
-  const isSuperAdmin = roleName === "SUPER_ADMIN" || String(session?.user?.role) === "1";
-  const isAdmin = roleName === "ADMIN" || String(session?.user?.role) === "2";
-  const canManageTasks =
-    isSuperAdmin ||
-    isAdmin ||
-    (session?.user?.permissions || []).some((p: string) => {
-      const lp = p.toLowerCase();
-      return lp.includes("work_item") || lp.includes("task") || lp.includes("assign_work") || lp.includes("manage_projects");
-    });
-  const isAdminOrHR = canManageTasks;
+  const rawRole = session?.user?.role;
+  const roleName = (
+    typeof rawRole === "string"
+      ? rawRole
+      : (rawRole as any)?.name || ""
+  ).toUpperCase();
+
+  const isSuperAdmin = roleName === "SUPER_ADMIN";
+  const isAdmin = roleName === "ADMIN";
+  const isHR = roleName === "HR" || roleName === "HR_ADMIN";
+  const userPermissions = (session?.user?.permissions || []).map((p: string) => String(p).toUpperCase());
+  const canManageAllProjects =
+    userPermissions.includes("MANAGE_PROJECTS") ||
+    userPermissions.includes("PROJECT:MANAGE");
+
+  // Except Super Admin, Admin, and Sub-role (HR or roles with MANAGE_PROJECTS), ordinary employees/sub-roles must ONLY see assigned tasks or tasks in their member projects
+  const isAdminOrHR = isSuperAdmin || isAdmin || isHR || canManageAllProjects;
 
   // Fetch initial tasks, projects, and employee list
   const loadData = async () => {
@@ -112,8 +116,18 @@ export default function TasksPage() {
       setTasks(tasksRes.items || []);
 
       if (projectsRes && Array.isArray((projectsRes as any).items)) {
+        const allProjects = (projectsRes as any).items;
+        const visibleProjects = isAdminOrHR
+          ? allProjects
+          : allProjects.filter((p: any) => {
+            const isMember = Array.isArray(p.members) && p.members.some((m: any) => (m.userId || m.user?.id) === session?.user?.id || m.user?.email === session?.user?.email);
+            const isAssigned = Array.isArray(p.assignedUserIds) && p.assignedUserIds.includes(session?.user?.id);
+            const isOwner = (p.createdBy?.id || p.createdById) === session?.user?.id;
+            return isMember || isAssigned || isOwner;
+          });
+
         setProjects(
-          (projectsRes as any).items.map((p: any) => ({
+          visibleProjects.map((p: any) => ({
             id: Number(p.id),
             name: String(p.name || "Untitled Project"),
             key: p.key ? String(p.key) : undefined,

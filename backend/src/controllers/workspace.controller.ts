@@ -49,11 +49,11 @@ function isSystemAdmin(user: any): boolean {
 }
 
 function hasUserPermission(user: any, permissionNames: string[]): boolean {
-  if (user?.role?.name === "SUPER_ADMIN") return true;
+  if ((user?.role?.name || "").toUpperCase() === "SUPER_ADMIN") return true;
   const userPerms: string[] = (user?.role?.permissions || []).map(
-    (rp: any) => rp?.permission?.name || rp?.name
+    (rp: any) => (rp?.permission?.name || rp?.name || "").toUpperCase()
   );
-  return permissionNames.some((p) => userPerms.includes(p));
+  return permissionNames.some((p) => userPerms.includes(p.toUpperCase()));
 }
 
 // 1. Dynamic Project Permissions (Super Admin, Admin, PM, or assigned permission)
@@ -229,15 +229,30 @@ function generateProjectKey(name: string): string {
 }
 
 export async function listProjects(req: Request, res: Response) {
-  if (!(await authenticate(req, res))) return;
+  const user = await authenticate(req, res);
+  if (!user) return;
+
+  const roleName = (user?.role?.name || "").toUpperCase();
+  const isSuperAdminOrAdmin = isSystemAdmin(user);
+  const isHR = roleName === "HR" || roleName === "HR_ADMIN" || hasUserPermission(user, ["MANAGE_PROJECTS"]);
+  const canViewAll = isSuperAdminOrAdmin || isHR;
 
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
 
+  const whereClause: any = { status: { not: "INACTIVE" } };
+  if (!canViewAll) {
+    whereClause.OR = [
+      { createdById: user.id },
+      { members: { some: { userId: user.id } } },
+      { workItems: { some: { OR: [{ assigneeId: user.id }, { assignees: { some: { userId: user.id } } }] } } },
+    ];
+  }
+
   const [items, total] = await Promise.all([
     prisma.project.findMany({
-      where: { status: { not: "INACTIVE" } },
+      where: whereClause,
       select: {
         id: true,
         key: true,
@@ -364,7 +379,8 @@ export async function getSprint(req: Request, res: Response) {
 }
 
 export async function getWorkItem(req: Request, res: Response) {
-  if (!(await authenticate(req, res))) return;
+  const user = await authenticate(req, res);
+  if (!user) return;
 
   const item = await prisma.workItem.findUnique({
     where: { id: Number(req.params.id) },
@@ -402,6 +418,23 @@ export async function getWorkItem(req: Request, res: Response) {
   if (!item) {
     res.status(404).json({ message: "Work item / Epic not found" });
     return;
+  }
+
+  const roleName = (user?.role?.name || "").toUpperCase();
+  const isSuperAdminOrAdmin = isSystemAdmin(user);
+  const isHR = roleName === "HR" || roleName === "HR_ADMIN" || hasUserPermission(user, ["MANAGE_PROJECTS"]);
+  const canViewAll = isSuperAdminOrAdmin || isHR;
+
+  if (!canViewAll) {
+    const isAssignee = item.assigneeId === user.id || item.assignees?.some((a) => a.userId === user.id);
+    const isCreator = item.createdById === user.id || item.reporterId === user.id;
+    const isProjectMember = await prisma.projectMember.findFirst({
+      where: { projectId: item.projectId, userId: user.id },
+    });
+    if (!isAssignee && !isCreator && !isProjectMember) {
+      res.status(403).json({ message: "You do not have permission to view this task" });
+      return;
+    }
   }
 
   const members = await prisma.projectMember.findMany({
@@ -1421,13 +1454,10 @@ export async function listAllWorkItems(req: Request, res: Response) {
   const user = await authenticate(req, res);
   if (!user) return;
 
-  const canViewAll =
-    isSystemAdmin(user) ||
-    hasUserPermission(user, [
-      "VIEW_WORK_ITEMS",
-      "work_item:view",
-      "MANAGE_PROJECTS",
-    ]);
+  const roleName = (user?.role?.name || "").toUpperCase();
+  const isSuperAdminOrAdmin = isSystemAdmin(user);
+  const isHR = roleName === "HR" || roleName === "HR_ADMIN" || hasUserPermission(user, ["MANAGE_PROJECTS"]);
+  const canViewAll = isSuperAdminOrAdmin || isHR;
   const { projectId, employeeId, status, search, limit } = req.query;
 
   const whereClause: any = {

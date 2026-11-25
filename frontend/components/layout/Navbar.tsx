@@ -14,6 +14,7 @@ import {
   Briefcase,
   MessageSquare,
   Phone,
+  PhoneOff,
   Video,
   Clock,
   LogOut,
@@ -35,7 +36,7 @@ import {
   type AppNotification,
 } from "@/services/notification.service";
 import { UnauthorizedError } from "@/services/api";
-import { playRingtone } from "@/lib/ringtone";
+import { playRingtone, stopRingtone } from "@/lib/ringtone";
 import { buildApiUrl } from "@/lib/api-config";
 import { showSuccessToast, showErrorToast, showConfirmDialog } from "@/lib/swal";
 
@@ -122,6 +123,15 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [incomingCallAlert, setIncomingCallAlert] = useState<{
+    callSessionId: number;
+    channelName: string;
+    caller: { id: number; name: string };
+    type: "AUDIO" | "VIDEO";
+    conversationName?: string | null;
+    isGroupCall?: boolean;
+    meetingId?: number;
+  } | null>(null);
 
   // Track if the token has been confirmed expired so we stop polling immediately
   const tokenExpiredRef = useRef(false);
@@ -177,7 +187,9 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
     checkOut: string | null;
     status: string;
     workingHours: number;
+    canClockIn?: boolean;
   } | null>(null);
+  const [canClockIn, setCanClockIn] = useState(false);
   const [clockActionLoading, setClockActionLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -191,6 +203,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
       now - cachedTodayAttendance.timestamp < TODAY_ATTENDANCE_CACHE_TTL
     ) {
       setTodayAttendance(cachedTodayAttendance.attendance);
+      setCanClockIn(Boolean((cachedTodayAttendance.attendance as any)?.canClockIn));
       return;
     }
 
@@ -198,6 +211,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
       try {
         const attendance = await inflightTodayAttendancePromise;
         setTodayAttendance(attendance);
+        setCanClockIn(Boolean((attendance as any)?.canClockIn));
       } catch {
         // non-blocking
       }
@@ -212,7 +226,12 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
           if (res.ok) {
             const data = await res.json();
             const attendance = data.attendance || null;
+            const allowClockIn = Boolean(data.canClockIn);
+            if (attendance) {
+              (attendance as any).canClockIn = allowClockIn;
+            }
             cachedTodayAttendance = { token: session.token, attendance, timestamp: Date.now() };
+            setCanClockIn(allowClockIn);
             return attendance;
           }
           return null;
@@ -223,6 +242,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
       const attendance = await inflightTodayAttendancePromise;
       setTodayAttendance(attendance);
+      setCanClockIn(Boolean((attendance as any)?.canClockIn));
     } catch {
       // Non-blocking for navbar
     }
@@ -240,7 +260,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
     };
   }, [fetchTodayAttendance]);
 
-  // Live timer tick when clocked in and not clocked out
+  // Live timer tick when clocked in and not clocked out (auto-caps at 12 hours)
   useEffect(() => {
     if (!todayAttendance?.checkIn || todayAttendance?.checkOut) {
       setElapsedSeconds(0);
@@ -248,15 +268,24 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
     }
 
     const checkInMs = new Date(todayAttendance.checkIn).getTime();
+    const MAX_SECS = 12 * 3600; // 12 hours
+
     const updateElapsed = () => {
       const diffSecs = Math.max(0, Math.floor((Date.now() - checkInMs) / 1000));
-      setElapsedSeconds(diffSecs);
+      if (diffSecs >= MAX_SECS) {
+        setElapsedSeconds(MAX_SECS);
+        // Once 12 hours have passed, auto-refresh to finalize shift and enable clock in
+        invalidateTodayAttendanceCache();
+        void fetchTodayAttendance(true);
+      } else {
+        setElapsedSeconds(diffSecs);
+      }
     };
 
     updateElapsed();
     const timer = setInterval(updateElapsed, 1000);
     return () => clearInterval(timer);
-  }, [todayAttendance?.checkIn, todayAttendance?.checkOut]);
+  }, [todayAttendance?.checkIn, todayAttendance?.checkOut, fetchTodayAttendance]);
 
   const formatElapsed = (totalSecs: number) => {
     const hrs = Math.floor(totalSecs / 3600);
@@ -345,31 +374,77 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
       type: "AUDIO" | "VIDEO";
       conversationName?: string | null;
       isGroupCall?: boolean;
+      meetingId?: number;
     }) => {
+      // If user is already on the calls page, let the calls page handle the ringing dialog
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard/messenger/calls")) {
+        return;
+      }
       try {
         playRingtone();
       } catch { }
-      if (window.location.pathname.startsWith("/dashboard/messenger/calls")) return;
-      const params = new URLSearchParams({
-        incomingCall: "true",
-        callSessionId: String(call.callSessionId),
-        activeChannel: call.channelName,
-        callerId: String(call.caller.id),
-        callerName: call.caller.name,
-        type: call.type,
-        ...(call.conversationName ? { groupName: call.conversationName } : {}),
-        ...(call.isGroupCall ? { groupCall: "true" } : {}),
+      setIncomingCallAlert(call);
+    };
+
+    const onCallEndedOrRejected = (data: { callSessionId: number }) => {
+      setIncomingCallAlert((curr) => {
+        if (curr && curr.callSessionId === data.callSessionId) {
+          try {
+            stopRingtone();
+          } catch { }
+          return null;
+        }
+        return curr;
       });
-      router.push(`/dashboard/messenger/calls?${params.toString()}`);
     };
 
     socket.on("notification:new", onNotificationCreated);
     socket.on("incoming:call", onIncomingCall);
+    socket.on("call:ended", onCallEndedOrRejected);
+    socket.on("call:rejected", onCallEndedOrRejected);
     return () => {
+      try {
+        stopRingtone();
+      } catch { }
       socket.off("notification:new", onNotificationCreated);
       socket.off("incoming:call", onIncomingCall);
+      socket.off("call:ended", onCallEndedOrRejected);
+      socket.off("call:rejected", onCallEndedOrRejected);
     };
   }, [fetchNotifs, router, socket]);
+
+  const handleAnswerIncomingAlert = () => {
+    if (!incomingCallAlert) return;
+    try {
+      stopRingtone();
+    } catch { }
+    const call = incomingCallAlert;
+    setIncomingCallAlert(null);
+    const params = new URLSearchParams({
+      incomingCall: "true",
+      autoAccept: "true",
+      callSessionId: String(call.callSessionId),
+      activeChannel: call.channelName,
+      callerId: String(call.caller.id),
+      callerName: call.caller.name,
+      type: call.type,
+      ...(call.conversationName ? { groupName: call.conversationName } : {}),
+      ...(call.isGroupCall ? { groupCall: "true" } : {}),
+      ...(call.meetingId ? { meetingId: String(call.meetingId) } : {}),
+    });
+    router.push(`/dashboard/messenger/calls?${params.toString()}`);
+  };
+
+  const handleDeclineIncomingAlert = () => {
+    if (!incomingCallAlert) return;
+    try {
+      stopRingtone();
+    } catch { }
+    if (socket) {
+      socket.emit("call:reject", { callSessionId: incomingCallAlert.callSessionId });
+    }
+    setIncomingCallAlert(null);
+  };
 
   const currentUser = session?.user || user;
   const roleName = typeof currentUser?.role === "string"
@@ -512,29 +587,66 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
     return `${diffDays}d ago`;
   };
 
-  const getNotifIcon = (type: string) => {
-    switch (type) {
-      case "EMPLOYEE_CREATED":
-        return "";
-      case "PROJECT_CREATED":
-        return "";
-      case "WORK_ITEM":
-        return "";
-      case "LEAVE":
-        return "";
-      default:
-        return "";
+  const getNotifBadge = (type: string, title?: string) => {
+    const t = (type || "").toUpperCase();
+    const tit = (title || "").toLowerCase();
+    if (t.includes("MEET") || tit.includes("meet")) {
+      return (
+        <span className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 border border-orange-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+          <Calendar className="w-3.5 h-3.5" />
+        </span>
+      );
     }
+    if (t.includes("CALL") || tit.includes("call")) {
+      return (
+        <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+          <Video className="w-3.5 h-3.5" />
+        </span>
+      );
+    }
+    if (t === "EMPLOYEE_CREATED" || t.includes("USER") || tit.includes("employee")) {
+      return (
+        <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+          <Users className="w-3.5 h-3.5" />
+        </span>
+      );
+    }
+    if (t === "PROJECT_CREATED" || tit.includes("project") || tit.includes("task")) {
+      return (
+        <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+          <Briefcase className="w-3.5 h-3.5" />
+        </span>
+      );
+    }
+    if (t === "LEAVE" || tit.includes("leave") || tit.includes("attendance")) {
+      return (
+        <span className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+          <Clock className="w-3.5 h-3.5" />
+        </span>
+      );
+    }
+    if (t === "CHAT" || tit.includes("message")) {
+      return (
+        <span className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+          <MessageSquare className="w-3.5 h-3.5" />
+        </span>
+      );
+    }
+    return (
+      <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 border border-slate-200/70 flex items-center justify-center shrink-0 shadow-2xs">
+        <Bell className="w-3.5 h-3.5" />
+      </span>
+    );
   };
 
   return (
-    <header className="topbar">
+    <header className="topbar !px-2.5 sm:!px-4 lg:!px-7">
       {/* Brand Title & Logo on Left */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("hrms_sidebar_mobile_toggle"))}
-          className="lg:hidden p-1.5 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+          className="lg:hidden p-1 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           title="Toggle Navigation Menu"
           aria-label="Toggle navigation menu"
         >
@@ -543,14 +655,14 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 sm:gap-3 group transition-all active:scale-[0.98] select-none"
+          className="flex items-center gap-1.5 sm:gap-3 group transition-all active:scale-[0.98] select-none"
           aria-label="Infograins HRMS dashboard"
         >
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             <img
               src="/logo-infograins.webp"
               alt="Infograins Software Solutions"
-              className="h-7 sm:h-8 w-auto object-contain"
+              className="h-6 sm:h-7 md:h-8 w-auto object-contain shrink-0"
               loading="eager"
             />
             {/* Product identifier */}
@@ -705,7 +817,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {/* Mobile Search Trigger Icon Button */}
         <button
           type="button"
@@ -714,34 +826,45 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             setIsSearchOpen(true);
             setTimeout(() => mobileSearchInputRef.current?.focus(), 50);
           }}
-          className="sm:hidden p-2 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors shrink-0"
+          className="sm:hidden p-1.5 text-slate-600 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors shrink-0"
           style={{ border: "none", background: "none", cursor: "pointer" }}
           aria-label="Search"
           title="Search navigation"
         >
-          <Search className="w-5 h-5 text-slate-700" />
+          <Search className="w-4 h-4 text-slate-700" />
         </button>
 
         {/* Clock In / Clock Out Attendance Tracker Widget */}
         {session?.user && (
           <div className="flex items-center shrink-0">
-            {!todayAttendance?.checkIn ? (
-              <button
-                type="button"
-                onClick={handleClockIn}
-                disabled={clockActionLoading}
-                title="Clock in for today's shift"
-                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-[11px] sm:text-xs border border-slate-700/80 shadow-xs hover:border-slate-600 transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
-              >
-                <div className="relative flex items-center justify-center">
-                  <Clock className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-400 transition-colors" />
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                </div>
-                <span className="tracking-tight">Clock In</span>
-              </button>
+            {!todayAttendance?.checkIn || canClockIn ? (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {todayAttendance?.checkOut && (
+                  <div
+                    title={`Previous shift: ${todayAttendance.workingHours.toFixed(2)} hrs worked`}
+                    className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300 text-[10px] font-semibold"
+                  >
+                    <span className="text-emerald-400 font-bold">✓</span>
+                    <span>{todayAttendance.workingHours.toFixed(1)}h</span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleClockIn}
+                  disabled={clockActionLoading}
+                  title={todayAttendance?.checkOut ? "Clock in for next shift (12 hrs elapsed)" : "Clock in for today's shift"}
+                  className="group inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-[11px] sm:text-xs border border-slate-700/80 shadow-xs hover:border-slate-600 transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <div className="relative flex items-center justify-center">
+                    <Clock className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-slate-300 group-hover:text-emerald-400 transition-colors" />
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <span className="tracking-tight hidden sm:inline">Clock In</span>
+                </button>
+              </div>
             ) : !todayAttendance?.checkOut ? (
-              <div className="inline-flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1 rounded-xl bg-slate-900 border border-slate-700/90 text-white shadow-xs">
-                <div className="flex items-center gap-1.5">
+              <div className="inline-flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1 rounded-xl bg-slate-900 border border-slate-700/90 text-white shadow-xs">
+                <div className="flex items-center gap-1">
                   <span className="relative flex h-2 w-2 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
@@ -758,11 +881,11 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                   onClick={handleClockOut}
                   disabled={clockActionLoading}
                   title="Click to Clock Out and end shift"
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium text-[10px] sm:text-[11px] shadow-xs hover:shadow-sm transition-all duration-150 active:scale-95 cursor-pointer shrink-0"
+                  className="inline-flex items-center justify-center p-1 sm:px-3 sm:py-1 rounded-lg sm:rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-medium text-[10px] sm:text-[11px] shadow-xs hover:shadow-sm transition-all duration-150 active:scale-95 cursor-pointer shrink-0"
                 >
-                  <LogOut className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
-                  <span className="hidden sm:inline">Clock Out</span>
-                  <span className="sm:hidden">Out</span>
+                  <LogOut className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span className="hidden sm:inline ml-1">Clock Out</span>
+                  <span className="sm:hidden text-[10px] font-bold">Out</span>
                 </button>
               </div>
             ) : (
@@ -788,27 +911,14 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
               setIsNotifOpen(!isNotifOpen);
               setIsProfileOpen(false);
             }}
-            className="relative p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+            className="relative p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors shrink-0"
             style={{ border: "none", background: "none", cursor: "pointer" }}
             aria-label="Notifications"
           >
-            <Bell className="w-5 h-5 text-slate-700" />
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700" />
             {unreadCount > 0 && (
               <span
-                className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-white animate-pulse"
-                style={{
-                  backgroundColor: "#ef4444",
-                  color: "#ffffff",
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  borderRadius: "9999px",
-                  height: "20px",
-                  width: "20px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  lineHeight: 1,
-                }}
+                className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 inline-flex items-center justify-center border-2 border-white shadow-xs"
               >
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
@@ -817,44 +927,15 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
           {isNotifOpen && (
             <div
-              className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-xl border border-gray-200 z-[1000] overflow-hidden flex flex-col"
-              style={{
-                position: "absolute",
-                right: 0,
-                marginTop: "8px",
-                width: "min(360px, calc(100vw - 24px))",
-                maxHeight: "480px",
-                backgroundColor: "#ffffff",
-                borderRadius: "16px",
-                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
-                border: "1px solid var(--line, #e2e8f0)",
-                zIndex: 1000,
-              }}
+              className="absolute right-[-44px] sm:right-0 top-full mt-2 w-[calc(100vw-24px)] max-w-sm sm:w-92 bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-[1000] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100"
+              style={{ maxWidth: "min(380px, calc(100vw - 20px))" }}
             >
               {/* Notification Header */}
-              <div
-                style={{
-                  padding: "14px 16px",
-                  borderBottom: "1px solid #f1f5f9",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  backgroundColor: "#f8fafc",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>Notifications</strong>
+              <div className="px-3.5 py-2.5 bg-slate-50/90 flex items-center justify-between border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 tracking-tight">Notifications</span>
                   {unreadCount > 0 && (
-                    <span
-                      style={{
-                        backgroundColor: "#3b82f6",
-                        color: "#fff",
-                        fontSize: "0.75rem",
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        fontWeight: 600,
-                      }}
-                    >
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200/80">
                       {unreadCount} new
                     </span>
                   )}
@@ -864,94 +945,55 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#f97316",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
+                    className="text-[11px] font-semibold text-orange-600 hover:text-orange-700 hover:underline transition-colors cursor-pointer"
                   >
-                    Mark all as read
+                    Mark all read
                   </button>
                 )}
               </div>
 
               {/* Notification Body */}
-              <div
-                style={{
-                  maxHeight: "320px",
-                  overflowY: "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
+              <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100/90 overscroll-contain">
                 {loadingNotifs && notifications.length === 0 ? (
-                  <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                  <div className="py-8 text-center text-slate-400 text-xs">
                     Loading notifications...
                   </div>
                 ) : notifications.length === 0 ? (
-                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
-                    <small style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No notifications at this moment.</small>
+                  <div className="py-10 px-4 text-center">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                      <Bell className="w-4 h-4" />
+                    </div>
+                    <p className="text-xs text-slate-600 font-semibold">No notifications</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">You&apos;re all caught up!</p>
                   </div>
                 ) : (
                   notifications.map((notif) => (
                     <div
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      style={{
-                        padding: "12px 16px",
-                        borderBottom: "1px solid #f1f5f9",
-                        backgroundColor: notif.isRead ? "#ffffff" : "#fff7ed",
-                        cursor: "pointer",
-                        display: "flex",
-                        gap: "12px",
-                        alignItems: "flex-start",
-                        transition: "background-color 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = notif.isRead ? "#f8fafc" : "#ffedd5";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = notif.isRead ? "#ffffff" : "#fff7ed";
-                      }}
+                      className={`group px-3.5 py-3 cursor-pointer flex items-start gap-2.5 transition-colors relative ${notif.isRead
+                          ? "bg-white hover:bg-slate-50/80 border-l-[3px] border-l-transparent"
+                          : "bg-slate-100/80 hover:bg-slate-200/60 border-l-[3px] border-l-orange-500"
+                        }`}
                     >
-                      <span
-                        style={{
-                          fontSize: "1.2rem",
-                          backgroundColor: notif.isRead ? "#f1f5f9" : "#ffedd5",
-                          padding: "6px",
-                          borderRadius: "10px",
-                          lineHeight: 1,
-                        }}
-                      >
-                        {getNotifIcon(notif.type)}
-                      </span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
-                          <strong style={{ fontSize: "0.85rem", color: "#0f172a", fontWeight: 700 }}>
+                      {getNotifBadge(notif.type, notif.title)}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <p className={`text-xs truncate ${notif.isRead ? "font-medium text-slate-700" : "font-bold text-slate-900"}`}>
                             {notif.title}
-                          </strong>
-                          <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                          </p>
+                          <span className="text-[10px] text-slate-400 shrink-0 font-normal">
                             {formatTimeAgo(notif.createdAt)}
                           </span>
                         </div>
-                        <p style={{ margin: 0, fontSize: "0.8rem", color: "#475569", lineHeight: 1.4 }}>
+                        <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
                           {notif.message}
                         </p>
                       </div>
+
                       {!notif.isRead && (
-                        <span
-                          style={{
-                            height: "8px",
-                            width: "8px",
-                            borderRadius: "50%",
-                            backgroundColor: "#f97316",
-                            marginTop: "6px",
-                            flexShrink: 0,
-                          }}
-                        />
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 mt-1.5 ring-2 ring-orange-200" />
                       )}
                     </div>
                   ))
@@ -960,31 +1002,11 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
 
               {/* Notification Footer with Clear All */}
               {notifications.length > 0 && (
-                <div
-                  style={{
-                    padding: "10px 16px",
-                    borderTop: "1px solid #f1f5f9",
-                    backgroundColor: "#f8fafc",
-                    textAlign: "center",
-                  }}
-                >
+                <div className="p-2 bg-slate-50/80 border-t border-slate-100 flex items-center justify-center">
                   <button
                     type="button"
                     onClick={handleClearAll}
-                    style={{
-                      width: "100%",
-                      padding: "8px",
-                      backgroundColor: "#fee2e2",
-                      color: "#dc2626",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "background-color 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e3a3a3ff")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fee2e2")}
+                    className="w-full py-1.5 px-3 rounded-lg text-[11px] font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50/70 border border-slate-200/60 hover:border-rose-200/70 transition-colors cursor-pointer text-center"
                   >
                     Clear All Notifications
                   </button>
@@ -1005,7 +1027,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
             }}
             aria-expanded={isProfileOpen}
             aria-haspopup="true"
-            className="flex items-center gap-1 sm:gap-2.5 p-1 sm:p-1.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10 shrink-0"
+            className="flex items-center gap-1 sm:gap-2 p-0.5 sm:p-1.5 rounded-xl hover:bg-gray-100/80 transition-all duration-200 focus:outline-none shrink-0"
             style={{ background: "none", border: "none", cursor: "pointer" }}
             aria-label="User profile menu"
           >
@@ -1013,10 +1035,10 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
               <img
                 src={user.avatarUrl}
                 alt={user.name || "User"}
-                className="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-orange-500/20"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0 ring-2 ring-orange-500/20"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xs flex items-center justify-center shadow-inner shrink-0 ring-2 ring-orange-500/20">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xs flex items-center justify-center shadow-inner shrink-0 ring-2 ring-orange-500/20">
                 {user?.name?.slice(0, 1).toUpperCase() ?? "U"}
               </div>
             )}
@@ -1024,7 +1046,7 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
               {user?.name ?? ""}
             </span>
             <svg
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 transition-transform duration-200 shrink-0 ${isProfileOpen ? 'rotate-180' : ''}`}
+              className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 transition-transform duration-200 shrink-0 ${isProfileOpen ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -1093,6 +1115,48 @@ export function Navbar({ user, onSignOut }: NavbarProps) {
           )}
         </div>
       </div>
+
+      {/* Global Incoming Call Banner / Modal for any dashboard page */}
+      {incomingCallAlert && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[92%] max-w-md bg-slate-900/95 text-white p-4 rounded-2xl shadow-2xl border border-orange-500/30 backdrop-blur-md animate-in slide-in-from-top-4 duration-200 touch-manipulation select-none">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/40 shrink-0">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-30 animate-ping pointer-events-none"></span>
+              {incomingCallAlert.type === "VIDEO" ? <Video className="w-6 h-6 pointer-events-none" /> : <Phone className="w-6 h-6 pointer-events-none" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-400">
+                <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+                <span>Incoming {incomingCallAlert.isGroupCall ? "Group " : ""}{incomingCallAlert.type.toLowerCase()} call</span>
+              </div>
+              <h4 className="text-sm font-bold text-white truncate">
+                {incomingCallAlert.conversationName || incomingCallAlert.caller.name}
+              </h4>
+              <p className="text-[11px] text-slate-400 truncate">
+                From {incomingCallAlert.caller.name}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleDeclineIncomingAlert}
+                className="touch-manipulation select-none active:scale-90 w-10 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-transform duration-75 shadow-md cursor-pointer"
+                title="Decline Call"
+              >
+                <PhoneOff className="w-5 h-5 pointer-events-none" />
+              </button>
+              <button
+                type="button"
+                onClick={handleAnswerIncomingAlert}
+                className="touch-manipulation select-none active:scale-90 w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-transform duration-75 shadow-md cursor-pointer"
+                title="Answer Call"
+              >
+                <Phone className="w-5 h-5 pointer-events-none" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header >
   );
 }
